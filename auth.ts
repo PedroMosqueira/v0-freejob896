@@ -1,11 +1,11 @@
-import NextAuth from "next-auth" // Changed back to default import for beta.16
+import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { getUserByEmail } from "@/lib/auth-users"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import type { Session } from "next-auth"
 
-const nextAuthInstance = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/",
   },
@@ -108,7 +108,5 @@ const nextAuthInstance = NextAuth({
   trustHost: true,
   debug: true,
 })
-
-export const { handlers, auth, signIn, signOut } = nextAuthInstance
 
 export const { GET, POST } = handlers
