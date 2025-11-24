@@ -1,11 +1,13 @@
 import NextAuth from "next-auth"
+import type { NextAuthOptions } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { getUserByEmail } from "@/lib/auth-users"
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import type { Session } from "next-auth"
+import { getServerSession } from "next-auth/next"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/",
   },
@@ -107,6 +109,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
   debug: true,
-})
+}
 
-export const { GET, POST } = handlers
+const handler = NextAuth(authOptions)
+
+export { handler as GET, handler as POST }
+
+export const auth = () => getServerSession(authOptions)
