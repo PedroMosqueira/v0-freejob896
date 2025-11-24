@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
 import { useSearchParams } from "next/navigation"
+import ForgotPasswordForm from "@/components/forgot-password-form"
 
 export default function Home() {
   const { email: authenticatedEmail, login, isLoading } = useAuth()
@@ -26,6 +27,7 @@ export default function Home() {
   const [loginPassword, setLoginPassword] = useState("")
   const [isSubmittingLogin, setIsSubmittingLogin] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [activeTab, setActiveTab] = useState("procurar")
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -187,7 +189,9 @@ export default function Home() {
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
             <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
-              {isRegistering ? (
+              {isForgotPassword ? (
+                <ForgotPasswordForm onBack={() => setIsForgotPassword(false)} />
+              ) : isRegistering ? (
                 <RegisterForm onSwitchToLogin={() => setIsRegistering(false)} />
               ) : (
                 <div className="w-full max-w-sm">
@@ -232,6 +236,14 @@ export default function Home() {
                             onChange={(e) => setLoginPassword(e.target.value)}
                             required
                           />
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="text-xs text-blue-600 p-0 h-auto justify-end"
+                            onClick={() => setIsForgotPassword(true)}
+                          >
+                            Esqueceu a senha?
+                          </Button>
                         </div>
                         <div className="grid gap-2">
                           <Button
