@@ -3,7 +3,20 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, AlertCircle, XCircle, Calendar, MessageSquare, User, Star, ThumbsUp, ThumbsDown, Ban, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Calendar,
+  MessageSquare,
+  User,
+  Star,
+  ThumbsUp,
+  ThumbsDown,
+  Ban,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
 import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import {
@@ -40,32 +53,30 @@ import { createNotificationViaAPI } from "@/lib/notifications-client"
 
 // Mock getUserProfile for now if it's not provided
 const getUserProfile = async (email: string) => {
-  const supabase = createSupabaseBrowserClient();
-  
+  const supabase = createSupabaseBrowserClient()
+
   // Fetch from 'users' table directly
   const { data, error } = await supabase
     .from("users")
-    .select("full_name, profile_image_url, rating") // Added rating here
+    .select("full_name, profile_image_url, rating")
     .eq("email", email)
-    .single();
+    .single()
 
   if (error) {
-    console.error(`Error fetching user profile for ${email}:`, error);
-    return null;
+    console.error(`Error fetching user profile for ${email}:`, error)
+    return null
   }
 
   if (data) {
     return {
       fullName: data.full_name,
       photoUrl: data.profile_image_url,
-      rating: data.rating, // Return rating
-    };
+      rating: data.rating,
+    }
   }
 
-  return null;
-};
-// </CHANGE>
-
+  return null
+}
 
 console.log("[v0] professionalRespondToVisit imported:", typeof professionalRespondToVisit)
 
@@ -102,7 +113,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [showInterestDialog, setShowInterestDialog] = useState(false)
   const [showSendBidDialog, setShowSendBidDialog] = useState(false)
   const [isSendingInterest, setIsSendingInterest] = useState(false)
-  // </CHANGE>
   const [selectedProfessionalChat, setSelectedProfessionalChat] = useState<{
     email: string
     chatThreadId: string
@@ -115,7 +125,9 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   } | null>(null)
   const [hasExpressedInterest, setHasExpressedInterest] = useState(false)
   const [currentNeed, setCurrentNeed] = useState<Need>(need)
-  const [professionalProfiles, setProfessionalProfiles] = useState<Record<string, { fullName: string; photoUrl?: string; rating?: number }>>({}); // Added rating here
+  const [professionalProfiles, setProfessionalProfiles] = useState<
+    Record<string, { fullName: string; photoUrl?: string; rating?: number }>
+  >({}) // Added rating here
 
   useEffect(() => {
     setCurrentNeed(need)
@@ -202,32 +214,34 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       if (error) throw error
       console.log("[v0] Fetched proposals:", data)
       setProposals(data || [])
-      
+
       if (data && data.length > 0) {
-        const professionalEmails = Array.from(new Set(data.map(p => p.professional_email).filter(Boolean)))
+        const professionalEmails = Array.from(new Set(data.map((p) => p.professional_email).filter(Boolean)))
         console.log("[v0] Professional emails to fetch:", professionalEmails) // Debug log
         const profiles: Record<string, { fullName: string; photoUrl?: string; rating?: number }> = {} // Added rating here
-        
-        await Promise.all(professionalEmails.map(async (email) => {
-          try {
-            console.log("[v0] Fetching profile for:", email) // Debug log
-            const profile = await getUserProfile(email)
-            console.log("[v0] Got profile:", email, profile) // Debug log
-            if (profile) {
+
+        await Promise.all(
+          professionalEmails.map(async (email) => {
+            try {
+              console.log("[v0] Fetching profile for:", email) // Debug log
+              const profile = await getUserProfile(email)
+              console.log("[v0] Got profile:", email, profile) // Debug log
+              if (profile) {
+                profiles[email] = {
+                  fullName: profile.fullName || email.split("@")[0],
+                  photoUrl: profile.photoUrl,
+                  rating: profile.rating, // Add rating
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching profile for ${email}:`, error)
               profiles[email] = {
-                fullName: profile.fullName || email.split('@')[0],
-                photoUrl: profile.photoUrl,
-                rating: profile.rating, // Add rating
+                fullName: email.split("@")[0],
               }
             }
-          } catch (error) {
-            console.error(`Error fetching profile for ${email}:`, error)
-            profiles[email] = {
-              fullName: email.split('@')[0]
-            }
-          }
-        }))
-        
+          }),
+        )
+
         console.log("[v0] All profiles fetched:", profiles) // Debug log
         setProfessionalProfiles(profiles)
       }
@@ -280,17 +294,16 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     try {
       await acceptProposal(proposalId, currentNeed.id, email)
 
-      const proposal = proposals.find(p => p.id === proposalId)
+      const proposal = proposals.find((p) => p.id === proposalId)
       if (proposal?.professional_email) {
         await createNotificationViaAPI({
           userEmail: proposal.professional_email,
-          title: 'Proposta aceita!',
+          title: "Proposta aceita!",
           message: `Sua proposta para "${currentNeed.title}" foi aceita`,
-          type: 'proposal_accepted',
+          type: "proposal_accepted",
           needId: currentNeed.id,
-        }).catch(err => console.error('[v0] Failed to create acceptance notification:', err))
+        }).catch((err) => console.error("[v0] Failed to create acceptance notification:", err))
       }
-      // </CHANGE>
 
       await fetchProposals()
       onStatusUpdate?.()
@@ -534,7 +547,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const canRespondToVisit = !!professionalVisitProposal && currentNeed.status === "aceito"
 
   const hasShownInterest = proposals.some((p) => p.professional_email === email && p.type === "interest_only")
-  // </CHANGE>
 
   const handleRateClick = () => {
     console.log("[v0] handleRateClick - acceptedProposal:", acceptedProposal)
@@ -758,7 +770,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   </Button>
                 )}
 
-                {/* CHANGE: Removed "Chat" button, keeping only "Enviar Lance" and the "Abrir Chat" button below */}
                 {email && !isRequester && hasShownInterest && currentNeed.status === "aberto" && (
                   <Button
                     onClick={() => setShowSendBidDialog(true)}
@@ -781,29 +792,29 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                 )}
               </div>
 
-              {/* */}
               {/* Only show "Marcar como Concluído" after requester accepts the final proposal */}
               {isRequester && (
                 <div className="pt-3 border-t dark:border-gray-700 space-y-2">
                   <h3 className="font-semibold text-sm flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
-                    Propostas Recebidas ({proposals.filter(p => p.type !== 'interest_only').length})
+                    Propostas Recebidas ({proposals.filter((p) => p.type !== "interest_only").length})
                   </h3>
                   {isLoadingProposals ? (
                     <p className="text-gray-500 dark:text-gray-400 text-xs">Carregando...</p>
-                  ) : proposals.filter(p => p.type !== 'interest_only').length === 0 ? (
+                  ) : proposals.filter((p) => p.type !== "interest_only").length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-xs">Nenhuma proposta recebida.</p>
                   ) : (
                     <div className="space-y-2">
                       {proposals
-                        .filter(p => p.type !== 'interest_only')
+                        .filter((p) => p.type !== "interest_only")
                         .map((proposal) => {
-                          
-                          const professionalName = professionalProfiles[proposal.professional_email]?.fullName || proposal.professional_email.split('@')[0]
+                          const professionalName =
+                            professionalProfiles[proposal.professional_email]?.fullName ||
+                            proposal.professional_email.split("@")[0]
                           const professionalPhoto = professionalProfiles[proposal.professional_email]?.photoUrl
                           const professionalRating = professionalProfiles[proposal.professional_email]?.rating || 0
 
-                          const firstName = professionalName.split(' ')[0]
+                          const firstName = professionalName.split(" ")[0]
 
                           const isProfessionalAcceptedVisit =
                             proposal.type === "visit_proposal" &&
@@ -837,12 +848,12 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                       </div>
                                       <div className="flex justify-between text-gray-500 dark:text-gray-400">
                                         <span>Taxa da plataforma (10%):</span>
-                                        <span>{formatCurrency(proposal.bid_amount * 0.10)}</span>
+                                        <span>{formatCurrency(proposal.bid_amount * 0.1)}</span>
                                       </div>
                                       <div className="flex justify-between font-bold pt-1.5 border-t border-gray-200 dark:border-gray-600">
                                         <span className="text-gray-700 dark:text-gray-300">Você pagará:</span>
                                         <span className="text-blue-600 dark:text-blue-400">
-                                          {formatCurrency(proposal.bid_amount * 1.10)}
+                                          {formatCurrency(proposal.bid_amount * 1.1)}
                                         </span>
                                       </div>
                                     </div>
@@ -907,10 +918,14 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                     {professionalRating > 0 ? (
                                       <div className="flex items-center gap-1 text-xs">
                                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                        <span className="font-medium text-gray-700 dark:text-gray-300">{professionalRating.toFixed(1)}</span>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                          {professionalRating.toFixed(1)}
+                                        </span>
                                       </div>
                                     ) : (
-                                      <span className="text-xs text-muted-foreground dark:text-gray-500">Sem avaliações</span>
+                                      <span className="text-xs text-muted-foreground dark:text-gray-500">
+                                        Sem avaliações
+                                      </span>
                                     )}
                                   </div>
                                 </div>
@@ -920,7 +935,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                       ? "secondary"
                                       : proposal.status === "accepted_by_professional"
                                         ? "default"
-                                        : proposal.status === "declined_by_professional" || proposal.status === "declined_by_requester"
+                                        : proposal.status === "declined_by_professional" ||
+                                            proposal.status === "declined_by_requester"
                                           ? "destructive"
                                           : proposal.status === "cancelled"
                                             ? "outline"
@@ -932,7 +948,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                     ? "Aguardando visita"
                                     : proposal.status === "accepted_by_professional"
                                       ? "Aceita pelo profissional"
-                                      : proposal.status === "declined_by_professional" || proposal.status === "declined_by_requester"
+                                      : proposal.status === "declined_by_professional" ||
+                                          proposal.status === "declined_by_requester"
                                         ? "Recusada"
                                         : proposal.status === "cancelled"
                                           ? "Cancelada"
@@ -952,12 +969,12 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                   </div>
                                   <div className="flex justify-between text-gray-500 dark:text-gray-400 text-[10px]">
                                     <span>Taxa (10%):</span>
-                                    <span>{formatCurrency(proposal.bid_amount * 0.10)}</span>
+                                    <span>{formatCurrency(proposal.bid_amount * 0.1)}</span>
                                   </div>
                                   <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-600 pt-1">
                                     <span className="text-gray-700 dark:text-gray-300">Você paga:</span>
                                     <span className="text-blue-600 dark:text-blue-400">
-                                      {formatCurrency(proposal.bid_amount * 1.10)}
+                                      {formatCurrency(proposal.bid_amount * 1.1)}
                                     </span>
                                   </div>
                                 </div>
@@ -1013,273 +1030,270 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   )}
                 </div>
               )}
-              {/* </CHANGE> */}
 
-              {/* Start of merged updates */}
-            </div>
-          </div>
+              {canRespondToVisit && (
+                <div className="p-3 border-t dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+                  {!showVisitResponse ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="font-semibold text-sm">Responder após visita</span>
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300">
+                        Após avaliar o serviço no local, você pode aceitar ou recusar a execução.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            setVisitResponseType("accept")
+                            setShowVisitResponse(true)
+                          }}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9 text-sm"
+                          size="sm"
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          Aceitar Serviço
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setVisitResponseType("decline")
+                            setShowVisitResponse(true)
+                          }}
+                          variant="outline"
+                          className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-9 text-sm"
+                          size="sm"
+                        >
+                          <ThumbsDown className="h-4 w-4 mr-1" />
+                          Recusar Serviço
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {visitResponseType === "accept"
+                          ? "Confirmar que vai executar o serviço?"
+                          : "Confirmar que não vai executar o serviço?"}
+                      </p>
 
-          {canRespondToVisit && (
-            <div className="p-3 border-t dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
-              {!showVisitResponse ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
-                    <AlertCircle className="h-4 w-4" />
-                    <span className="font-semibold text-sm">Responder após visita</span>
-                  </div>
-                  <p className="text-xs text-gray-700 dark:text-gray-300">
-                    Após avaliar o serviço no local, você pode aceitar ou recusar a execução.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        setVisitResponseType("accept")
-                        setShowVisitResponse(true)
-                      }}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9 text-sm"
-                      size="sm"
-                    >
-                      <ThumbsUp className="h-4 w-4 mr-1" />
-                      Aceitar Serviço
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setVisitResponseType("decline")
-                        setShowVisitResponse(true)
-                      }}
-                      variant="outline"
-                      className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-9 text-sm"
-                      size="sm"
-                    >
-                      <ThumbsDown className="h-4 w-4 mr-1" />
-                      Recusar Serviço
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                    {visitResponseType === "accept"
-                      ? "Confirmar que vai executar o serviço?"
-                      : "Confirmar que não vai executar o serviço?"}
-                  </p>
-
-                  {visitResponseType === "accept" && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        Valor do lance (mínimo R$ 50,00):
-                      </label>
-                      <input
-                        type="number"
-                        min="50"
-                        step="0.01"
-                        placeholder="Ex: 150.00"
-                        value={visitBidAmount}
-                        onChange={(e) => setVisitBidAmount(e.target.value)}
-                        className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-                      />
-                      {visitBidAmount && Number(visitBidAmount) >= 50 && (
-                        <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded space-y-1 text-xs">
-                          <div className="flex justify-between">
-                            <span>Seu lance:</span>
-                            <span>{formatCurrency(Number(visitBidAmount))}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Taxa (10%):</span>
-                            <span>{formatCurrency(Number(visitBidAmount) * 0.1)}</span>
-                          </div>
-                          <div className="flex justify-between font-semibold border-t border-blue-200 dark:border-blue-800 pt-1">
-                            <span>Cliente pagará:</span>
-                            <span className="text-blue-600 dark:text-blue-400">
-                              {formatCurrency(Number(visitBidAmount) * 1.1)}
-                            </span>
-                          </div>
+                      {visitResponseType === "accept" && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Valor do lance (mínimo R$ 50,00):
+                          </label>
+                          <input
+                            type="number"
+                            min="50"
+                            step="0.01"
+                            placeholder="Ex: 150.00"
+                            value={visitBidAmount}
+                            onChange={(e) => setVisitBidAmount(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                          />
+                          {visitBidAmount && Number(visitBidAmount) >= 50 && (
+                            <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded space-y-1 text-xs">
+                              <div className="flex justify-between">
+                                <span>Seu lance:</span>
+                                <span>{formatCurrency(Number(visitBidAmount))}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Taxa (10%):</span>
+                                <span>{formatCurrency(Number(visitBidAmount) * 0.1)}</span>
+                              </div>
+                              <div className="flex justify-between font-semibold border-t border-blue-200 dark:border-blue-800 pt-1">
+                                <span>Cliente pagará:</span>
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {formatCurrency(Number(visitBidAmount) * 1.1)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
+
+                      <Textarea
+                        placeholder={
+                          visitResponseType === "accept"
+                            ? "Mensagem opcional: ex. 'Serviço avaliado, posso executar conforme combinado.'"
+                            : "Motivo da recusa (opcional)"
+                        }
+                        value={visitResponseMessage}
+                        onChange={(e) => setVisitResponseMessage(e.target.value)}
+                        rows={2}
+                        className="text-xs dark:bg-gray-800 dark:border-gray-600"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleProfessionalVisitResponse(visitResponseType === "accept")}
+                          disabled={
+                            isRespondingToVisit ||
+                            (visitResponseType === "accept" && (!visitBidAmount || Number(visitBidAmount) < 50))
+                          }
+                          className={
+                            visitResponseType === "accept"
+                              ? "flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                              : "flex-1 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
+                          }
+                          size="sm"
+                        >
+                          {isRespondingToVisit ? "Enviando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowVisitResponse(false)
+                            setVisitResponseMessage("")
+                            setVisitResponseType(null)
+                            setVisitBidAmount("")
+                          }}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
                     </div>
                   )}
+                </div>
+              )}
 
-                  <Textarea
-                    placeholder={
-                      visitResponseType === "accept"
-                        ? "Mensagem opcional: ex. 'Serviço avaliado, posso executar conforme combinado.'"
-                        : "Motivo da recusa (opcional)"
-                    }
-                    value={visitResponseMessage}
-                    onChange={(e) => setVisitResponseMessage(e.target.value)}
-                    rows={2}
-                    className="text-xs dark:bg-gray-800 dark:border-gray-600"
-                  />
-                  <div className="flex gap-2">
+              {canMarkAsCompletedRevised && ( // Use the revised logic for canMarkAsCompleted
+                <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  {!showConfirmation ? (
                     <Button
-                      onClick={() => handleProfessionalVisitResponse(visitResponseType === "accept")}
-                      disabled={
-                        isRespondingToVisit ||
-                        (visitResponseType === "accept" && (!visitBidAmount || Number(visitBidAmount) < 50))
-                      }
-                      className={
-                        visitResponseType === "accept"
-                          ? "flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                          : "flex-1 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
-                      }
+                      onClick={() => setShowConfirmation(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white h-9"
                       size="sm"
                     >
-                      {isRespondingToVisit ? "Enviando..." : "Confirmar"}
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Marcar como Concluído
                     </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar conclusão do serviço?</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleMarkAsCompleted}
+                          disabled={isUpdatingStatus}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isUpdatingStatus ? "Confirmando..." : "Sim"}
+                        </Button>
+                        <Button
+                          onClick={() => setShowConfirmation(false)}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canRate && acceptedProposal && (
+                <div className="p-3 border-t dark:border-gray-700 bg-blue-50 dark:bg-gray-900/50">
+                  <Button
+                    onClick={handleRateClick}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-9"
+                    size="sm"
+                  >
+                    <Star className="h-4 w-4 mr-2 fill-current" />
+                    Avaliar Profissional
+                  </Button>
+                </div>
+              )}
+
+              {canProfessionalCancel && (
+                <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
+                  {!showProfessionalCancelConfirmation ? (
                     <Button
-                      onClick={() => {
-                        setShowVisitResponse(false)
-                        setVisitResponseMessage("")
-                        setVisitResponseType(null)
-                        setVisitBidAmount("")
-                      }}
+                      onClick={() => setShowProfessionalCancelConfirmation(true)}
                       variant="outline"
-                      className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                      className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 h-9"
                       size="sm"
                     >
-                      Voltar
+                      <Ban className="h-4 w-4 mr-2" />
+                      Cancelar Serviço
                     </Button>
-                  </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Informe o motivo do cancelamento:</p>
+                      <Textarea
+                        placeholder="Motivo do cancelamento"
+                        value={professionalCancelReason}
+                        onChange={(e) => setProfessionalCancelReason(e.target.value)}
+                        rows={2}
+                        className="text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleProfessionalCancelService}
+                          disabled={isCancelingByProfessional}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isCancelingByProfessional ? "Cancelando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowProfessionalCancelConfirmation(false)
+                            setProfessionalCancelReason("")
+                          }}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canCancelService && (
+                <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  {!showCancelConfirmation ? (
+                    <Button
+                      onClick={() => setShowCancelConfirmation(true)}
+                      variant="destructive"
+                      className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white border-0 h-9 shadow-sm"
+                      size="sm"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancelar Serviço
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar cancelamento do serviço?</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleCancelService}
+                          disabled={isUpdatingStatus}
+                          className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isUpdatingStatus ? "Cancelando..." : "Sim"}
+                        </Button>
+                        <Button
+                          onClick={() => setShowCancelConfirmation(false)}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
-
-          {canMarkAsCompletedRevised && ( // Use the revised logic for canMarkAsCompleted
-            <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-              {!showConfirmation ? (
-                <Button
-                  onClick={() => setShowConfirmation(true)}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white h-9"
-                  size="sm"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Marcar como Concluído
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar conclusão do serviço?</p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleMarkAsCompleted}
-                      disabled={isUpdatingStatus}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                      size="sm"
-                    >
-                      {isUpdatingStatus ? "Confirmando..." : "Sim"}
-                    </Button>
-                    <Button
-                      onClick={() => setShowConfirmation(false)}
-                      variant="outline"
-                      className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                      size="sm"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {canRate && acceptedProposal && (
-            <div className="p-3 border-t dark:border-gray-700 bg-blue-50 dark:bg-gray-900/50">
-              <Button
-                onClick={handleRateClick}
-                className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-9"
-                size="sm"
-              >
-                <Star className="h-4 w-4 mr-2 fill-current" />
-                Avaliar Profissional
-              </Button>
-            </div>
-          )}
-
-          {canProfessionalCancel && (
-            <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
-              {!showProfessionalCancelConfirmation ? (
-                <Button
-                  onClick={() => setShowProfessionalCancelConfirmation(true)}
-                  variant="outline"
-                  className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 h-9"
-                  size="sm"
-                >
-                  <Ban className="h-4 w-4 mr-2" />
-                  Cancelar Serviço
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Informe o motivo do cancelamento:</p>
-                  <Textarea
-                    placeholder="Motivo do cancelamento"
-                    value={professionalCancelReason}
-                    onChange={(e) => setProfessionalCancelReason(e.target.value)}
-                    rows={2}
-                    className="text-xs"
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleProfessionalCancelService}
-                      disabled={isCancelingByProfessional}
-                      className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-8 text-xs"
-                      size="sm"
-                    >
-                      {isCancelingByProfessional ? "Cancelando..." : "Confirmar"}
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setShowProfessionalCancelConfirmation(false)
-                        setProfessionalCancelReason("")
-                      }}
-                      variant="outline"
-                      className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                      size="sm"
-                    >
-                      Voltar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {canCancelService && (
-            <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-              {!showCancelConfirmation ? (
-                <Button
-                  onClick={() => setShowCancelConfirmation(true)}
-                  variant="destructive"
-                  className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white border-0 h-9 shadow-sm"
-                  size="sm"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Cancelar Serviço
-                </Button>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar cancelamento do serviço?</p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleCancelService}
-                      disabled={isUpdatingStatus}
-                      className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white h-8 text-xs"
-                      size="sm"
-                    >
-                      {isUpdatingStatus ? "Cancelando..." : "Sim"}
-                    </Button>
-                    <Button
-                      onClick={() => setShowCancelConfirmation(false)}
-                      variant="outline"
-                      className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                      size="sm"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1289,7 +1303,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           isOpen={!!selectedNeedForChatManagement}
           onClose={() => setSelectedNeedForChatManagement(null)}
           currentUserEmail={email}
-          onActionSuccess={() => { // Fixed prop name from onActionSuccess to onChatActionSuccess
+          onActionSuccess={() => {
+            // Fixed prop name from onActionSuccess to onChatActionSuccess
             setSelectedNeedForChatManagement(null)
             onStatusUpdate?.()
           }}
@@ -1363,15 +1378,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
             setProfessionalToRate(null)
           }}
           professionalEmail={professionalToRate}
-          requesterEmail={email}
+          requesterEmail={email || ""}
           needId={currentNeed.id}
-          onSuccess={handleRatingSuccess}
-        />
-      )}
-    </>
-  )
-}
-.id}
           onSuccess={handleRatingSuccess}
         />
       )}
