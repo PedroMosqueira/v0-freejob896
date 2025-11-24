@@ -3,6 +3,8 @@ import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
+  // [v0] Adding debug logs to track callback flow
+  console.log("[v0] Callback route accessed")
   console.log("🔗 [CALLBACK] Email verification callback accessed")
   console.log("🌐 [CALLBACK] Request URL:", request.url)
 
@@ -11,7 +13,7 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get("error")
   const error_description = requestUrl.searchParams.get("error_description")
 
-  console.log("📧 [CALLBACK] Params:", {
+  console.log("[v0] [CALLBACK] Params:", {
     code: code ? `${code.substring(0, 10)}...` : null,
     error,
     error_description,
@@ -79,7 +81,8 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ [CALLBACK] Email verified successfully for:", data.user.email)
 
-    console.log("👤 [CALLBACK] Creating user in custom users table...")
+    console.log("[v0] [CALLBACK] Creating user in custom users table...")
+    console.log("[v0] User data to insert:", { id: data.user.id, email: data.user.email })
 
     // Create service role client for database operations
     const serviceSupabase = createServerClient(
@@ -107,13 +110,14 @@ export async function GET(request: NextRequest) {
       .eq("email", data.user.email)
       .single()
 
+    console.log("[v0] Existing user check:", { exists: !!existingUser, error: checkError?.message })
+
     if (checkError && checkError.code !== "PGRST116") {
-      // PGRST116 = no rows found
-      console.error("❌ [CALLBACK] Error checking existing user:", checkError)
+      console.error("[v0] [CALLBACK] Error checking existing user:", checkError)
     }
 
     if (!existingUser) {
-      console.log("➕ [CALLBACK] Creating new user in custom table...")
+      console.log("[v0] [CALLBACK] Creating new user in custom table...")
 
       const { data: newUser, error: insertError } = await serviceSupabase
         .from("users")
@@ -126,15 +130,17 @@ export async function GET(request: NextRequest) {
         .select()
         .single()
 
+      console.log("[v0] User insert result:", { success: !!newUser, error: insertError?.message })
+
       if (insertError) {
-        console.error("❌ [CALLBACK] Error creating user in custom table:", insertError)
-        console.error("❌ [CALLBACK] Insert error details:", JSON.stringify(insertError, null, 2))
+        console.error("[v0] [CALLBACK] Error creating user in custom table:", insertError)
+        console.error("[v0] [CALLBACK] Insert error details:", JSON.stringify(insertError, null, 2))
         return NextResponse.redirect(
           new URL("/?error=Erro ao criar usuário. Entre em contato com o suporte.", requestUrl.origin),
         )
       }
 
-      console.log("✅ [CALLBACK] User created in custom table:", data.user.email)
+      console.log("[v0] ✅ [CALLBACK] User created in custom table:", data.user.email)
       console.log("✅ [CALLBACK] New user data:", newUser)
     } else {
       console.log("ℹ️ [CALLBACK] User already exists in custom table:", data.user.email)

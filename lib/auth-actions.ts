@@ -64,7 +64,10 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
 }
 
 export async function signUpWithEmail(prevState: any, formData: FormData) {
+  console.log("[v0] signUpWithEmail called")
+
   if (!formData) {
+    console.log("[v0] Error: Form data is missing")
     return { error: "Form data is missing" }
   }
 
@@ -72,11 +75,15 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   const password = formData.get("password")
   const confirmPassword = formData.get("confirmPassword")
 
+  console.log("[v0] Form data received:", { email: email?.toString(), hasPassword: !!password })
+
   if (!email || !password || !confirmPassword) {
+    console.log("[v0] Error: Missing required fields")
     return { error: "Todos os campos são obrigatórios" }
   }
 
   if (password !== confirmPassword) {
+    console.log("[v0] Error: Passwords don't match")
     return { error: "As senhas não conferem" }
   }
 
@@ -100,7 +107,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("🚀 Starting registration for:", email.toString())
+    console.log("[v0] Starting registration for:", email.toString())
 
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
@@ -112,8 +119,14 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       },
     })
 
+    console.log("[v0] SignUp response:", {
+      success: !!data?.user,
+      userId: data?.user?.id,
+      error: error?.message,
+    })
+
     if (error) {
-      console.error("Registration error:", error)
+      console.error("[v0] Registration error:", error)
 
       if (error.message.includes("already registered") || error.message.includes("User already registered")) {
         return {
