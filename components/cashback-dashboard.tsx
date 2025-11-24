@@ -21,6 +21,10 @@ export function CashbackDashboard({ userEmail, userRole }: CashbackDashboardProp
     fetch(`/api/cashback/balance?email=${userEmail}`)
       .then((res) => res.json())
       .then((data) => setCashbackData(data))
+      .catch((error) => {
+        console.error("[v0] Error fetching cashback:", error)
+        setCashbackData({ balance: 0, totalEarned: 0 })
+      })
   }, [userEmail])
 
   if (!cashbackData) return null
@@ -48,13 +52,15 @@ export function CashbackDashboard({ userEmail, userRole }: CashbackDashboardProp
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-green-700 dark:text-green-400">
-              R$ {cashbackData.balance.toFixed(2)}
+              R$ {(cashbackData.balance ?? 0).toFixed(2)}
             </span>
             <span className="text-sm text-muted-foreground">
               {userRole === "professional" ? "disponível para saque" : "disponível"}
             </span>
           </div>
-          <div className="text-xs text-muted-foreground">Total acumulado: R$ {cashbackData.totalEarned.toFixed(2)}</div>
+          <div className="text-xs text-muted-foreground">
+            Total acumulado: R$ {(cashbackData.totalEarned ?? 0).toFixed(2)}
+          </div>
         </div>
 
         {userRole === "professional" && (

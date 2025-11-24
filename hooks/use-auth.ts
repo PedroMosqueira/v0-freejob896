@@ -17,6 +17,12 @@ export function useAuth() {
       if (session?.user?.email) {
         try {
           const response = await fetch("/api/user/subscription")
+          if (!response.ok) {
+            console.error("[v0] Subscription API returned error:", response.status)
+            setIsFreeUser(true)
+            return
+          }
+
           const data = await response.json()
           // Usuário é free se não tem plano premium ativo
           setIsFreeUser(data.plan !== "premium" || !data.is_active)

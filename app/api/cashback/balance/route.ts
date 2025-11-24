@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { getCashbackBalance, getNextPlanPrice } from "@/lib/transaction-manager"
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const email = searchParams.get('email')
+  const email = searchParams.get("email")
 
   if (!email) {
-    return NextResponse.json({ error: 'Email required' }, { status: 400 })
+    return NextResponse.json({ error: "Email required" }, { status: 400 })
   }
 
   try {
@@ -14,12 +14,19 @@ export async function GET(request: NextRequest) {
     const nextPlanPrice = await getNextPlanPrice(email)
 
     return NextResponse.json({
-      balance: cashback.balance,
-      totalEarned: cashback.totalEarned,
-      nextPlanPrice,
+      balance: cashback?.balance ?? 0,
+      totalEarned: cashback?.totalEarned ?? 0,
+      nextPlanPrice: nextPlanPrice ?? 0,
     })
   } catch (error) {
-    console.error('[v0] Error fetching cashback balance:', error)
-    return NextResponse.json({ error: 'Failed to fetch cashback' }, { status: 500 })
+    console.error("[v0] Error fetching cashback balance:", error)
+    return NextResponse.json(
+      {
+        balance: 0,
+        totalEarned: 0,
+        nextPlanPrice: 0,
+      },
+      { status: 200 },
+    )
   }
 }
