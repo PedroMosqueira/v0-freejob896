@@ -1,0 +1,114 @@
+import NextAuth from "next-auth" // Changed back to default import for beta.16
+import Credentials from "next-auth/providers/credentials"
+import { getUserByEmail } from "@/lib/auth-users"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import type { Session } from "next-auth"
+
+const nextAuthInstance = NextAuth({
+  pages: {
+    signIn: "/",
+  },
+  providers: [
+    Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials): Promise<{ id: string; email: string } | null> {
+        try {
+          const email = credentials.email as string
+          const password = credentials.password as string
+
+          console.log("🔐 Auth attempt for email:", email)
+
+          if (!email || !password) {
+            console.log("❌ Missing email or password")
+            return null
+          }
+
+          const cookieStore = cookies()
+          const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                get(name: string) {
+                  return cookieStore.get(name)?.value
+                },
+                set(name: string, value: string, options: any) {
+                  cookieStore.set({ name, value, ...options })
+                },
+                remove(name: string, options: any) {
+                  cookieStore.set({ name, value: "", ...options })
+                },
+              },
+            },
+          )
+
+          const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+
+          if (authError || !authData.user) {
+            console.log("❌ Supabase Auth failed:", authError?.message)
+            return null
+          }
+
+          console.log("✅ Supabase Auth successful")
+
+          const user = await getUserByEmail(email)
+          console.log("👤 User found in custom table:", user ? "YES" : "NO")
+
+          if (!user) {
+            console.log("❌ User not found in custom table - may need to complete registration")
+            return null
+          }
+
+          console.log("✅ Authentication successful")
+          return {
+            id: String(user.id),
+            email: String(user.email),
+          }
+        } catch (error: any) {
+          console.log("💥 Auth error:", error.message)
+          return null
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+        token.email = user.email
+      }
+      return token
+    },
+    session({ session, token }) {
+      if (token && token.id && token.email) {
+        const newSession: Session = {
+          user: {
+            id: String(token.id),
+            email: String(token.email),
+          },
+          expires: session.expires,
+        }
+        return newSession
+      }
+      return session
+    },
+  },
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  trustHost: true,
+  debug: true,
+})
+
+export const { handlers, auth, signIn, signOut } = nextAuthInstance
+
+export const { GET, POST } = handlers

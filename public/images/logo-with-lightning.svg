@@ -1,0 +1,14 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#2563EB" stroke="#1E40AF" stroke-width="3"/>
+  
+  <!-- Letter "F" in white -->
+  <text x="65" y="135" font-family="Arial, sans-serif" font-size="100" font-weight="bold" fill="white">F</text>
+  
+  <!-- Lightning bolt in yellow/gold overlaid on the F -->
+  <path d="M 115 50 L 85 100 L 105 100 L 90 150 L 130 90 L 110 90 Z" 
+        fill="#FCD34D" 
+        stroke="#F59E0B" 
+        stroke-width="2"
+        stroke-linejoin="round"/>
+</svg>
