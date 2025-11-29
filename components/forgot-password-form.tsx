@@ -78,35 +78,14 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
             </div>
             <h2 className="text-xl font-bold">Email Enviado!</h2>
             <p className="text-sm text-muted-foreground">
-              Um link de recuperação foi enviado para <strong>{email}</strong>. Verifique sua caixa de entrada e spam.
+              Um link de recuperação foi enviado para <strong>{email}</strong>.
             </p>
-
-            {resetUrl && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                <h3 className="font-semibold text-sm text-blue-900 mb-2">Link de Backup</h3>
-                <p className="text-xs text-blue-800 mb-2">Caso não receba o email, use este link:</p>
-                <div className="bg-white border border-blue-300 rounded p-2 mb-3">
-                  <a
-                    href={resetUrl}
-                    className="text-xs break-all text-blue-600 hover:text-blue-800 underline"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {resetUrl}
-                  </a>
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    navigator.clipboard.writeText(resetUrl)
-                    alert("Link copiado para a área de transferência!")
-                  }}
-                >
-                  Copiar Link
-                </Button>
-              </div>
-            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-xs text-blue-800">
+                <strong>Verifique sua caixa de entrada e spam.</strong>
+              </p>
+              <p className="text-xs text-blue-700 mt-2">O link expira em 1 hora por segurança.</p>
+            </div>
 
             <div className="space-y-2">
               <Button onClick={onBack} className="w-full bg-blue-600 hover:bg-blue-600/90">
