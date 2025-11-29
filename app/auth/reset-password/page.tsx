@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -10,42 +10,47 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import Image from "next/image"
+import { createBrowserClient } from "@supabase/ssr"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
   const [userEmail, setUserEmail] = useState<string>("")
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const tokenParam = searchParams.get("token")
-    const emailParam = searchParams.get("email")
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
 
-    console.log("[v0] 🔐 Reset Password Page - Token:", tokenParam)
-    console.log("[v0] 📧 Reset Password Page - Email:", emailParam)
+    const checkSession = async () => {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
 
-    if (!tokenParam) {
-      setError("Link de recuperação inválido. Solicite um novo link.")
-      return
+      console.log("[v0] Reset Password Page - Checking session")
+      console.log("[v0] Session exists:", !!session)
+      console.log("[v0] User email:", session?.user?.email)
+
+      if (sessionError || !session) {
+        console.error("[v0] No valid session found:", sessionError)
+        setError("Sessão inválida ou expirada. Solicite um novo link de recuperação.")
+        setIsLoading(false)
+        return
+      }
+
+      setUserEmail(session.user.email || "")
+      setIsLoading(false)
     }
 
-    setToken(tokenParam)
-
-    if (emailParam) {
-      const decodedEmail = decodeURIComponent(emailParam)
-      setUserEmail(decodedEmail)
-      document.title = `Reset: ${decodedEmail} - Freejob`
-      console.log("[v0] ✅ Email definido:", decodedEmail)
-    } else {
-      console.log("[v0] ⚠️ Email não encontrado na URL")
-      document.title = "Redefinir Senha - Freejob"
-    }
-  }, [searchParams])
+    checkSession()
+  }, [])
 
   const checkPasswordStrength = (password: string) => {
     let score = 0
@@ -87,30 +92,52 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, token }),
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password,
       })
 
-      const data = await response.json()
-
-      if (data.success) {
-        setSuccess(true)
-        setTimeout(() => {
-          router.push("/")
-        }, 3000)
-      } else {
-        setError(data.message || "Erro ao redefinir senha.")
+      if (updateError) {
+        console.error("[v0] Error updating password:", updateError)
+        setError(updateError.message || "Erro ao redefinir senha.")
+        setIsSubmitting(false)
+        return
       }
+
+      console.log("[v0] Password updated successfully")
+      setSuccess(true)
+
+      // Aguarda 3 segundos e redireciona para login
+      setTimeout(() => {
+        router.push("/?message=Senha redefinida com sucesso! Faça login com sua nova senha.")
+      }, 3000)
     } catch (err) {
+      console.error("[v0] Exception updating password:", err)
       setError("Erro ao processar solicitação. Tente novamente.")
-    } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (!token) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-sm">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600" />
+              <p className="text-sm text-muted-foreground">Verificando sessão...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error && !userEmail) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <Card className="w-full max-w-sm">
@@ -161,12 +188,10 @@ export default function ResetPasswordPage() {
               <Image src="/logo.png" alt="Freejob Logo" width={60} height={60} className="rounded-full" />
             </div>
             <h2 className="text-2xl font-bold">Redefinir Senha</h2>
-            {userEmail ? (
+            {userEmail && (
               <p className="text-sm text-muted-foreground mt-2">
                 Conta: <span className="font-semibold text-foreground">{userEmail}</span>
               </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-2">Digite sua nova senha abaixo.</p>
             )}
           </div>
 
