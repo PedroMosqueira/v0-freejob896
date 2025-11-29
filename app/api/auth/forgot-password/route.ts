@@ -145,13 +145,14 @@ export async function POST(request: NextRequest) {
     console.log("[v4] 📋 COPY THIS LINK TO TEST!")
     console.log("[v4] ==========================================")
 
-    const isProduction = process.env.VERCEL_ENV === "production"
+    const isDevelopment = process.env.NODE_ENV === "development" || process.env.VERCEL_ENV === "preview"
 
     return NextResponse.json({
       success: true,
       message: "Link de recuperação gerado!",
-      resetUrl: !isProduction ? resetUrl : undefined,
-      token: !isProduction ? token : undefined,
+      resetUrl: isDevelopment ? resetUrl : undefined,
+      token: isDevelopment ? token : undefined,
+      email: email, // Always return email so frontend can display it
     })
   } catch (error) {
     console.error("[v4] ========== UNEXPECTED ERROR ==========")
