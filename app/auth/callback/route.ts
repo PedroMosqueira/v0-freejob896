@@ -12,12 +12,14 @@ export async function GET(request: NextRequest) {
 
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const tokenHash = requestUrl.searchParams.get("token_hash")
   const error = requestUrl.searchParams.get("error")
   const error_description = requestUrl.searchParams.get("error_description")
   const type = requestUrl.searchParams.get("type")
 
   console.log("[v0] [CALLBACK] Params:", {
     code: code ? `${code.substring(0, 10)}...` : null,
+    tokenHash: tokenHash ? `${tokenHash.substring(0, 10)}...` : null,
     error,
     error_description,
     type,
@@ -36,8 +38,8 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!code) {
-    console.log("⚠️ [CALLBACK] No code parameter found, redirecting to home")
+  if (!code && !tokenHash) {
+    console.log("⚠️ [CALLBACK] No code or token_hash parameter found, redirecting to home")
     return NextResponse.redirect(new URL("/?error=Código de verificação não encontrado", requestUrl.origin))
   }
 
@@ -63,8 +65,23 @@ export async function GET(request: NextRequest) {
       },
     )
 
-    console.log("🔄 [CALLBACK] Exchanging code for session...")
-    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    let data: any
+    let exchangeError: any
+
+    if (tokenHash && type === "recovery") {
+      console.log("🔑 [CALLBACK] Processing password recovery with token_hash...")
+      const result = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: "recovery",
+      })
+      data = result.data
+      exchangeError = result.error
+    } else if (code) {
+      console.log("🔄 [CALLBACK] Exchanging code for session...")
+      const result = await supabase.auth.exchangeCodeForSession(code)
+      data = result.data
+      exchangeError = result.error
+    }
 
     if (exchangeError) {
       console.error("❌ [CALLBACK] Session exchange error:", exchangeError.message)
@@ -83,22 +100,16 @@ export async function GET(request: NextRequest) {
 
     console.log("✅ [CALLBACK] Session exchanged successfully for:", data.user.email)
 
-    const isPasswordRecovery =
-      type === "recovery" ||
-      data.user.recovery_sent_at ||
-      requestUrl.searchParams.has("recovery") ||
-      requestUrl.searchParams.has("type")
+    const isPasswordRecovery = type === "recovery" || !!tokenHash
 
     console.log("[v0] [CALLBACK] Recovery detection:", {
       type,
-      hasRecoverySentAt: !!data.user.recovery_sent_at,
-      hasRecoveryParam: requestUrl.searchParams.has("recovery"),
+      hasTokenHash: !!tokenHash,
       isPasswordRecovery,
     })
 
     if (isPasswordRecovery) {
       console.log("🔑 [CALLBACK] Password recovery flow detected, redirecting to reset page")
-
       return NextResponse.redirect(new URL("/auth/reset-password", requestUrl.origin))
     }
 
@@ -143,7 +154,7 @@ export async function GET(request: NextRequest) {
         .insert({
           id: data.user.id,
           email: data.user.email,
-          password_hash: null, // No password needed - use Supabase Auth
+          password_hash: null,
           created_at: new Date().toISOString(),
         })
         .select()
@@ -175,7 +186,7 @@ export async function GET(request: NextRequest) {
     )
 
     if (data.session) {
-      const maxAge = 100 * 365 * 24 * 60 * 60 // 100 years, never expires
+      const maxAge = 100 * 365 * 24 * 60 * 60
       response.cookies.set("sb-access-token", data.session.access_token, {
         path: "/",
         httpOnly: true,
