@@ -34,14 +34,35 @@ export default function ResetPasswordPage() {
         error: sessionError,
       } = await supabase.auth.getSession()
 
-      console.log("[v0] Reset Password Page - Checking session")
-      console.log("[v0] Session exists:", !!session)
-      console.log("[v0] User email:", session?.user?.email)
+      console.log("[v0] Reset Password - Session check:", {
+        hasSession: !!session,
+        email: session?.user?.email,
+        error: sessionError?.message,
+      })
+
+      if (!session && !sessionError) {
+        console.log("[v0] Waiting for session to be established...")
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        const {
+          data: { session: retrySession },
+        } = await supabase.auth.getSession()
+
+        if (retrySession) {
+          setUserEmail(retrySession.user.email || "")
+          setIsLoading(false)
+          return
+        }
+      }
 
       if (sessionError || !session) {
         console.error("[v0] No valid session found:", sessionError)
         setError("Sessão inválida ou expirada. Solicite um novo link de recuperação.")
         setIsLoading(false)
+
+        setTimeout(() => {
+          router.push("/?message=Link de recuperação expirado. Solicite um novo link.")
+        }, 3000)
         return
       }
 
@@ -50,7 +71,7 @@ export default function ResetPasswordPage() {
     }
 
     checkSession()
-  }, [])
+  }, [router])
 
   const checkPasswordStrength = (password: string) => {
     let score = 0
@@ -111,7 +132,6 @@ export default function ResetPasswordPage() {
       console.log("[v0] Password updated successfully")
       setSuccess(true)
 
-      // Aguarda 3 segundos e redireciona para login
       setTimeout(() => {
         router.push("/?message=Senha redefinida com sucesso! Faça login com sua nova senha.")
       }, 3000)

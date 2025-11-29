@@ -84,7 +84,10 @@ export async function GET(request: NextRequest) {
     console.log("✅ [CALLBACK] Session exchanged successfully for:", data.user.email)
 
     const isPasswordRecovery =
-      type === "recovery" || data.user.recovery_sent_at || requestUrl.searchParams.has("recovery")
+      type === "recovery" ||
+      data.user.recovery_sent_at ||
+      requestUrl.searchParams.has("recovery") ||
+      requestUrl.searchParams.has("type")
 
     console.log("[v0] [CALLBACK] Recovery detection:", {
       type,
@@ -96,28 +99,7 @@ export async function GET(request: NextRequest) {
     if (isPasswordRecovery) {
       console.log("🔑 [CALLBACK] Password recovery flow detected, redirecting to reset page")
 
-      const response = NextResponse.redirect(new URL("/auth/reset-password", requestUrl.origin))
-
-      if (data.session) {
-        const maxAge = 60 * 60 // 1 hora para reset de senha
-        response.cookies.set("sb-access-token", data.session.access_token, {
-          path: "/",
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: maxAge,
-        })
-        response.cookies.set("sb-refresh-token", data.session.refresh_token, {
-          path: "/",
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: maxAge,
-        })
-        console.log("✅ [CALLBACK] Temporary session cookies set for password reset")
-      }
-
-      return response
+      return NextResponse.redirect(new URL("/auth/reset-password", requestUrl.origin))
     }
 
     console.log("[v0] [CALLBACK] Creating user in custom users table...")
