@@ -27,9 +27,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
 
     const trimmedEmail = email.trim()
 
-    console.log("[v0] ==========================================")
     console.log("[v0] Attempting to send reset email for:", trimmedEmail)
-    console.log("[v0] ==========================================")
 
     if (!trimmedEmail || !trimmedEmail.includes("@")) {
       setError("Por favor, insira um email válido.")
@@ -38,8 +36,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
     }
 
     try {
-      console.log("[v0] Calling /api/auth/forgot-password")
-
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,50 +47,21 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       const data = await response.json()
       console.log("[v0] Response data:", JSON.stringify(data, null, 2))
 
-      console.log("[v0] 🔍 DEBUG - Verificando campos da resposta:")
-      console.log("[v0]   - data.success:", data.success)
-      console.log("[v0]   - data.resetUrl:", data.resetUrl)
-      console.log("[v0]   - data.token:", data.token)
-      console.log("[v0]   - data.message:", data.message)
-
       if (data.success) {
-        console.log("[v0] ==========================================")
         console.log("[v0] ✅ SUCCESS!")
 
         if (data.resetUrl) {
-          console.log("[v0] 🔗 Reset URL:", data.resetUrl)
-          console.log("[v0] 🔑 Token:", data.token)
-          console.log("[v0] ==========================================")
+          console.log("[v0] Reset URL:", data.resetUrl)
           setResetUrl(data.resetUrl)
-
-          alert(`Link de reset gerado!\n\nCopie e cole no navegador:\n\n${data.resetUrl}`)
-        } else {
-          console.log("[v0] ⚠️ No resetUrl in response (production mode)")
-          console.log("[v0] ==========================================")
         }
         setSuccess(true)
       } else {
         const errorMsg = data.message || "Erro ao solicitar recuperação de senha."
-        console.error("[v0] ❌ Error from API:", errorMsg)
-
-        let detailedError = errorMsg
-
-        if (data.errorDetails) {
-          console.error("[v0] Error details:", data.errorDetails)
-          detailedError += `\n\nDetalhes técnicos:\nCódigo: ${data.errorDetails.code}\nMensagem: ${data.errorDetails.message}`
-          if (data.errorDetails.hint) {
-            detailedError += `\nDica: ${data.errorDetails.hint}`
-          }
-        }
-
-        if (data.debug) {
-          console.error("[v0] Debug info:", data.debug)
-        }
-
-        setError(detailedError)
+        console.error("[v0] Error from API:", errorMsg)
+        setError(errorMsg)
       }
     } catch (err) {
-      console.error("[v0] ❌ Fetch error:", err)
+      console.error("[v0] Fetch error:", err)
       setError("Erro ao processar solicitação. Tente novamente.")
     } finally {
       setIsSubmitting(false)
@@ -109,22 +76,15 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
             <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-bold">Link Gerado!</h2>
+            <h2 className="text-xl font-bold">Email Enviado!</h2>
             <p className="text-sm text-muted-foreground">
-              {resetUrl ? (
-                <>Link de recuperação gerado com sucesso. Use o link abaixo para redefinir sua senha.</>
-              ) : (
-                <>
-                  Se o email <strong>{email}</strong> estiver cadastrado, você receberá um link para redefinir sua
-                  senha.
-                </>
-              )}
+              Um link de recuperação foi enviado para <strong>{email}</strong>. Verifique sua caixa de entrada e spam.
             </p>
 
             {resetUrl && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                <h3 className="font-semibold text-sm text-blue-900 mb-2">Link de Recuperação</h3>
-                <p className="text-xs text-blue-800 mb-2">Clique no link ou copie e cole no navegador:</p>
+                <h3 className="font-semibold text-sm text-blue-900 mb-2">Link de Backup</h3>
+                <p className="text-xs text-blue-800 mb-2">Caso não receba o email, use este link:</p>
                 <div className="bg-white border border-blue-300 rounded p-2 mb-3">
                   <a
                     href={resetUrl}
