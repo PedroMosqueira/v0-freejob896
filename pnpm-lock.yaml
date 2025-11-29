@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@auth/core':
         specifier: latest
-        version: 0.34.3(nodemailer@7.0.10)
+        version: 0.34.3(nodemailer@7.0.11)
       '@radix-ui/react-dialog':
         specifier: latest
         version: 1.1.15(@types/react-dom@18.0.0)(@types/react@18.0.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -40,10 +40,10 @@ importers:
         version: 1.2.15(@types/react-dom@18.0.0)(@types/react@18.0.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@supabase/ssr':
         specifier: latest
-        version: 0.7.0(@supabase/supabase-js@2.84.0)
+        version: 0.8.0(@supabase/supabase-js@2.86.0)
       '@supabase/supabase-js':
         specifier: latest
-        version: 2.84.0
+        version: 2.86.0
       bcryptjs:
         specifier: latest
         version: 3.0.3
@@ -56,6 +56,9 @@ importers:
       cmdk:
         specifier: ^1.0.0
         version: 1.0.0(@types/react-dom@18.0.0)(@types/react@18.0.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      crypto:
+        specifier: latest
+        version: 1.0.1
       lucide-react:
         specifier: ^0.454.0
         version: 0.454.0(react@18.2.0)
@@ -64,13 +67,13 @@ importers:
         version: 14.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       next-auth:
         specifier: latest
-        version: 4.24.13(@auth/core@0.34.3(nodemailer@7.0.10))(next@14.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(nodemailer@7.0.10)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 4.24.13(@auth/core@0.34.3(nodemailer@7.0.11))(next@14.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(nodemailer@7.0.11)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       next-themes:
         specifier: 0.4.6
         version: 0.4.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       nodemailer:
         specifier: latest
-        version: 7.0.10
+        version: 7.0.11
       react:
         specifier: ^18.2.0
         version: 18.2.0
@@ -894,33 +897,33 @@ packages:
   '@rushstack/eslint-patch@1.15.0':
     resolution: {integrity: sha512-ojSshQPKwVvSMR8yT2L/QtUkV5SXi/IfDiJ4/8d6UbTPjiHVmxZzUAzGD8Tzks1b9+qQkZa0isUOvYObedITaw==}
 
-  '@supabase/auth-js@2.84.0':
-    resolution: {integrity: sha512-J6XKbqqg1HQPMfYkAT9BrC8anPpAiifl7qoVLsYhQq5B/dnu/lxab1pabnxtJEsvYG5rwI5HEVEGXMjoQ6Wz2Q==}
+  '@supabase/auth-js@2.86.0':
+    resolution: {integrity: sha512-3xPqMvBWC6Haqpr6hEWmSUqDq+6SA1BAEdbiaHdAZM9QjZ5uiQJ+6iD9pZOzOa6MVXZh4GmwjhC9ObIG0K1NcA==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/functions-js@2.84.0':
-    resolution: {integrity: sha512-2oY5QBV4py/s64zMlhPEz+4RTdlwxzmfhM1k2xftD2v1DruRZKfoe7Yn9DCz1VondxX8evcvpc2udEIGzHI+VA==}
+  '@supabase/functions-js@2.86.0':
+    resolution: {integrity: sha512-AlOoVfeaq9XGlBFIyXTmb+y+CZzxNO4wWbfgRM6iPpNU5WCXKawtQYSnhivi3UVxS7GA0rWovY4d6cIAxZAojA==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/postgrest-js@2.84.0':
-    resolution: {integrity: sha512-oplc/3jfJeVW4F0J8wqywHkjIZvOVHtqzF0RESijepDAv5Dn/LThlGW1ftysoP4+PXVIrnghAbzPHo88fNomPQ==}
+  '@supabase/postgrest-js@2.86.0':
+    resolution: {integrity: sha512-QVf+wIXILcZJ7IhWhWn+ozdf8B+oO0Ulizh2AAPxD/6nQL+x3r9lJ47a+fpc/jvAOGXMbkeW534Kw6jz7e8iIA==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/realtime-js@2.84.0':
-    resolution: {integrity: sha512-ThqjxiCwWiZAroHnYPmnNl6tZk6jxGcG2a7Hp/3kcolPcMj89kWjUTA3cHmhdIWYsP84fHp8MAQjYWMLf7HEUg==}
+  '@supabase/realtime-js@2.86.0':
+    resolution: {integrity: sha512-dyS8bFoP29R/sj5zLi0AP3JfgG8ar1nuImcz5jxSx7UIW7fbFsXhUCVrSY2Ofo0+Ev6wiATiSdBOzBfWaiFyPA==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/ssr@0.7.0':
-    resolution: {integrity: sha512-G65t5EhLSJ5c8hTCcXifSL9Q/ZRXvqgXeNo+d3P56f4U1IxwTqjB64UfmfixvmMcjuxnq2yGqEWVJqUcO+AzAg==}
+  '@supabase/ssr@0.8.0':
+    resolution: {integrity: sha512-/PKk8kNFSs8QvvJ2vOww1mF5/c5W8y42duYtXvkOSe+yZKRgTTZywYG2l41pjhNomqESZCpZtXuWmYjFRMV+dw==}
     peerDependencies:
-      '@supabase/supabase-js': ^2.43.4
+      '@supabase/supabase-js': ^2.76.1
 
-  '@supabase/storage-js@2.84.0':
-    resolution: {integrity: sha512-vXvAJ1euCuhryOhC6j60dG8ky+lk0V06ubNo+CbhuoUv+sl39PyY0lc+k+qpQhTk/VcI6SiM0OECLN83+nyJ5A==}
+  '@supabase/storage-js@2.86.0':
+    resolution: {integrity: sha512-PM47jX/Mfobdtx7NNpoj9EvlrkapAVTQBZgGGslEXD6NS70EcGjhgRPBItwHdxZPM5GwqQ0cGMN06uhjeY2mHQ==}
     engines: {node: '>=20.0.0'}
 
-  '@supabase/supabase-js@2.84.0':
-    resolution: {integrity: sha512-byMqYBvb91sx2jcZsdp0qLpmd4Dioe80e4OU/UexXftCkpTcgrkoENXHf5dO8FCSai8SgNeq16BKg10QiDI6xg==}
+  '@supabase/supabase-js@2.86.0':
+    resolution: {integrity: sha512-BaC9sv5+HGNy1ulZwY8/Ev7EjfYYmWD4fOMw9bDBqTawEj6JHAiOHeTwXLRzVaeSay4p17xYLN2NSCoGgXMQnw==}
     engines: {node: '>=20.0.0'}
 
   '@swc/helpers@0.5.2':
@@ -1311,6 +1314,10 @@ packages:
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
+
+  crypto@1.0.1:
+    resolution: {integrity: sha512-VxBKmeNcqQdiUQUW2Tzq0t377b54N2bMtXO/qiLa+6eRRmmC4qT3D4OnTGoT/U6O9aklQ/jTwbOtRMTTY8G0Ig==}
+    deprecated: This package is no longer supported. It's now a built-in Node module. If you've depended on crypto, you should switch to the one that's built-in.
 
   cssesc@3.0.0:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
@@ -1720,6 +1727,10 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
+  iceberg-js@0.8.0:
+    resolution: {integrity: sha512-kmgmea2nguZEvRqW79gDqNXyxA3OS5WIgMVffrHpqXV4F/J4UmNIw2vstixioLTNSkd5rFB8G0s3Lwzogm6OFw==}
+    engines: {node: '>=20.0.0'}
+
   ignore@4.0.6:
     resolution: {integrity: sha512-cyFDKrqc/YdcWFniJhzI42+AzS+gNwmUzOSFcRCQYwySuBBBy/KjuxWLZ/FHEH6Moq1NizMOBWyTcv8O4OZIMg==}
     engines: {node: '>= 4'}
@@ -2033,8 +2044,8 @@ packages:
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
-  nodemailer@7.0.10:
-    resolution: {integrity: sha512-Us/Se1WtT0ylXgNFfyFSx4LElllVLJXQjWi2Xz17xWw7amDKO2MLtFnVp1WACy7GkVGs+oBlRopVNUzlrGSw1w==}
+  nodemailer@7.0.11:
+    resolution: {integrity: sha512-gnXhNRE0FNhD7wPSCGhdNh46Hs6nm+uTyg+Kq0cZukNQiYdnCsoQjodNP9BQVG9XrcK/v6/MgpAPBUFyzh9pvw==}
     engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
@@ -2676,7 +2687,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@auth/core@0.34.3(nodemailer@7.0.10)':
+  '@auth/core@0.34.3(nodemailer@7.0.11)':
     dependencies:
       '@panva/hkdf': 1.2.1
       '@types/cookie': 0.6.0
@@ -2686,7 +2697,7 @@ snapshots:
       preact: 10.11.3
       preact-render-to-string: 5.2.3(preact@10.11.3)
     optionalDependencies:
-      nodemailer: 7.0.10
+      nodemailer: 7.0.11
 
   '@babel/runtime@7.28.4': {}
 
@@ -3418,19 +3429,19 @@ snapshots:
 
   '@rushstack/eslint-patch@1.15.0': {}
 
-  '@supabase/auth-js@2.84.0':
+  '@supabase/auth-js@2.86.0':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/functions-js@2.84.0':
+  '@supabase/functions-js@2.86.0':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/postgrest-js@2.84.0':
+  '@supabase/postgrest-js@2.86.0':
     dependencies:
       tslib: 2.8.1
 
-  '@supabase/realtime-js@2.84.0':
+  '@supabase/realtime-js@2.86.0':
     dependencies:
       '@types/phoenix': 1.6.6
       '@types/ws': 8.18.1
@@ -3440,22 +3451,23 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@supabase/ssr@0.7.0(@supabase/supabase-js@2.84.0)':
+  '@supabase/ssr@0.8.0(@supabase/supabase-js@2.86.0)':
     dependencies:
-      '@supabase/supabase-js': 2.84.0
+      '@supabase/supabase-js': 2.86.0
       cookie: 1.0.2
 
-  '@supabase/storage-js@2.84.0':
+  '@supabase/storage-js@2.86.0':
     dependencies:
+      iceberg-js: 0.8.0
       tslib: 2.8.1
 
-  '@supabase/supabase-js@2.84.0':
+  '@supabase/supabase-js@2.86.0':
     dependencies:
-      '@supabase/auth-js': 2.84.0
-      '@supabase/functions-js': 2.84.0
-      '@supabase/postgrest-js': 2.84.0
-      '@supabase/realtime-js': 2.84.0
-      '@supabase/storage-js': 2.84.0
+      '@supabase/auth-js': 2.86.0
+      '@supabase/functions-js': 2.86.0
+      '@supabase/postgrest-js': 2.86.0
+      '@supabase/realtime-js': 2.86.0
+      '@supabase/storage-js': 2.86.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -3843,6 +3855,8 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  crypto@1.0.1: {}
 
   cssesc@3.0.0: {}
 
@@ -4404,6 +4418,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  iceberg-js@0.8.0: {}
+
   ignore@4.0.6: {}
 
   ignore@5.3.2: {}
@@ -4668,7 +4684,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-auth@4.24.13(@auth/core@0.34.3(nodemailer@7.0.10))(next@14.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(nodemailer@7.0.10)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  next-auth@4.24.13(@auth/core@0.34.3(nodemailer@7.0.11))(next@14.1.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(nodemailer@7.0.11)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
       '@babel/runtime': 7.28.4
       '@panva/hkdf': 1.2.1
@@ -4683,8 +4699,8 @@ snapshots:
       react-dom: 18.2.0(react@18.2.0)
       uuid: 8.3.2
     optionalDependencies:
-      '@auth/core': 0.34.3(nodemailer@7.0.10)
-      nodemailer: 7.0.10
+      '@auth/core': 0.34.3(nodemailer@7.0.11)
+      nodemailer: 7.0.11
 
   next-themes@0.4.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
@@ -4718,7 +4734,7 @@ snapshots:
 
   node-releases@2.0.27: {}
 
-  nodemailer@7.0.10: {}
+  nodemailer@7.0.11: {}
 
   normalize-path@3.0.0: {}
 

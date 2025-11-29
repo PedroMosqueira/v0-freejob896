@@ -18,6 +18,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [resetUrl, setResetUrl] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,6 +27,10 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
 
     const trimmedEmail = email.trim()
 
+    console.log("[v0] ==========================================")
+    console.log("[v0] Attempting to send reset email for:", trimmedEmail)
+    console.log("[v0] ==========================================")
+
     if (!trimmedEmail || !trimmedEmail.includes("@")) {
       setError("Por favor, insira um email válido.")
       setIsSubmitting(false)
@@ -33,20 +38,63 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
     }
 
     try {
+      console.log("[v0] Calling /api/auth/forgot-password")
+
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: trimmedEmail }),
       })
 
+      console.log("[v0] Response status:", response.status)
+
       const data = await response.json()
+      console.log("[v0] Response data:", JSON.stringify(data, null, 2))
+
+      console.log("[v0] 🔍 DEBUG - Verificando campos da resposta:")
+      console.log("[v0]   - data.success:", data.success)
+      console.log("[v0]   - data.resetUrl:", data.resetUrl)
+      console.log("[v0]   - data.token:", data.token)
+      console.log("[v0]   - data.message:", data.message)
 
       if (data.success) {
+        console.log("[v0] ==========================================")
+        console.log("[v0] ✅ SUCCESS!")
+
+        if (data.resetUrl) {
+          console.log("[v0] 🔗 Reset URL:", data.resetUrl)
+          console.log("[v0] 🔑 Token:", data.token)
+          console.log("[v0] ==========================================")
+          setResetUrl(data.resetUrl)
+
+          alert(`Link de reset gerado!\n\nCopie e cole no navegador:\n\n${data.resetUrl}`)
+        } else {
+          console.log("[v0] ⚠️ No resetUrl in response (production mode)")
+          console.log("[v0] ==========================================")
+        }
         setSuccess(true)
       } else {
-        setError(data.message || "Erro ao solicitar recuperação de senha.")
+        const errorMsg = data.message || "Erro ao solicitar recuperação de senha."
+        console.error("[v0] ❌ Error from API:", errorMsg)
+
+        let detailedError = errorMsg
+
+        if (data.errorDetails) {
+          console.error("[v0] Error details:", data.errorDetails)
+          detailedError += `\n\nDetalhes técnicos:\nCódigo: ${data.errorDetails.code}\nMensagem: ${data.errorDetails.message}`
+          if (data.errorDetails.hint) {
+            detailedError += `\nDica: ${data.errorDetails.hint}`
+          }
+        }
+
+        if (data.debug) {
+          console.error("[v0] Debug info:", data.debug)
+        }
+
+        setError(detailedError)
       }
     } catch (err) {
+      console.error("[v0] ❌ Fetch error:", err)
       setError("Erro ao processar solicitação. Tente novamente.")
     } finally {
       setIsSubmitting(false)
@@ -61,19 +109,44 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
             <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-bold">Email Enviado!</h2>
+            <h2 className="text-xl font-bold">Link Gerado!</h2>
             <p className="text-sm text-muted-foreground">
-              Se o email <strong>{email}</strong> estiver cadastrado, você receberá um link para redefinir sua senha.
+              {resetUrl ? (
+                <>Link de recuperação gerado com sucesso. Use o link abaixo para redefinir sua senha.</>
+              ) : (
+                <>
+                  Se o email <strong>{email}</strong> estiver cadastrado, você receberá um link para redefinir sua
+                  senha.
+                </>
+              )}
             </p>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-              <h3 className="font-semibold text-sm text-blue-900 mb-2">Não recebeu o email?</h3>
-              <ul className="text-xs text-blue-800 space-y-1 list-disc ml-4">
-                <li>Verifique sua pasta de Spam/Lixo Eletrônico</li>
-                <li>Aguarde até 5 minutos</li>
-                <li>Certifique-se de que digitou o email correto</li>
-              </ul>
-            </div>
+            {resetUrl && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-sm text-blue-900 mb-2">Link de Recuperação</h3>
+                <p className="text-xs text-blue-800 mb-2">Clique no link ou copie e cole no navegador:</p>
+                <div className="bg-white border border-blue-300 rounded p-2 mb-3">
+                  <a
+                    href={resetUrl}
+                    className="text-xs break-all text-blue-600 hover:text-blue-800 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {resetUrl}
+                  </a>
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetUrl)
+                    alert("Link copiado para a área de transferência!")
+                  }}
+                >
+                  Copiar Link
+                </Button>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Button onClick={onBack} className="w-full bg-blue-600 hover:bg-blue-600/90">
@@ -83,6 +156,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
                 onClick={() => {
                   setSuccess(false)
                   setEmail("")
+                  setResetUrl("")
                 }}
                 variant="outline"
                 className="w-full"

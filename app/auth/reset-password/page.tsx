@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Loader2, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import Image from "next/image"
 
 export default function ResetPasswordPage() {
@@ -20,14 +19,31 @@ export default function ResetPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [hasToken, setHasToken] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [userEmail, setUserEmail] = useState<string>("")
 
   useEffect(() => {
-    const token = searchParams?.get("access_token") || searchParams?.get("token")
-    setHasToken(!!token)
+    const tokenParam = searchParams.get("token")
+    const emailParam = searchParams.get("email")
 
-    if (!token) {
-      setError("Link inválido ou expirado. Solicite um novo link de recuperação.")
+    console.log("[v0] 🔐 Reset Password Page - Token:", tokenParam)
+    console.log("[v0] 📧 Reset Password Page - Email:", emailParam)
+
+    if (!tokenParam) {
+      setError("Link de recuperação inválido. Solicite um novo link.")
+      return
+    }
+
+    setToken(tokenParam)
+
+    if (emailParam) {
+      const decodedEmail = decodeURIComponent(emailParam)
+      setUserEmail(decodedEmail)
+      document.title = `Reset: ${decodedEmail} - Freejob`
+      console.log("[v0] ✅ Email definido:", decodedEmail)
+    } else {
+      console.log("[v0] ⚠️ Email não encontrado na URL")
+      document.title = "Redefinir Senha - Freejob"
     }
   }, [searchParams])
 
@@ -74,7 +90,7 @@ export default function ResetPasswordPage() {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password, confirmPassword }),
+        body: JSON.stringify({ password, token }),
       })
 
       const data = await response.json()
@@ -92,6 +108,27 @@ export default function ResetPasswordPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-sm">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold">Link Inválido</h2>
+              <p className="text-sm text-muted-foreground">{error}</p>
+              <Button onClick={() => router.push("/")} className="w-full">
+                Voltar ao Início
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   if (success) {
@@ -124,91 +161,83 @@ export default function ResetPasswordPage() {
               <Image src="/logo.png" alt="Freejob Logo" width={60} height={60} className="rounded-full" />
             </div>
             <h2 className="text-2xl font-bold">Redefinir Senha</h2>
-            <p className="text-sm text-muted-foreground mt-1">Digite sua nova senha abaixo.</p>
+            {userEmail ? (
+              <p className="text-sm text-muted-foreground mt-2">
+                Conta: <span className="font-semibold text-foreground">{userEmail}</span>
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-2">Digite sua nova senha abaixo.</p>
+            )}
           </div>
 
-          {!hasToken ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-              <AlertTriangle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-              <p className="text-sm text-red-800">{error}</p>
-              <Button onClick={() => router.push("/")} className="mt-4 w-full bg-blue-600 hover:bg-blue-600/90">
-                Voltar ao Login
-              </Button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="grid gap-4">
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-red-800">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-2">
-                <Label htmlFor="password">Nova Senha</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Digite sua nova senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-                <div className="mt-1">
-                  <Progress value={passwordStrength.score} className="h-2" />
-                  <p
-                    className="text-sm mt-1"
-                    style={{
-                      color: passwordStrength.score < 40 ? "red" : passwordStrength.score < 70 ? "orange" : "green",
-                    }}
-                  >
-                    Força: {passwordStrength.text}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    A senha deve ter pelo menos 8 caracteres e incluir letras maiúsculas, minúsculas, números e
-                    símbolos.
-                  </p>
-                </div>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                <p className="text-sm text-red-800">{error}</p>
               </div>
+            )}
 
-              <div className="grid gap-2">
-                <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="Confirme sua nova senha"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-600/90" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redefinindo...
-                  </>
-                ) : (
-                  "Redefinir Senha"
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                variant="link"
-                className="w-full text-sm text-blue-600"
-                onClick={() => router.push("/")}
+            <div className="grid gap-2">
+              <Label htmlFor="password">Nova Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Digite sua nova senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 disabled={isSubmitting}
-              >
-                Voltar ao Login
-              </Button>
-            </form>
-          )}
+              />
+              <div className="mt-1">
+                <Progress value={passwordStrength.score} className="h-2" />
+                <p
+                  className="text-sm mt-1"
+                  style={{
+                    color: passwordStrength.score < 40 ? "red" : passwordStrength.score < 60 ? "orange" : "green",
+                  }}
+                >
+                  Força: {passwordStrength.text}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A senha deve ter pelo menos 8 caracteres e incluir letras maiúsculas, minúsculas, números e símbolos.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Confirme sua nova senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-600/90" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Redefinindo...
+                </>
+              ) : (
+                "Redefinir Senha"
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="link"
+              className="w-full text-sm text-blue-600"
+              onClick={() => router.push("/")}
+              disabled={isSubmitting}
+            >
+              Voltar ao Login
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>

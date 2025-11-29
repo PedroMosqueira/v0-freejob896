@@ -3,7 +3,9 @@ import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  // [v0] Adding debug logs to track callback flow
+  console.log("🚨🚨🚨 [CALLBACK] ============================================")
+  console.log("🚨🚨🚨 [CALLBACK] CALLBACK ROUTE ACCESSED!")
+  console.log("🚨🚨🚨 [CALLBACK] ============================================")
   console.log("[v0] Callback route accessed")
   console.log("🔗 [CALLBACK] Email verification callback accessed")
   console.log("🌐 [CALLBACK] Request URL:", request.url)
@@ -12,17 +14,19 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code")
   const error = requestUrl.searchParams.get("error")
   const error_description = requestUrl.searchParams.get("error_description")
+  const type = requestUrl.searchParams.get("type")
 
   console.log("[v0] [CALLBACK] Params:", {
     code: code ? `${code.substring(0, 10)}...` : null,
     error,
     error_description,
+    type,
+    allParams: Object.fromEntries(requestUrl.searchParams.entries()),
   })
 
   if (error) {
     console.error("❌ [CALLBACK] Email verification error:", error, error_description)
 
-    // Handle specific error cases
     if (error === "access_denied" && error_description?.includes("expired")) {
       return NextResponse.redirect(new URL("/?error=Link expirado. Faça um novo cadastro.", requestUrl.origin))
     }
@@ -41,7 +45,6 @@ export async function GET(request: NextRequest) {
     console.log("🔧 [CALLBACK] Creating Supabase client...")
     const cookieStore = cookies()
 
-    // Use anon key for auth operations
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -66,9 +69,8 @@ export async function GET(request: NextRequest) {
     if (exchangeError) {
       console.error("❌ [CALLBACK] Session exchange error:", exchangeError.message)
 
-      // Handle expired code specifically
       if (exchangeError.message.includes("expired") || exchangeError.message.includes("invalid")) {
-        return NextResponse.redirect(new URL("/?error=Link expirado. Faça um novo cadastro.", requestUrl.origin))
+        return NextResponse.redirect(new URL("/?error=Link expirado. Solicite um novo link.", requestUrl.origin))
       }
 
       return NextResponse.redirect(new URL(`/?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin))
@@ -79,12 +81,48 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/?error=Dados do usuário não encontrados", requestUrl.origin))
     }
 
-    console.log("✅ [CALLBACK] Email verified successfully for:", data.user.email)
+    console.log("✅ [CALLBACK] Session exchanged successfully for:", data.user.email)
+
+    const isPasswordRecovery =
+      type === "recovery" || data.user.recovery_sent_at || requestUrl.searchParams.has("recovery")
+
+    console.log("[v0] [CALLBACK] Recovery detection:", {
+      type,
+      hasRecoverySentAt: !!data.user.recovery_sent_at,
+      hasRecoveryParam: requestUrl.searchParams.has("recovery"),
+      isPasswordRecovery,
+    })
+
+    if (isPasswordRecovery) {
+      console.log("🔑 [CALLBACK] Password recovery flow detected, redirecting to reset page")
+
+      const response = NextResponse.redirect(new URL("/auth/reset-password", requestUrl.origin))
+
+      if (data.session) {
+        const maxAge = 60 * 60 // 1 hora para reset de senha
+        response.cookies.set("sb-access-token", data.session.access_token, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: maxAge,
+        })
+        response.cookies.set("sb-refresh-token", data.session.refresh_token, {
+          path: "/",
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: maxAge,
+        })
+        console.log("✅ [CALLBACK] Temporary session cookies set for password reset")
+      }
+
+      return response
+    }
 
     console.log("[v0] [CALLBACK] Creating user in custom users table...")
     console.log("[v0] User data to insert:", { id: data.user.id, email: data.user.email })
 
-    // Create service role client for database operations
     const serviceSupabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -103,7 +141,6 @@ export async function GET(request: NextRequest) {
       },
     )
 
-    // Check if user already exists in custom table
     const { data: existingUser, error: checkError } = await serviceSupabase
       .from("users")
       .select("id")
@@ -155,7 +192,6 @@ export async function GET(request: NextRequest) {
       ),
     )
 
-    // Set the session cookies
     if (data.session) {
       const maxAge = 100 * 365 * 24 * 60 * 60 // 100 years, never expires
       response.cookies.set("sb-access-token", data.session.access_token, {

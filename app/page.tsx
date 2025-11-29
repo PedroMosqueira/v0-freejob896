@@ -15,22 +15,47 @@ import RegisterForm from "@/components/register-form"
 import { useToast } from "@/hooks/use-toast"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import ForgotPasswordForm from "@/components/forgot-password-form"
 
 export default function Home() {
   const { email: authenticatedEmail, login, isLoading } = useAuth()
   const { toast } = useToast()
   const searchParams = useSearchParams()
+  const router = useRouter()
 
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [isForgotPassword, setIsForgotPassword] = useState(false)
-  const [activeTab, setActiveTab] = useState("procurar")
-  const [showFilters, setShowFilters] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+  useEffect(() => {
+    const checkRecoverySession = async () => {
+      // Nosso sistema customizado usa tokens na URL que vão direto para /auth/reset-password
+    }
+
+    // Não executar mais essa verificação
+    // checkRecoverySession()
+  }, [router])
+
+  useEffect(() => {
+    const currentUrl = window.location.href
+    // NÃO redirecionar se tiver "token" (nosso sistema customizado de reset)
+    const code = searchParams?.get("code")
+    const type = searchParams?.get("type")
+
+    console.log("[v0] ========== PAGE LOAD ==========")
+    console.log("[v0] Current URL:", currentUrl)
+    console.log("[v0] Code param:", code)
+    console.log("[v0] Type param:", type)
+    console.log("[v0] All search params:", Object.fromEntries(searchParams?.entries() || []))
+
+    if (code) {
+      console.log("[v0] 🚨🚨🚨 CODE DETECTED - REDIRECTING TO CALLBACK 🚨🚨🚨")
+      const params = new URLSearchParams(window.location.search)
+      const callbackUrl = `/auth/callback?${params.toString()}`
+      console.log("[v0] Redirecting to:", callbackUrl)
+      window.location.href = callbackUrl
+      return
+    }
+
+    console.log("[v0] No code detected, staying on main page")
+  }, [searchParams])
 
   useEffect(() => {
     if (!authenticatedEmail) return
@@ -61,6 +86,15 @@ export default function Home() {
 
     return () => window.removeEventListener("scroll", handleScroll)
   }, [authenticatedEmail])
+
+  const [loginEmail, setLoginEmail] = useState("")
+  const [loginPassword, setLoginPassword] = useState("")
+  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
+  const [activeTab, setActiveTab] = useState("procurar")
+  const [showFilters, setShowFilters] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
