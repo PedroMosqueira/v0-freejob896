@@ -34,21 +34,20 @@ export default function Home() {
   }, [router])
 
   useEffect(() => {
-    const currentUrl = window.location.href
-    // NÃO redirecionar se tiver "token" (nosso sistema customizado de reset)
     const code = searchParams?.get("code")
     const type = searchParams?.get("type")
 
     console.log("[v0] ========== PAGE LOAD ==========")
-    console.log("[v0] Current URL:", currentUrl)
+    console.log("[v0] Current URL:", window.location.href)
     console.log("[v0] Code param:", code)
     console.log("[v0] Type param:", type)
     console.log("[v0] All search params:", Object.fromEntries(searchParams?.entries() || []))
 
+    // Apenas redirecionar se tiver code nos QUERY PARAMS (não no hash)
     if (code) {
-      console.log("[v0] 🚨🚨🚨 CODE DETECTED - REDIRECTING TO CALLBACK 🚨🚨🚨")
+      console.log("[v0] 🚨 CODE DETECTED - REDIRECTING TO API CALLBACK 🚨")
       const params = new URLSearchParams(window.location.search)
-      const callbackUrl = `/auth/callback?${params.toString()}`
+      const callbackUrl = `/api/auth/callback?${params.toString()}`
       console.log("[v0] Redirecting to:", callbackUrl)
       window.location.href = callbackUrl
       return
