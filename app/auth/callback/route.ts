@@ -3,14 +3,17 @@ import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
-  console.log("🚨🚨🚨 [CALLBACK] ============================================")
-  console.log("🚨🚨🚨 [CALLBACK] CALLBACK ROUTE ACCESSED!")
-  console.log("🚨🚨🚨 [CALLBACK] ============================================")
+  console.log("=".repeat(80))
+  console.log("CALLBACK ROUTE ACCESSED!")
+  console.log("=".repeat(80))
   console.log("[v0] Callback route accessed")
   console.log("🔗 [CALLBACK] Email verification callback accessed")
   console.log("🌐 [CALLBACK] Request URL:", request.url)
 
   const requestUrl = new URL(request.url)
+  console.log("FULL URL:", request.url)
+  console.log("ALL PARAMS:", JSON.stringify(Object.fromEntries(requestUrl.searchParams), null, 2))
+
   const code = requestUrl.searchParams.get("code")
   const tokenHash = requestUrl.searchParams.get("token_hash")
   const error = requestUrl.searchParams.get("error")
