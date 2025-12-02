@@ -95,7 +95,7 @@ export const AMAZON_PRODUCTS = {
     name: "Esmerilhadeira Lixadeira 12V Sem Fio Portátil (2 Bateria + 8 Discos)",
     price: "R$ 125,90",
     link: AFFILIATE_CONFIG.amazonProducts.esmerilhadeira,
-    image: "/produtos/esmerilhadeira.jpg",
+    image: "https://kz7olagf6boahkbe.public.blob.vercel-storage.com/ads/produtos/1764640720655-esmerilhadeira.jpg",
     category: "marceneiro",
   },
   multimetro: {
