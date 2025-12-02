@@ -88,7 +88,7 @@ export const AMAZON_PRODUCTS = {
     name: "Black+Decker Conjunto De Chaves De Fenda 42 Peças",
     price: "R$ 149,24",
     link: AFFILIATE_CONFIG.amazonProducts.conjuntoChavesFenda,
-    image: "/produtos/conjunto-chaves-fenda.jpg",
+    image: "https://kz7olagf6boahkbe.public.blob.vercel-storage.com/ads/produtos/1764640577913-conjunto-chaves-fenda.jpg",
     category: "eletricista",
   },
   esmerilhadeira: {
