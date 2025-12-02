@@ -60,7 +60,7 @@ export const AMAZON_PRODUCTS = {
     name: "Serra Mármore 2000w Cortador De Concreto 10mm KNAKASAKI",
     price: "R$ 199,50",
     link: AFFILIATE_CONFIG.amazonProducts.serraMarmore,
-    image: "/produtos/serra-marmore-knakasaki.jpg",
+    image: "https://kz7olagf6boahkbe.public.blob.vercel-storage.com/ads/produtos/1764639710312-serra-marmore-knakasaki.jpg",
     category: "pedreiro",
   },
   fitaDuplaFace: {
