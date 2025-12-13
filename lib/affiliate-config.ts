@@ -29,10 +29,10 @@ export const AFFILIATE_CONFIG = {
   amazonProducts: {
     serraMarmore:
       "https://www.amazon.com.br/Serra-M%C3%A1rmore-Cortador-Concreto-KNAKASAKI/dp/B0FRRNHGKN?__mk_pt_BR=%C3%85M%C3%85%C5%BD%C3%95%C3%91&crid=2OFH5AXYRLAWS&dib=eyJ2IjoiMSJ9.sJal-4z9FbJL43fjTMXvdfE0y7PoJYJ6acEWsPaT5O6t1GexG2iBK4UweaOj4Up2Y170UPb8_TCav3cr33zLzdYCYm-kdTsuzWn5qCN29RjRU_4pfgHMcENCfDVwK-C2vfM8nkCg7cxefr2Ixi7amIBthnTep2-dh9uNBfcUDgtvUtvYm-WZkd7K8khyDrVxZBHbANYXYhT47KWLdeNpFy_B5xgpgH-59MILfdg9x03tp_m-wuhwrZBAcuGGAHZfhmwn1lyVC8Pqmx1SsPFFclczSCo-1MQd6besvdEFxIo._eKQFIkTmxqBy8TeacW5eAfbmhYdyz1aFSlZNUxViNw&dib_tag=se&keywords=maquita+bosch+220v&qid=1763603775&sprefix=maquita+bosch+220v%2Caps%2C247&sr=8-21-spons&ufe=app_do%3Aamzn1.fos.fcd6d665-32ba-4479-9f21-b774e276a678&sp_csd=d2lkZ2V0TmFtZT1zcF9tdGY&psc=1&linkCode=ll1&tag=freejob0c-20&linkId=fe7dfef942a04be386993b1eb2f924b9&language=pt_BR&ref_=as_li_ss_tl",
-    fitaDuplaFace: "https://amzn.to/3K4pjx5",
+    fitaDuplaFace: "https://amzn.to/3KsMWUk",
     parafusadeiraWap: "https://amzn.to/3KeDy6r",
     cameraSegurancaWifi: "https://amzn.to/4oTAJa4",
-    conjuntoChavesFenda: "https://www.amazon.com.br/dp/B08XYZ123?tag=freejob0c-20",
+    conjuntoChavesFenda: "https://amzn.to/3KZqvpO",
     esmerilhadeira: "https://amzn.to/4oMGlCV",
     // Produtos ainda com links placeholder
     multimetro: "https://www.amazon.com.br/dp/B08XYZ456?tag=freejob0c-20",
