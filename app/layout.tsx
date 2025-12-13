@@ -36,22 +36,16 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  if (typeof window === 'undefined') return;
-  var originalBtoa = window.btoa;
+  var _btoa = window.btoa;
   window.btoa = function(str) {
     try {
-      return originalBtoa(str);
+      return _btoa(str);
     } catch (e) {
-      try {
-        return originalBtoa(unescape(encodeURIComponent(str)));
-      } catch (e2) {
-        console.error('[btoa error]', e2);
-        return '';
-      }
+      return _btoa(unescape(encodeURIComponent(str)));
     }
   };
 })();
-            `.trim(),
+            `,
           }}
         />
 
