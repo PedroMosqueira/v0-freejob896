@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createBrowserClient } from "@supabase/ssr"
 
 export default function CallbackPage() {
   const router = useRouter()
@@ -27,32 +26,18 @@ export default function CallbackPage() {
         })
 
         if (accessToken && type === "recovery") {
-          // Create Supabase client
-          const supabase = createBrowserClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          )
-
-          // Set the session
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken!,
-          })
-
-          if (sessionError) {
-            console.error("[v0] ❌ Session error:", sessionError)
-            setStatus("error")
-            setMessage(`Erro ao estabelecer sessão: ${sessionError.message}`)
-            return
-          }
-
-          console.log("[v0] ✅ Session established:", sessionData.session?.user?.email)
+          console.log("[v0] ✅ Recovery token found, redirecting to reset password")
           setStatus("success")
           setMessage("Redirecionando para redefinição de senha...")
 
-          // Redirect to reset password page
+          // Pass tokens in URL for reset page to handle
+          const params = new URLSearchParams({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          })
+
           setTimeout(() => {
-            router.push("/auth/reset-password")
+            router.push(`/auth/reset-password?${params.toString()}`)
           }, 1000)
         } else {
           // Check for query params (regular OAuth flow)
@@ -64,7 +49,7 @@ export default function CallbackPage() {
             setMessage("Verificando código de autenticação...")
 
             // Let server-side callback handle OAuth code
-            window.location.href = `/auth/callback?${queryParams.toString()}`
+            window.location.href = `/api/auth/callback?${queryParams.toString()}`
           } else {
             console.log("[v0] ⚠️ No valid parameters found")
             setStatus("error")
