@@ -81,14 +81,14 @@ export const AMAZON_PRODUCTS = {
     name: "Câmera De Segurança Wi-fi Externa À Prova D'água Full Hd Gira 360 Bivolt",
     price: "R$ 110,00",
     link: AFFILIATE_CONFIG.amazonProducts.cameraSegurancaWifi,
-    image: "/produtos/camera-wifi.jpg",
+    image: "/images/camera-wifi.jpg",
     category: "eletricista",
   },
   conjuntoChavesFenda: {
     name: "Black+Decker Conjunto De Chaves De Fenda 42 Peças",
     price: "R$ 149,24",
     link: AFFILIATE_CONFIG.amazonProducts.conjuntoChavesFenda,
-    image: "/produtos/conjunto-chaves-fenda.jpg",
+    image: "/images/jogo-chave.jpg",
     category: "eletricista",
   },
   esmerilhadeira: {
