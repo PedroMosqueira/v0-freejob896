@@ -36,24 +36,36 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  if (typeof window !== 'undefined' && window.btoa) {
-    var originalBtoa = window.btoa;
-    window.btoa = function(str) {
+  if (typeof window === 'undefined') return;
+  
+  var originalBtoa = window.btoa;
+  var originalAtob = window.atob;
+  
+  window.btoa = function(str) {
+    try {
+      return originalBtoa(str);
+    } catch (e) {
       try {
-        return originalBtoa(str);
-      } catch (e) {
-        if (e.name === 'InvalidCharacterError') {
-          try {
-            return originalBtoa(unescape(encodeURIComponent(str)));
-          } catch (e2) {
-            console.warn('[v0] btoa fallback also failed, returning empty string');
-            return '';
-          }
-        }
-        throw e;
+        return originalBtoa(unescape(encodeURIComponent(str)));
+      } catch (e2) {
+        console.error('[v0] btoa failed for string:', str.substring(0, 50));
+        return originalBtoa('');
       }
-    };
-  }
+    }
+  };
+  
+  window.atob = function(str) {
+    try {
+      return decodeURIComponent(escape(originalAtob(str)));
+    } catch (e) {
+      try {
+        return originalAtob(str);
+      } catch (e2) {
+        console.error('[v0] atob failed');
+        return '';
+      }
+    }
+  };
 })();
             `,
           }}
