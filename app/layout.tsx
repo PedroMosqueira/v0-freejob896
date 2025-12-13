@@ -36,18 +36,29 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
 (function() {
-  var _btoa = window.btoa;
-  window.btoa = function(str) {
-    try {
-      return _btoa(str);
-    } catch (e) {
-      return _btoa(unescape(encodeURIComponent(str)));
-    }
-  };
+  if (typeof window !== 'undefined' && window.btoa) {
+    var originalBtoa = window.btoa;
+    window.btoa = function(str) {
+      try {
+        return originalBtoa(str);
+      } catch (e) {
+        if (e.name === 'InvalidCharacterError') {
+          try {
+            return originalBtoa(unescape(encodeURIComponent(str)));
+          } catch (e2) {
+            console.warn('[v0] btoa fallback also failed, returning empty string');
+            return '';
+          }
+        }
+        throw e;
+      }
+    };
+  }
 })();
             `,
           }}
         />
+        {/* </CHANGE> */}
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#facc15" />
