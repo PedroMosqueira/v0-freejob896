@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
-    generator: 'v0.app'
+  generator: "v0.app",
 }
 
 export default async function RootLayout({
@@ -32,6 +32,29 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function() {
+  if (typeof window === 'undefined') return;
+  var originalBtoa = window.btoa;
+  window.btoa = function(str) {
+    try {
+      return originalBtoa(str);
+    } catch (e) {
+      try {
+        return originalBtoa(unescape(encodeURIComponent(str)));
+      } catch (e2) {
+        console.error('[btoa error]', e2);
+        return '';
+      }
+    }
+  };
+})();
+            `.trim(),
+          }}
+        />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#facc15" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -40,7 +63,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Freejob" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
 
-        {/* IMPORTANTE: Substitua ca-pub-XXXXXXXXXX pelo seu Publisher ID do Google AdSense */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXX"
