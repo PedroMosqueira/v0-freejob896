@@ -13,7 +13,7 @@
 - **Não atingiu a meta (< R$ 300)**: Desconto proporcional ao valor atingido
 
 [... conteúdo completo da análise ...]
-\`\`\`
+```
 
 **🗑️ Arquivos Deletados (Sistema de 13º Salário):**
 

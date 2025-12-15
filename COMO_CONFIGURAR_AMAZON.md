@@ -43,7 +43,7 @@ Para cada categoria de serviço, escolha produtos relevantes:
 
 Abra o arquivo `lib/affiliate-config.ts` e substitua:
 
-\`\`\`typescript
+```typescript
 export const AFFILIATE_CONFIG = {
   amazonTag: "sua-tag-aqui-20", // ← Cole sua tag aqui
   
@@ -53,11 +53,11 @@ export const AFFILIATE_CONFIG = {
     // ... e assim por diante
   },
 }
-\`\`\`
+```
 
 ## Exemplo Real:
 
-\`\`\`typescript
+```typescript
 export const AFFILIATE_CONFIG = {
   amazonTag: "freejob-20",
   
@@ -68,7 +68,7 @@ export const AFFILIATE_CONFIG = {
     // ...
   },
 }
-\`\`\`
+```
 
 ## Dicas:
 

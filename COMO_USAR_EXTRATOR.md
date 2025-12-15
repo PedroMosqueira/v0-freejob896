@@ -13,7 +13,7 @@ Este programa extrai automaticamente as escalas de serviço dos Boletins Interno
 
 ### Opção 1: Processar um único arquivo
 
-\`\`\`python
+```python
 from scripts.extrair_escalas_servico import processar_arquivo_boletim, salvar_escalas_extraidas
 
 # Processar um boletim
@@ -21,11 +21,11 @@ escalas = processar_arquivo_boletim("caminho/para/boletim.txt")
 
 # Salvar resultados
 salvar_escalas_extraidas(escalas, "escalas_extraidas.txt")
-\`\`\`
+```
 
 ### Opção 2: Processar múltiplos arquivos
 
-\`\`\`python
+```python
 from pathlib import Path
 from scripts.extrair_escalas_servico import processar_arquivo_boletim, salvar_escalas_extraidas
 
@@ -39,19 +39,19 @@ for arquivo in pasta_boletins.glob("*.txt"):
 
 # Salvar todos os resultados
 salvar_escalas_extraidas(todas_escalas, "todas_escalas_2025.txt")
-\`\`\`
+```
 
 ### Opção 3: Usar o script diretamente
 
-\`\`\`bash
+```bash
 python scripts/extrair_escalas_servico.py
-\`\`\`
+```
 
 ## Formato de Saída
 
 O programa gera um arquivo de texto formatado com:
 
-\`\`\`
+```
 ================================================================================
 BOLETIM INTERNO Nº 140/2025 - 30 de julho de 2025
 ESCALA DE SERVIÇO PARA 31 DE JULHO DE 2025 (QUINTA-FEIRA)
@@ -67,7 +67,7 @@ COMANDANTE DA GUARDA:
   • 3º Sgt LEANDRO
 
 ...
-\`\`\`
+```
 
 ## Personalização
 
@@ -75,21 +75,21 @@ COMANDANTE DA GUARDA:
 
 Edite a lista `funcoes_padrao` na função `extrair_militares_por_funcao()`:
 
-\`\`\`python
+```python
 funcoes_padrao = [
     'FISCAL DE DIA',
     'SARGENTO DE DIA',
     'COMANDANTE DA GUARDA',
     # Adicione ou remova funções conforme necessário
 ]
-\`\`\`
+```
 
 ### Exportar para outros formatos
 
 O programa pode ser facilmente adaptado para exportar para CSV, JSON ou Excel:
 
 #### CSV:
-\`\`\`python
+```python
 import csv
 
 def salvar_escalas_csv(escalas, arquivo_saida):
@@ -107,16 +107,16 @@ def salvar_escalas_csv(escalas, arquivo_saida):
                         funcao,
                         militar
                     ])
-\`\`\`
+```
 
 #### JSON:
-\`\`\`python
+```python
 import json
 
 def salvar_escalas_json(escalas, arquivo_saida):
     with open(arquivo_saida, 'w', encoding='utf-8') as f:
         json.dump(escalas, f, ensure_ascii=False, indent=2)
-\`\`\`
+```
 
 ## Troubleshooting
 

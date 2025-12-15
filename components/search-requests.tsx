@@ -4,7 +4,7 @@ import React from "react"
 import { CategoryCombobox } from "@/components/category-combobox"
 import type { ReactElement } from "react"
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -404,19 +404,6 @@ function SearchRequests({
 
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
-          {showFilters && (
-            <div className="overflow-hidden transition-all duration-700 ease-out animate-in fade-in slide-in-from-top-4">
-              <Card className="shadow-sm">
-                <CardContent className="pt-4 pb-3 px-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Filtros de Busca</h3>
-                  </div>
-                  <FilterForm />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
           <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
             <SheetContent side="left" className="w-[300px] sm:w-[350px]">
               <SheetHeader>
