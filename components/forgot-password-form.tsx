@@ -18,8 +18,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [resetUrl, setResetUrl] = useState("")
-  const [showInNotifications, setShowInNotifications] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,14 +48,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
 
       if (data.success) {
         console.log("[v0] ✅ SUCCESS!")
-
-        if (data.resetUrl) {
-          console.log("[v0] Reset URL:", data.resetUrl)
-          setResetUrl(data.resetUrl)
-        }
-        if (data.showInNotifications) {
-          setShowInNotifications(true)
-        }
         setSuccess(true)
       } else {
         const errorMsg = data.message || "Erro ao solicitar recuperação de senha."
@@ -80,40 +70,17 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
             <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
               <Mail className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-bold">Link Gerado!</h2>
+            <h2 className="text-xl font-bold">Email Enviado!</h2>
             <p className="text-sm text-muted-foreground">
-              O link de recuperação foi gerado para <strong>{email}</strong>.
+              Se o email <strong>{email}</strong> estiver cadastrado, você receberá um link para redefinir sua senha.
             </p>
 
-            {resetUrl && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <p className="text-xs font-semibold text-blue-800">Use o link abaixo para redefinir sua senha:</p>
-                <div className="bg-white p-3 rounded border border-blue-300 break-all">
-                  <a href={resetUrl} className="text-xs text-blue-600 hover:underline">
-                    {resetUrl}
-                  </a>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  onClick={() => {
-                    navigator.clipboard.writeText(resetUrl)
-                    alert("Link copiado!")
-                  }}
-                >
-                  Copiar Link
-                </Button>
-              </div>
-            )}
-
-            {showInNotifications && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <p className="text-xs text-amber-800">
-                  <strong>💡 Dica:</strong> O link também está disponível nas suas notificações dentro da plataforma!
-                </p>
-              </div>
-            )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+              <p className="text-xs font-semibold text-blue-800">📧 Verifique sua caixa de entrada</p>
+              <p className="text-xs text-blue-700">
+                O email pode levar alguns minutos para chegar. Não esqueça de verificar a pasta de spam!
+              </p>
+            </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-xs text-gray-700">O link expira em 1 hora por segurança.</p>
@@ -127,8 +94,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
                 onClick={() => {
                   setSuccess(false)
                   setEmail("")
-                  setResetUrl("")
-                  setShowInNotifications(false)
                 }}
                 variant="outline"
                 className="w-full"
