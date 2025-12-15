@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { createBrowserClient } from "@supabase/ssr"
 
 export default function CallbackPage() {
   const router = useRouter()
@@ -11,7 +12,12 @@ export default function CallbackPage() {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        console.log("[v0] 🔄 Processing Supabase callback on client side")
+        console.log("[v0] Processing Supabase callback on client side")
+
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        )
 
         // Get tokens from hash fragment
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
@@ -26,18 +32,28 @@ export default function CallbackPage() {
         })
 
         if (accessToken && type === "recovery") {
-          console.log("[v0] ✅ Recovery token found, redirecting to reset password")
+          console.log("[v0] Recovery token found, establishing session...")
           setStatus("success")
-          setMessage("Redirecionando para redefinição de senha...")
+          setMessage("Estabelecendo sessão segura...")
 
-          // Pass tokens in URL for reset page to handle
-          const params = new URLSearchParams({
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || "",
           })
 
+          if (sessionError) {
+            console.error("[v0] Error setting session:", sessionError)
+            setStatus("error")
+            setMessage("Erro ao processar link de recuperação")
+            setTimeout(() => router.push("/?message=Link inválido. Solicite um novo."), 3000)
+            return
+          }
+
+          console.log("[v0] Session established successfully, redirecting to reset password")
+          setMessage("Redirecionando para redefinição de senha...")
+
           setTimeout(() => {
-            router.push(`/auth/reset-password?${params.toString()}`)
+            router.push("/auth/reset-password")
           }, 1000)
         } else {
           // Check for query params (regular OAuth flow)
@@ -45,22 +61,21 @@ export default function CallbackPage() {
           const code = queryParams.get("code")
 
           if (code) {
-            console.log("[v0] 🔄 Processing OAuth code")
+            console.log("[v0] Processing OAuth code")
             setMessage("Verificando código de autenticação...")
-
-            // Let server-side callback handle OAuth code
             window.location.href = `/api/auth/callback?${queryParams.toString()}`
           } else {
-            console.log("[v0] ⚠️ No valid parameters found")
+            console.log("[v0] No valid parameters found")
             setStatus("error")
             setMessage("Link inválido ou expirado")
             setTimeout(() => router.push("/"), 3000)
           }
         }
       } catch (error) {
-        console.error("[v0] ❌ Callback error:", error)
+        console.error("[v0] Callback error:", error)
         setStatus("error")
         setMessage("Erro ao processar link de recuperação")
+        setTimeout(() => router.push("/"), 3000)
       }
     }
 

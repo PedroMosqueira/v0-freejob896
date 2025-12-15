@@ -40,24 +40,9 @@ export default function ResetPasswordPage() {
         error: sessionError?.message,
       })
 
-      if (!session && !sessionError) {
-        console.log("[v0] Waiting for session to be established...")
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const {
-          data: { session: retrySession },
-        } = await supabase.auth.getSession()
-
-        if (retrySession) {
-          setUserEmail(retrySession.user.email || "")
-          setIsLoading(false)
-          return
-        }
-      }
-
       if (sessionError || !session) {
         console.error("[v0] No valid session found:", sessionError)
-        setError("Sessão inválida ou expirada. Solicite um novo link de recuperação.")
+        setError("Link de recuperação inválido ou expirado. Por favor, solicite um novo link.")
         setIsLoading(false)
 
         setTimeout(() => {
