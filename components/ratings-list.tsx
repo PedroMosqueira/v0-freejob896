@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Star, User } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { getUserRatings, type Rating } from "@/lib/ratings"
 
 interface RatingsListProps {
@@ -14,6 +15,7 @@ interface RatingsListProps {
 export function RatingsList({ userEmail, onRatingsLoaded }: RatingsListProps) {
   const [ratings, setRatings] = useState<Rating[]>([])
   const [loading, setLoading] = useState(true)
+  const [showCount, setShowCount] = useState(3)
 
   useEffect(() => {
     loadRatings()
@@ -50,9 +52,12 @@ export function RatingsList({ userEmail, onRatingsLoaded }: RatingsListProps) {
     )
   }
 
+  const visibleRatings = ratings.slice(0, showCount)
+  const hasMore = ratings.length > showCount
+
   return (
     <div className="space-y-4">
-      {ratings.map((rating) => (
+      {visibleRatings.map((rating) => (
         <Card key={rating.id}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -87,6 +92,14 @@ export function RatingsList({ userEmail, onRatingsLoaded }: RatingsListProps) {
           )}
         </Card>
       ))}
+
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <Button variant="outline" onClick={() => setShowCount((prev) => prev + 3)}>
+            Mostrar mais avaliações ({ratings.length - showCount} restantes)
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
