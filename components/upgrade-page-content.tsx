@@ -114,7 +114,7 @@ export function UpgradePageContent() {
         <div className="bg-card border border-border rounded-2xl p-8">
           <h2 className="text-2xl font-bold mb-8 text-center">Por que o Freejob é gratuito?</h2>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6">
             <div className="text-center">
               <div className="inline-flex items-center justify-center h-12 w-12 bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400 rounded-xl mb-4">
                 <Zap className="h-6 w-6" />
@@ -132,16 +132,6 @@ export function UpgradePageContent() {
               <h3 className="font-semibold mb-2">Taxa Justa</h3>
               <p className="text-sm text-muted-foreground">
                 Cobramos apenas 20% sobre transações realizadas na plataforma
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center h-12 w-12 bg-yellow-100 dark:bg-yellow-950 text-yellow-600 dark:text-yellow-400 rounded-xl mb-4">
-                <Crown className="h-6 w-6" />
-              </div>
-              <h3 className="font-semibold mb-2">Comissões e Cashback</h3>
-              <p className="text-sm text-muted-foreground">
-                Profissionais ganham 30% de comissão, clientes ganham 20% de cashback
               </p>
             </div>
           </div>

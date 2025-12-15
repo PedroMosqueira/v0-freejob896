@@ -12,7 +12,6 @@ import { Loader2, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { RatingsList } from "@/components/ratings-list"
-import { CashbackDashboard } from "@/components/cashback-dashboard"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -81,11 +80,6 @@ export default function ProfilePage() {
       <div className="space-y-8">
         <ProfileHeader profile={profile} />
         <ProfileStats profile={profile} />
-
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Saldo e Comissões</h2>
-          <CashbackDashboard />
-        </div>
 
         <div>
           <h2 className="text-2xl font-bold mb-4">Avaliações Recebidas</h2>
