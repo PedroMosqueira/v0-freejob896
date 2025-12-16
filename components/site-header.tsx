@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, User, Briefcase, List, LogOut, Lock, Plus, Search, Home, Sun, Moon, Bell } from 'lucide-react'
+import { MessageCircle, Menu, User, Briefcase, List, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useRef, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
@@ -17,6 +17,7 @@ import { getUserProfile } from "@/lib/user-profile"
 import { formatUserName } from "@/lib/format-user-name"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
+import InstallAppButton from "./install-app-button"
 
 interface SiteHeaderProps {
   onSolicitarClick?: () => void
@@ -50,14 +51,16 @@ export function SiteHeader({
   const { theme, setTheme } = useTheme()
 
   // Calculate effective theme considering "system"
-  const effectiveTheme = mounted ? (
-    theme === "system" 
-      ? (typeof window !== 'undefined' && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+  const effectiveTheme = mounted
+    ? theme === "system"
+      ? typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
       : theme
-  ) : "light"
+    : "light"
 
   const toggleTheme = () => {
-    const newTheme = effectiveTheme === 'dark' ? 'light' : 'dark'
+    const newTheme = effectiveTheme === "dark" ? "light" : "dark"
     console.log("[v0] Toggle theme from", theme, "to", newTheme)
     setTheme(newTheme)
   }
@@ -206,7 +209,7 @@ export function SiteHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-blue-50/95 dark:bg-blue-950/95 backdrop-blur supports-[backdrop-filter]:bg-blue-50/60 dark:supports-[backdrop-filter]:bg-blue-950/60">
         <div className="container flex h-16 sm:h-20 items-center justify-between gap-4 px-4 sm:px-6 relative z-10">
           {/* Logo - Left */}
           <div className="flex-shrink-0 flex items-center">
@@ -262,11 +265,11 @@ export function SiteHeader({
                   >
                     <Plus className="h-5 w-5" />
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="icon"
-                    className="relative"
+                    className="relative bg-transparent"
                     onClick={() => setIsMyChatsDialogOpen(true)}
                     title="Meus Chats"
                   >
@@ -277,6 +280,8 @@ export function SiteHeader({
                       </span>
                     )}
                   </Button>
+
+                  <InstallAppButton />
 
                   <NotificationsDropdown userEmail={email} />
                   <ThemeToggle />
@@ -347,6 +352,9 @@ export function SiteHeader({
                           )}
                         </button>
                         <div className="p-1.5">
+                          <InstallAppButton />
+                        </div>
+                        <div className="p-1.5">
                           <NotificationsDropdown userEmail={email} />
                         </div>
                         <button
@@ -393,33 +401,33 @@ export function SiteHeader({
                           <button
                             onClick={toggleTheme}
                             className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
-                            style={{ width: '66px', height: '42px' }}
+                            style={{ width: "66px", height: "42px" }}
                           >
                             <div className="relative h-full flex items-center justify-between px-[3px]">
                               {/* Sun icon inside slider */}
                               <Sun className="h-5 w-5 text-yellow-500 flex-shrink-0 z-0" />
-                              
+
                               {/* Moving ball with current theme icon */}
-                              <div 
+                              <div
                                 className="absolute h-8 w-8 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
                                 style={{
-                                  left: effectiveTheme === 'dark' ? 'calc(100% - 33px)' : '2px',
+                                  left: effectiveTheme === "dark" ? "calc(100% - 33px)" : "2px",
                                 }}
                               >
-                                {mounted && effectiveTheme === 'dark' ? (
+                                {mounted && effectiveTheme === "dark" ? (
                                   <Moon className="h-4 w-4 text-white" />
                                 ) : (
                                   <Sun className="h-4 w-4 text-white" />
                                 )}
                               </div>
-                              
+
                               {/* Moon icon inside slider */}
                               <Moon className="h-5 w-5 text-blue-400 flex-shrink-0 z-0" />
                             </div>
                           </button>
                         </div>
                         {/* </CHANGE> */}
-                        
+
                         <button
                           className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           onClick={() => {
