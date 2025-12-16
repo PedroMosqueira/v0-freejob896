@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TrendingUp, Users, DollarSign, Percent } from "lucide-react"
 
@@ -85,34 +84,40 @@ export default function RevenueSimulator() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label>Usuários Iniciais: {initialUsers}</Label>
-              <Slider
-                value={[initialUsers]}
-                onValueChange={(v) => setInitialUsers(v[0])}
+              <input
+                type="range"
+                value={initialUsers}
+                onChange={(e) => setInitialUsers(Number(e.target.value))}
                 min={50}
                 max={5000}
                 step={50}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Crescimento Mensal: {monthlyGrowthRate}%</Label>
-              <Slider
-                value={[monthlyGrowthRate]}
-                onValueChange={(v) => setMonthlyGrowthRate(v[0])}
+              <input
+                type="range"
+                value={monthlyGrowthRate}
+                onChange={(e) => setMonthlyGrowthRate(Number(e.target.value))}
                 min={0}
                 max={50}
                 step={1}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
               />
             </div>
 
             <div className="space-y-2">
               <Label>Taxa de Conversão (gratuito → pago): {conversionRate}%</Label>
-              <Slider
-                value={[conversionRate]}
-                onValueChange={(v) => setConversionRate(v[0])}
+              <input
+                type="range"
+                value={conversionRate}
+                onChange={(e) => setConversionRate(Number(e.target.value))}
                 min={0}
                 max={50}
                 step={1}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
               />
             </div>
           </CardContent>
