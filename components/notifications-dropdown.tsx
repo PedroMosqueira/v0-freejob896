@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Bell, CheckCheck } from 'lucide-react'
+import { Bell, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -12,7 +12,7 @@ import {
   type Notification,
 } from "@/lib/notifications-store"
 import { useNotifications } from "@/hooks/use-notifications"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 
 interface NotificationsDropdownProps {
   userEmail: string
@@ -50,11 +50,11 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
       loadUnreadCount()
     }
 
-    window.addEventListener('new-notification', handleNewNotification)
+    window.addEventListener("new-notification", handleNewNotification)
 
     return () => {
       clearInterval(interval)
-      window.removeEventListener('new-notification', handleNewNotification)
+      window.removeEventListener("new-notification", handleNewNotification)
     }
   }, [userEmail])
 
@@ -104,11 +104,11 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
     console.log("[v0] Notification clicked:", notification)
     await handleMarkAsRead(notification.id)
     setIsOpen(false)
-    
+
     if (notification.related_need_id) {
       console.log("[v0] Has related_need_id:", notification.related_need_id)
       console.log("[v0] Dispatching openNeed event for need:", notification.related_need_id)
-      const event = new CustomEvent('openNeed', { detail: notification.related_need_id })
+      const event = new CustomEvent("openNeed", { detail: notification.related_need_id })
       console.log("[v0] Event created:", event)
       window.dispatchEvent(event)
       console.log("[v0] Event dispatched")
@@ -165,7 +165,7 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
       {isOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          <div className="fixed sm:absolute right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] max-w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white">Notificações</h3>
               {unreadCount > 0 && (
