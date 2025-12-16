@@ -23,10 +23,21 @@ export function ImageCaptureInput({
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+
     const files = e.target.files
     if (files && files.length > 0) {
       onCapture(files)
+      // Reset input para permitir captura da mesma foto novamente
+      e.target.value = ""
     }
+  }
+
+  const handleButtonClick = (inputRef: React.RefObject<HTMLInputElement>) => (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    inputRef.current?.click()
   }
 
   return (
@@ -35,9 +46,9 @@ export function ImageCaptureInput({
       <Button
         type="button"
         variant="outline"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleButtonClick(fileInputRef)}
         disabled={disabled}
-        className="flex-1 gap-2"
+        className="flex-1 gap-2 bg-transparent"
       >
         <Upload className="h-4 w-4" />
         Escolher arquivo
@@ -56,9 +67,9 @@ export function ImageCaptureInput({
       <Button
         type="button"
         variant="outline"
-        onClick={() => cameraInputRef.current?.click()}
+        onClick={handleButtonClick(cameraInputRef)}
         disabled={disabled}
-        className="flex-1 gap-2"
+        className="flex-1 gap-2 bg-transparent"
       >
         <Camera className="h-4 w-4" />
         Tirar foto
