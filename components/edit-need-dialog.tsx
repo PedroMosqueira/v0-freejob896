@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { updateNeed, type Need } from "@/lib/needs-store"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, MapPin } from 'lucide-react'
+import { Loader2, MapPin } from "lucide-react"
 import { CategoryCombobox } from "@/components/category-combobox"
+import { ImageCaptureInput } from "@/components/image-capture-input"
 
 interface EditNeedDialogProps {
   need: Need
@@ -58,10 +59,7 @@ export default function EditNeedDialog({ need, isOpen, onClose, onSuccess }: Edi
     }
   }, [isOpen, need])
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-
+  const handleImageCapture = (files: FileList) => {
     const newPreviews: string[] = []
     Array.from(files).forEach((file) => {
       const reader = new FileReader()
@@ -369,11 +367,7 @@ export default function EditNeedDialog({ need, isOpen, onClose, onSuccess }: Edi
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="edit-category">Categoria *</Label>
-              <CategoryCombobox
-                value={category}
-                onValueChange={setCategory}
-                placeholder="Escolha uma categoria"
-              />
+              <CategoryCombobox value={category} onValueChange={setCategory} placeholder="Escolha uma categoria" />
             </div>
           </div>
 
@@ -500,7 +494,7 @@ export default function EditNeedDialog({ need, isOpen, onClose, onSuccess }: Edi
 
           <div className="space-y-2">
             <Label htmlFor="edit-images">Fotos do serviço (opcional)</Label>
-            <Input id="edit-images" type="file" multiple onChange={handleImageUpload} accept="image/*" />
+            <ImageCaptureInput onCapture={handleImageCapture} multiple={true} disabled={isSubmitting} />
             {imagePreviews.length > 0 && (
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {imagePreviews.map((src, index) => (

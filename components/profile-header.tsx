@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import type { UserProfile } from "@/lib/user-profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +7,7 @@ import { Camera, CheckCircle, Briefcase, User } from "lucide-react"
 import { useState } from "react"
 import { uploadProfileImage } from "@/lib/user-profile"
 import { useFormState } from "react-dom"
+import { ImageCaptureInput } from "@/components/image-capture-input"
 
 interface ProfileHeaderProps {
   profile: UserProfile
@@ -18,12 +17,14 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [state, formAction] = useFormState(uploadProfileImage, null)
+  const [showCaptureButtons, setShowCaptureButtons] = useState(false)
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleFileCapture = async (files: FileList) => {
+    const file = files[0]
     if (!file) return
 
     setIsUploading(true)
+    setShowCaptureButtons(false)
     const formData = new FormData()
     formData.append("file", file)
 
@@ -48,20 +49,22 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
           <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
         </Avatar>
         {!isPublic && (
-          <label
-            htmlFor="profile-image-upload"
-            className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
-          >
-            <Camera className="h-4 w-4" />
-            <input
-              id="profile-image-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
+          <>
+            <button
+              type="button"
+              onClick={() => setShowCaptureButtons(!showCaptureButtons)}
+              className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
               disabled={isUploading}
-            />
-          </label>
+            >
+              <Camera className="h-4 w-4" />
+            </button>
+
+            {showCaptureButtons && (
+              <div className="absolute top-full right-0 mt-2 z-10 bg-background border rounded-lg shadow-lg p-3 min-w-[280px]">
+                <ImageCaptureInput onCapture={handleFileCapture} disabled={isUploading} label="Foto de perfil" />
+              </div>
+            )}
+          </>
         )}
       </div>
 

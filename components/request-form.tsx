@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { addNeed, type NewNeedInput } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { MapPin, Loader2 } from 'lucide-react'
+import { Loader2, MapPin } from "lucide-react"
 import { CategoryCombobox } from "@/components/category-combobox"
+import { ImageCaptureInput } from "@/components/image-capture-input"
 
 const stateNameToAbbr: Record<string, string> = {
   Acre: "AC",
@@ -330,10 +331,7 @@ export default function RequestForm() {
     }
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
-
+  const handleImageCapture = (files: FileList) => {
     const newPreviews: string[] = []
     Array.from(files).forEach((file) => {
       const reader = new FileReader()
@@ -672,18 +670,8 @@ export default function RequestForm() {
               <Label htmlFor="images" className="text-sm sm:text-base">
                 Fotos do serviço *
               </Label>
-              <Input
-                id="images"
-                type="file"
-                multiple
-                onChange={handleImageUpload}
-                accept="image/*"
-                className="text-sm sm:text-base"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Adicione pelo menos uma foto do serviço (obrigatório).
-              </p>
+              <ImageCaptureInput onCapture={handleImageCapture} multiple={true} disabled={isSubmitting} />
+              <p className="text-xs text-muted-foreground">Adicione pelo menos uma foto do serviço (obrigatório).</p>
               {imagePreviews.length > 0 && (
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {imagePreviews.map((src, index) => (
