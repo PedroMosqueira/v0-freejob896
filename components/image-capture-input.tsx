@@ -13,6 +13,65 @@ interface ImageCaptureInputProps {
   label?: string
 }
 
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (e) => {
+      const img = new Image()
+      img.src = e.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        const ctx = canvas.getContext("2d")
+
+        // Define tamanho máximo (reduz imagens grandes)
+        const MAX_WIDTH = 1920
+        const MAX_HEIGHT = 1920
+        let width = img.width
+        let height = img.height
+
+        // Calcula novo tamanho mantendo proporção
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = (height * MAX_WIDTH) / width
+            width = MAX_WIDTH
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = (width * MAX_HEIGHT) / height
+            height = MAX_HEIGHT
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        // Desenha imagem redimensionada
+        ctx?.drawImage(img, 0, 0, width, height)
+
+        // Converte para Blob com qualidade reduzida (70%)
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              })
+              resolve(compressedFile)
+            } else {
+              reject(new Error("Falha ao comprimir imagem"))
+            }
+          },
+          "image/jpeg",
+          0.7,
+        )
+      }
+      img.onerror = reject
+    }
+    reader.onerror = reject
+  })
+}
+
 export function ImageCaptureInput({
   onCapture,
   multiple = false,
@@ -22,13 +81,27 @@ export function ImageCaptureInput({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
     e.stopPropagation()
 
     const files = e.target.files
     if (files && files.length > 0) {
-      onCapture(files)
+      try {
+        // Comprime cada imagem selecionada
+        const compressedFiles = await Promise.all(Array.from(files).map((file) => compressImage(file)))
+
+        // Cria um FileList customizado com as imagens comprimidas
+        const dataTransfer = new DataTransfer()
+        compressedFiles.forEach((file) => dataTransfer.items.add(file))
+
+        onCapture(dataTransfer.files)
+      } catch (error) {
+        console.error("[v0] Erro ao comprimir imagem:", error)
+        // Se falhar, usa arquivos originais como fallback
+        onCapture(files)
+      }
+
       // Reset input para permitir captura da mesma foto novamente
       e.target.value = ""
     }
