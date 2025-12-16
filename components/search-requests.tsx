@@ -445,6 +445,16 @@ function SearchRequests({
 
                   return (
                     <React.Fragment key={need.id}>
+                      {console.log(
+                        "[v0] Card render - Need:",
+                        need.title,
+                        "Distance:",
+                        need.distance,
+                        "Has distance?",
+                        !!need.distance,
+                        "< 999?",
+                        need.distance && need.distance < 999,
+                      )}
                       <Card
                         className="group relative overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-out cursor-pointer dark:bg-gray-800 dark:border-gray-700 rounded-none border aspect-square p-[1px]"
                         onClick={() => setSelectedNeedForDetails(need)}
@@ -456,7 +466,7 @@ function SearchRequests({
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
 
-                          {need.distance && need.distance < 999 && (
+                          {need.distance !== undefined && need.distance !== Number.POSITIVE_INFINITY && (
                             <div className="absolute top-2 right-2 z-30">
                               <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
                                 ⚡ {formatDistance(need.distance)}
