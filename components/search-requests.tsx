@@ -271,7 +271,7 @@ function SearchRequests({
       case "aberto":
         return "bg-green-500 text-white"
       case "visita-proposta":
-        return "bg-yellow-500 text-white"
+        return "bg-blue-400 text-white"
       case "aceito":
         return "bg-blue-500 text-white"
       case "concluido":
@@ -354,7 +354,7 @@ function SearchRequests({
         </div>
       </div>
       <div className="flex justify-end pt-2">
-        <Button type="submit" className="bg-yellow-400 hover:bg-yellow-400/90 text-black gap-2 w-full sm:w-auto">
+        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white gap-2 w-full sm:w-auto">
           <Search className="h-4 w-4" /> Aplicar Filtros
         </Button>
       </div>

@@ -148,8 +148,8 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
             )}
 
             {status.existsInAuth && !status.emailVerified && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
                   ⚠️ Sua conta existe mas o email não foi verificado. Verifique sua caixa de entrada.
                 </p>
               </div>
@@ -273,8 +273,8 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               </div>
             )}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-xs text-yellow-800">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
                 ⚠️ <strong>Importante:</strong> O link expira em 1 hora. Se não receber o email, verifique a pasta de
                 spam ou use um provedor diferente (Gmail, Outlook, etc.).
               </p>

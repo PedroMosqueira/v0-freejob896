@@ -289,7 +289,7 @@ export default function Home() {
                           <Button
                             type="button"
                             variant="outline"
-                            className="w-full border-yellow-300 text-yellow-900 bg-transparent"
+                            className="w-full border-blue-500 text-blue-700 dark:text-blue-400 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-950/30"
                             onClick={() => setIsRegistering(true)}
                             disabled={isSubmittingLogin}
                           >
