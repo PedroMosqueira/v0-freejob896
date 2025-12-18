@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
@@ -29,6 +28,7 @@ interface SearchRequestsProps {
   initialShowMyProfessionalServices?: boolean
   showFilters?: boolean
   searchQuery?: string
+  initialQuery?: string
 }
 
 function SearchRequests({
@@ -36,10 +36,11 @@ function SearchRequests({
   initialShowMyProfessionalServices = false,
   showFilters = false,
   searchQuery = "",
+  initialQuery = "",
 }: SearchRequestsProps): ReactElement {
   const { email, isFreeUser } = useAuth()
 
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState(initialQuery)
   const [category, setCategory] = useState("all")
   const [city, setCity] = useState("")
   const [status, setStatus] = useState("all")
@@ -154,12 +155,9 @@ function SearchRequests({
   }, [debouncedSearchQuery, showMyRequests, showMyProfessionalServices])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(0)
-      setHasMore(true)
-      performSearch(false)
-    }, 300)
-    return () => clearTimeout(timer)
+    setPage(0)
+    setHasMore(true)
+    performSearch(false)
   }, [query, category, city, status])
 
   useEffect(() => {
@@ -294,74 +292,75 @@ function SearchRequests({
       .replace(/[\u0300-\u036f]/g, "")
   }
 
-  const FilterForm = () => (
-    <form onSubmit={handleSearch} className="space-y-3 px-4">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="search-query" className="text-sm font-medium">
-            Palavra-chave
-          </Label>
-          <Input
-            id="search-query"
-            placeholder="Ex: encanador"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="text-sm"
-          />
+  const FilterForm = useMemo(() => {
+    return () => (
+      <form onSubmit={handleSearch} className="space-y-3 px-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="search-query" className="text-sm font-medium">
+              Palavra-chave
+            </Label>
+            <Input
+              id="search-query"
+              placeholder="Ex: encanador"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="search-city" className="text-sm font-medium">
+              Cidade
+            </Label>
+            <Input
+              id="search-city"
+              placeholder="Ex: Rio de Janeiro"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="search-status" className="text-sm font-medium">
+              Status
+            </Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="search-status" className="text-sm">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="aberto">Aberto</SelectItem>
+                <SelectItem value="visita-proposta">Visita Proposta</SelectItem>
+                <SelectItem value="aceito">Aceito</SelectItem>
+                <SelectItem value="concluido">Concluído</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="search-category" className="text-sm font-medium">
+              Categoria
+            </Label>
+            <CategoryCombobox
+              value={category}
+              onValueChange={setCategory}
+              placeholder="Todas as categorias"
+              className="text-sm"
+              includeAll={true}
+            />
+          </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="search-city" className="text-sm font-medium">
-            Cidade
-          </Label>
-          <Input
-            id="search-city"
-            placeholder="Ex: Rio de Janeiro"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="text-sm"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="search-status" className="text-sm font-medium">
-            Status
-          </Label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger id="search-status" className="text-sm">
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="aberto">Aberto</SelectItem>
-              <SelectItem value="visita-proposta">Visita Proposta</SelectItem>
-              <SelectItem value="aceito">Aceito</SelectItem>
-              <SelectItem value="concluido">Concluído</SelectItem>
-              <SelectItem value="cancelado">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="search-category" className="text-sm font-medium">
-            Categoria
-          </Label>
-          <CategoryCombobox
-            value={category}
-            onValueChange={setCategory}
-            placeholder="Todas as categorias"
-            className="text-sm"
-            includeAll={true}
-          />
-        </div>
-      </div>
-      <div className="flex justify-end pt-2">
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white gap-2 w-full sm:w-auto">
-          <Search className="h-4 w-4" /> Aplicar Filtros
+        <Button type="submit" className="w-full">
+          Aplicar Filtros
         </Button>
-      </div>
-    </form>
-  )
+      </form>
+    )
+  }, [query, city, status])
 
   useEffect(() => {
     if (showFilters) {
