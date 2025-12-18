@@ -7,7 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { listChatThreadsForNeed, type Need, type ChatThread } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
 import ChatDialog from "@/components/chat-dialog"
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle } from "lucide-react"
 import { formatUserName } from "@/lib/format-user-name"
 import { getUserProfile } from "@/lib/user-profile"
 
@@ -19,7 +19,10 @@ interface ChatManagementDialogProps {
   onChatActionSuccess?: () => void // Made optional to prevent errors
 }
 
-export default function ChatManagementDialog({
+export { ChatManagementDialog }
+export default ChatManagementDialog
+
+function ChatManagementDialog({
   need,
   isOpen,
   onClose,
@@ -148,7 +151,7 @@ export default function ChatManagementDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px] flex flex-col h-[80vh] bg-background border-0 shadow-none p-0">
         <DialogTitle className="sr-only">Gerenciar Conversas do Serviço</DialogTitle>
-        
+
         <div className="border-b px-4 py-4 bg-background flex items-center gap-3">
           <Avatar className="h-10 w-10 flex-shrink-0 ring-2 ring-border">
             {currentUserProfile?.profileImageUrl && (

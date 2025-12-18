@@ -1386,3 +1386,5 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     </>
   )
 }
+
+export { NeedDetailsDialog }

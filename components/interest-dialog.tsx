@@ -11,14 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
-import {
-  validateBidAmount,
-  calculatePlatformFee,
-  calculateTotalAmount,
-  formatCurrency,
-  MINIMUM_BID_AMOUNT,
-} from "@/lib/pricing"
-import { Info } from 'lucide-react'
+import { formatCurrency, MINIMUM_BID_AMOUNT } from "@/lib/pricing"
+import { Info } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 
 interface InterestDialogProps {
@@ -29,13 +23,10 @@ interface InterestDialogProps {
   onActionSuccess: () => void
 }
 
-export default function InterestDialog({
-  need,
-  isOpen,
-  onClose,
-  currentUserEmail,
-  onActionSuccess,
-}: InterestDialogProps) {
+export { InterestDialog }
+export default InterestDialog
+
+function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
   const [visitDate, setVisitDate] = useState("")
   const [visitMessage, setVisitMessage] = useState("")
@@ -71,7 +62,7 @@ export default function InterestDialog({
         "Proposta de visita recebida",
         `Um profissional propôs uma visita para "${need.title}"`,
         "proposal",
-        need.id
+        need.id,
       )
 
       await startChat({
@@ -129,7 +120,7 @@ export default function InterestDialog({
         "Proposta de aceitação direta",
         `Um profissional aceitou diretamente seu serviço "${need.title}" por ${formatCurrency(bidValue)}`,
         "proposal",
-        need.id
+        need.id,
       )
 
       await startChat({
@@ -238,9 +229,7 @@ export default function InterestDialog({
               </div>
               <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg text-xs text-amber-700 dark:text-amber-300">
                 <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                <p>
-                  Você receberá {bidValue > 0 && formatCurrency(bidValue)} ao completar o serviço.
-                </p>
+                <p>Você receberá {bidValue > 0 && formatCurrency(bidValue)} ao completar o serviço.</p>
               </div>
               <Button
                 type="submit"

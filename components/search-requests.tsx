@@ -3,7 +3,7 @@
 import React from "react"
 import { CategoryCombobox } from "@/components/category-combobox"
 import type { ReactElement } from "react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -13,13 +13,16 @@ import { Search } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
-import ChatManagementDialog from "@/components/chat-management-dialog"
-import NeedDetailsDialog from "@/components/need-details-dialog"
-import InterestDialog from "@/components/interest-dialog"
+import { NeedDetailsDialog } from "./need-details-dialog"
+import { InterestDialog } from "./interest-dialog"
+import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
 import { AffiliateSidebar, AffiliateSidebarVertical } from "@/components/affiliate-sidebar"
 import { AdWrapper } from "@/components/ad-wrapper"
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
+import { CourseBannerAd } from "./course-banner-ad"
+import { GoogleAdSense } from "./google-adsense"
+import { AFFILIATE_CONFIG } from "@/lib/affiliate-config"
 
 interface SearchRequestsProps {
   initialShowMyRequests?: boolean
@@ -35,9 +38,6 @@ function SearchRequests({
   searchQuery = "",
 }: SearchRequestsProps): ReactElement {
   const { email, isFreeUser } = useAuth()
-
-  console.log("[v0] isFreeUser:", isFreeUser)
-  console.log("[v0] email:", email)
 
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState("all")
@@ -121,34 +121,8 @@ function SearchRequests({
           })
         }
 
-        if (userLocation) {
-          fetchedNeeds = fetchedNeeds.map((need) => {
-            if (need.latitude && need.longitude) {
-              const distance = calculateDistance(
-                userLocation.latitude,
-                userLocation.longitude,
-                need.latitude,
-                need.longitude,
-              )
-              return { ...need, distance }
-            }
-            return need
-          })
-          // Ordenar por distância
-          fetchedNeeds.sort((a: any, b: any) => {
-            const distA = a.distance ?? Number.POSITIVE_INFINITY
-            const distB = b.distance ?? Number.POSITIVE_INFINITY
-            return distA - distB
-          })
-        }
-
-        if (isLoadMore) {
-          setSearchResults((prev) => [...prev, ...fetchedNeeds])
-        } else {
-          setSearchResults(fetchedNeeds)
-          setPage(0)
-        }
-
+        setSearchResults((prev) => [...prev, ...fetchedNeeds])
+        setPage(0)
         setHasMore(fetchedNeeds.length === limit)
       } catch (error) {
         console.error("Erro ao buscar pedidos:", error)
@@ -163,18 +137,7 @@ function SearchRequests({
         }
       }
     },
-    [
-      query,
-      category,
-      city,
-      status,
-      showMyRequests,
-      showMyProfessionalServices,
-      email,
-      userLocation,
-      debouncedSearchQuery,
-      page,
-    ],
+    [query, category, city, status, showMyRequests, showMyProfessionalServices, email, debouncedSearchQuery, page],
   )
 
   useEffect(() => {
@@ -267,6 +230,25 @@ function SearchRequests({
       )
     }
   }, [userLocation, isGettingLocation])
+
+  useEffect(() => {
+    if (userLocation) {
+      setSearchResults((prevResults) =>
+        prevResults.map((need) => {
+          if (need.latitude && need.longitude) {
+            const distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              need.latitude,
+              need.longitude,
+            )
+            return { ...need, distance }
+          }
+          return need
+        }),
+      )
+    }
+  }, [userLocation])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -409,6 +391,8 @@ function SearchRequests({
     }
   }, [])
 
+  const filters = useMemo(() => ({ category, city, status }), [category, city, status])
+
   return (
     <>
       <AdWrapper freeUserOnly={isFreeUser}>
@@ -434,7 +418,7 @@ function SearchRequests({
             <p className="text-center text-muted-foreground">Nenhum serviço encontrado.</p>
           ) : (
             <>
-              <div className="grid gap-3 grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((need: any, index: number) => {
                   const hasProposedInterest = email
                     ? need.proposals.some(
@@ -454,7 +438,8 @@ function SearchRequests({
                   const displayImage =
                     need.images && need.images.length > 0 ? need.images[0] : getCategoryImage(need.category)
 
-                  const shouldShowAd = isFreeUser && (index + 1) % 6 === 0
+                  const showCourseAd = (index + 1) % 6 === 0 && index > 0
+                  const showGoogleAd = (index + 1) % 12 === 0 && index > 0
 
                   return (
                     <React.Fragment key={need.id}>
@@ -469,13 +454,16 @@ function SearchRequests({
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
 
-                          {need.distance !== undefined && need.distance !== Number.POSITIVE_INFINITY && (
-                            <div className="absolute top-2 right-2 z-30">
-                              <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
-                                ⚡ {formatDistance(need.distance)}
-                              </span>
-                            </div>
-                          )}
+                          {need.distance !== undefined &&
+                            need.distance !== null &&
+                            need.distance !== Number.POSITIVE_INFINITY &&
+                            !isNaN(need.distance) && (
+                              <div className="absolute top-2 right-2 z-30">
+                                <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
+                                  ⚡ {formatDistance(need.distance)}
+                                </span>
+                              </div>
+                            )}
 
                           <div className="absolute -bottom-px -left-px -right-px h-12 group-hover:h-[33%] bg-gradient-to-t from-gray-900/95 via-gray-800/90 to-transparent dark:from-gray-950/98 dark:via-gray-900/95 backdrop-blur-sm transition-all duration-500 ease-out flex flex-col z-20 p-0">
                             <div className="px-2 pt-2 pb-1.5">
@@ -505,12 +493,16 @@ function SearchRequests({
                         </div>
                       </Card>
 
-                      {shouldShowAd && (
-                        <div className="col-span-2 md:col-span-2 lg:col-span-1">
-                          <AdWrapper freeUserOnly={true}>
-                            <AffiliateSidebarVertical />
-                          </AdWrapper>
-                        </div>
+                      {showCourseAd && (
+                        <CourseBannerAd category={filters.category} className="col-span-2 md:col-span-1" />
+                      )}
+
+                      {showGoogleAd && AFFILIATE_CONFIG.googleAdsense.enabled && (
+                        <GoogleAdSense
+                          adSlot={AFFILIATE_CONFIG.googleAdsense.adSlots.inFeed}
+                          adFormat="fluid"
+                          className="col-span-2 md:col-span-1"
+                        />
                       )}
                     </React.Fragment>
                   )
