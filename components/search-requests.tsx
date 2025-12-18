@@ -122,20 +122,24 @@ function SearchRequests({
         }
 
         if (userLocation) {
-          fetchedNeeds = fetchedNeeds
-            .map((need) => {
-              if (need.latitude && need.longitude) {
-                const distance = calculateDistance(
-                  userLocation.latitude,
-                  userLocation.longitude,
-                  need.latitude,
-                  need.longitude,
-                )
-                return { ...need, distance }
-              }
-              return { ...need, distance: Number.POSITIVE_INFINITY }
-            })
-            .sort((a: any, b: any) => a.distance - b.distance)
+          fetchedNeeds = fetchedNeeds.map((need) => {
+            if (need.latitude && need.longitude) {
+              const distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                need.latitude,
+                need.longitude,
+              )
+              return { ...need, distance }
+            }
+            return need
+          })
+          // Ordenar por distância
+          fetchedNeeds.sort((a: any, b: any) => {
+            const distA = a.distance ?? Number.POSITIVE_INFINITY
+            const distB = b.distance ?? Number.POSITIVE_INFINITY
+            return distA - distB
+          })
         }
 
         if (isLoadMore) {
@@ -184,7 +188,16 @@ function SearchRequests({
     setPage(0)
     setHasMore(true)
     performSearch(false)
-  }, [query, category, city, status, debouncedSearchQuery, showMyRequests, showMyProfessionalServices])
+  }, [debouncedSearchQuery, showMyRequests, showMyProfessionalServices])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0)
+      setHasMore(true)
+      performSearch(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query, category, city, status])
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -421,8 +434,8 @@ function SearchRequests({
             <p className="text-center text-muted-foreground">Nenhum serviço encontrado.</p>
           ) : (
             <>
-              <div className="grid gap-4 grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-                {searchResults.map((need: any) => {
+              <div className="grid gap-3 grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                {searchResults.map((need: any, index: number) => {
                   const hasProposedInterest = email
                     ? need.proposals.some(
                         (p) =>
@@ -441,18 +454,10 @@ function SearchRequests({
                   const displayImage =
                     need.images && need.images.length > 0 ? need.images[0] : getCategoryImage(need.category)
 
+                  const shouldShowAd = isFreeUser && (index + 1) % 6 === 0
+
                   return (
                     <React.Fragment key={need.id}>
-                      {console.log(
-                        "[v0] Card render - Need:",
-                        need.title,
-                        "Distance:",
-                        need.distance,
-                        "Has distance?",
-                        !!need.distance,
-                        "< 999?",
-                        need.distance && need.distance < 999,
-                      )}
                       <Card
                         className="group relative overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-out cursor-pointer dark:bg-gray-800 dark:border-gray-700 rounded-none border aspect-square p-[1px]"
                         onClick={() => setSelectedNeedForDetails(need)}
@@ -500,7 +505,13 @@ function SearchRequests({
                         </div>
                       </Card>
 
-                      {/* AdWrapper logic remains unchanged */}
+                      {shouldShowAd && (
+                        <div className="col-span-2 md:col-span-2 lg:col-span-1">
+                          <AdWrapper freeUserOnly={true}>
+                            <AffiliateSidebarVertical />
+                          </AdWrapper>
+                        </div>
+                      )}
                     </React.Fragment>
                   )
                 })}
@@ -578,13 +589,16 @@ function SearchRequests({
 
 function getCategoryImage(category: string): string {
   const images: Record<string, string> = {
-    eletricista: "/leaky-faucet.png",
-    encanador: "/leaky-faucet.png",
-    marceneiro: "/shelf-installation.png",
-    pintor: "/sofa-cleaning.png",
-    default: "/placeholder.svg",
+    eletricista: "/electrician-working.png",
+    encanador: "/plumber-fixing-pipes.png",
+    pedreiro: "/mason-building-wall.jpg",
+    pintor: "/painter-painting-wall.png",
+    marceneiro: "/carpenter-woodworking.jpg",
+    mecanico: "/mechanic-fixing-car.jpg",
+    jardineiro: "/gardener-trimming-plants.jpg",
+    faxineiro: "/cleaner-cleaning-house.jpg",
   }
-  return images[category] || images.default
+  return images[category] || "/service-professional.jpg"
 }
 
 export default SearchRequests
