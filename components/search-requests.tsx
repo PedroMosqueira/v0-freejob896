@@ -235,7 +235,7 @@ function SearchRequests({
     if (userLocation) {
       setSearchResults((prevResults) =>
         prevResults.map((need) => {
-          if (need.latitude && need.longitude) {
+          if (need.latitude && need.longitude && !need.distance) {
             const distance = calculateDistance(
               userLocation.latitude,
               userLocation.longitude,
@@ -249,6 +249,25 @@ function SearchRequests({
       )
     }
   }, [userLocation])
+
+  useEffect(() => {
+    if (userLocation && searchResults.length > 0) {
+      setSearchResults((prevResults) =>
+        prevResults.map((need) => {
+          if (need.latitude && need.longitude && !need.distance) {
+            const distance = calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              need.latitude,
+              need.longitude,
+            )
+            return { ...need, distance }
+          }
+          return need
+        }),
+      )
+    }
+  }, [userLocation, searchResults.length])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
