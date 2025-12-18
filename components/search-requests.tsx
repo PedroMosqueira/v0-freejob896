@@ -232,28 +232,9 @@ function SearchRequests({
   }, [userLocation, isGettingLocation])
 
   useEffect(() => {
-    if (userLocation) {
-      setSearchResults((prevResults) =>
-        prevResults.map((need) => {
-          if (need.latitude && need.longitude && !need.distance) {
-            const distance = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              need.latitude,
-              need.longitude,
-            )
-            return { ...need, distance }
-          }
-          return need
-        }),
-      )
-    }
-  }, [userLocation])
-
-  useEffect(() => {
     if (userLocation && searchResults.length > 0) {
-      setSearchResults((prevResults) =>
-        prevResults.map((need) => {
+      setSearchResults((prevResults) => {
+        const resultsWithDistance = prevResults.map((need) => {
           if (need.latitude && need.longitude && !need.distance) {
             const distance = calculateDistance(
               userLocation.latitude,
@@ -264,8 +245,15 @@ function SearchRequests({
             return { ...need, distance }
           }
           return need
-        }),
-      )
+        })
+
+        // Ordenar por distância (mais próximos primeiro)
+        return resultsWithDistance.sort((a, b) => {
+          const distA = a.distance ?? Number.POSITIVE_INFINITY
+          const distB = b.distance ?? Number.POSITIVE_INFINITY
+          return distA - distB
+        })
+      })
     }
   }, [userLocation, searchResults.length])
 
