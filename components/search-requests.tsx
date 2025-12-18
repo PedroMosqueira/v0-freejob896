@@ -512,16 +512,10 @@ function SearchRequests({
                         </div>
                       </Card>
 
-                      {showCourseAd && (
-                        <CourseBannerAd category={filters.category} className="col-span-2 md:col-span-1" />
-                      )}
+                      {showCourseAd && <CourseBannerAd category={filters.category} />}
 
                       {showGoogleAd && AFFILIATE_CONFIG.googleAdsense.enabled && (
-                        <GoogleAdSense
-                          adSlot={AFFILIATE_CONFIG.googleAdsense.adSlots.inFeed}
-                          adFormat="fluid"
-                          className="col-span-2 md:col-span-1"
-                        />
+                        <GoogleAdSense adSlot={AFFILIATE_CONFIG.googleAdsense.adSlots.inFeed} adFormat="fluid" />
                       )}
                     </React.Fragment>
                   )
