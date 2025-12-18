@@ -36,12 +36,6 @@ export default function RatingDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    console.log("[v0] Rating submission started")
-    console.log("[v0] Rating value:", rating)
-    console.log("[v0] Professional email:", professionalEmail)
-    console.log("[v0] Requester email:", requesterEmail)
-    console.log("[v0] Need ID:", needId)
-
     if (rating === 0) {
       setError("Por favor, selecione uma nota")
       return
@@ -60,22 +54,18 @@ export default function RatingDialog({
         formData.append("comment", comment)
       }
 
-      console.log("[v0] Calling createRating with formData")
       const result = await createRating(null, formData)
-      console.log("[v0] createRating result:", result)
 
       if (result?.success) {
-        console.log("[v0] Rating created successfully")
         setRating(0)
         setComment("")
         onSuccess?.()
         onClose()
       } else {
-        console.log("[v0] Rating creation failed:", result?.message)
         setError(result?.message || "Erro ao enviar avaliação")
       }
     } catch (err) {
-      console.error("[v0] Error submitting rating:", err)
+      console.error("Error submitting rating:", err)
       setError("Erro ao enviar avaliação. Tente novamente.")
     } finally {
       setIsSubmitting(false)

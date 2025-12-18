@@ -43,27 +43,30 @@ export default async function RootLayout({
   
   window.btoa = function(str) {
     try {
+      // Tenta encoding direto primeiro
       return originalBtoa(str);
     } catch (e) {
-      try {
-        return originalBtoa(unescape(encodeURIComponent(str)));
-      } catch (e2) {
-        console.error('[v0] btoa failed for string:', str.substring(0, 50));
-        return originalBtoa('');
+      // Se falhar, converte UTF-8 para Latin1
+      var utf8Bytes = new TextEncoder().encode(str);
+      var binaryString = '';
+      for (var i = 0; i < utf8Bytes.length; i++) {
+        binaryString += String.fromCharCode(utf8Bytes[i]);
       }
+      return originalBtoa(binaryString);
     }
   };
   
   window.atob = function(str) {
     try {
-      return decodeURIComponent(escape(originalAtob(str)));
-    } catch (e) {
-      try {
-        return originalAtob(str);
-      } catch (e2) {
-        console.error('[v0] atob failed');
-        return '';
+      var binaryString = originalAtob(str);
+      var bytes = new Uint8Array(binaryString.length);
+      for (var i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+      return new TextDecoder().decode(bytes);
+    } catch (e) {
+      console.error('[v0] atob failed:', e);
+      return originalAtob(str);
     }
   };
 })();

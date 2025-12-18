@@ -104,13 +104,9 @@ export async function createRating(
   formData: FormData,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    console.log("[v0] createRating function called")
-
     const session = await auth()
-    console.log("[v0] Session:", session?.user?.email)
 
     if (!session?.user?.email) {
-      console.log("[v0] No session found")
       return { success: false, message: "Você precisa estar autenticado" }
     }
 
@@ -119,26 +115,20 @@ export async function createRating(
     const rating = Number.parseInt(formData.get("rating") as string)
     const comment = formData.get("comment") as string
 
-    console.log("[v0] Form data:", { ratedUserEmail, needId, rating, comment })
-
     if (!ratedUserEmail || !rating) {
-      console.log("[v0] Invalid data")
       return { success: false, message: "Dados inválidos" }
     }
 
     if (rating < 1 || rating > 5) {
-      console.log("[v0] Invalid rating value")
       return { success: false, message: "Avaliação deve ser entre 1 e 5 estrelas" }
     }
 
     if (session.user.email === ratedUserEmail) {
-      console.log("[v0] Self rating attempt")
       return { success: false, message: "Você não pode avaliar a si mesmo" }
     }
 
     const supabase = await createSupabaseServerClient()
 
-    console.log("[v0] Checking if rated user exists:", ratedUserEmail)
     const { data: ratedUser, error: userCheckError } = await supabase
       .from("users")
       .select("email")
@@ -146,12 +136,11 @@ export async function createRating(
       .single()
 
     if (userCheckError || !ratedUser) {
-      console.error("[v0] Rated user not found:", ratedUserEmail, userCheckError)
+      console.error("Rated user not found:", ratedUserEmail, userCheckError)
       return { success: false, message: "Profissional não encontrado no sistema" }
     }
 
     if (needId) {
-      console.log("[v0] Checking proposal status for need:", needId)
       const { data: proposal, error: proposalError } = await supabase
         .from("need_proposals")
         .select("status")
@@ -160,10 +149,7 @@ export async function createRating(
         .in("status", ["accepted_by_requester", "accepted_by_professional"])
         .single()
 
-      console.log("[v0] Proposal check result:", { proposal, proposalError })
-
       if (!proposal) {
-        console.log("[v0] No accepted proposal found")
         return {
           success: false,
           message: "Você só pode avaliar profissionais cujas propostas foram aceitas",
@@ -171,7 +157,6 @@ export async function createRating(
       }
     }
 
-    console.log("[v0] Checking for existing rating")
     const { data: existingRating, error: existingError } = await supabase
       .from("ratings")
       .select("id")
@@ -180,14 +165,10 @@ export async function createRating(
       .eq("need_id", needId || null)
       .maybeSingle()
 
-    console.log("[v0] Existing rating check:", { existingRating, existingError })
-
     if (existingRating) {
-      console.log("[v0] Rating already exists")
       return { success: false, message: "Você já avaliou este usuário" }
     }
 
-    console.log("[v0] Inserting rating into database")
     const { error, data: insertedData } = await supabase
       .from("ratings")
       .insert({
@@ -200,14 +181,13 @@ export async function createRating(
       .select()
 
     if (error) {
-      console.error("[v0] Error creating rating:", error)
+      console.error("Error creating rating:", error)
       return { success: false, message: `Erro ao criar avaliação: ${error.message}` }
     }
 
-    console.log("[v0] Rating inserted successfully:", insertedData)
     return { success: true, message: "Avaliação criada com sucesso!" }
   } catch (error) {
-    console.error("[v0] Unexpected error creating rating:", error)
+    console.error("Unexpected error creating rating:", error)
     return { success: false, message: "Erro inesperado ao criar avaliação" }
   }
 }
