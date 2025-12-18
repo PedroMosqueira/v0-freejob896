@@ -118,8 +118,15 @@ function SearchRequests({
           })
         }
 
-        setSearchResults((prev) => [...prev, ...fetchedNeeds])
-        setPage(0)
+        if (isLoadMore) {
+          setSearchResults((prev) => [...prev, ...fetchedNeeds])
+        } else {
+          setSearchResults(fetchedNeeds)
+        }
+
+        if (!isLoadMore) {
+          setPage(0)
+        }
         setHasMore(fetchedNeeds.length === limit)
       } catch (error) {
         console.error("Erro ao buscar pedidos:", error)
