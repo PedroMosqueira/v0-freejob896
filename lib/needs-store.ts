@@ -145,6 +145,67 @@ export async function filterNeeds({
   offset?: number
 }): Promise<Need[]> {
   const supabase = await createSupabaseServerClient()
+
+  if (professionalEmail) {
+    const [proposalData, chatThreadData] = await Promise.all([
+      supabase
+        .from("need_proposals")
+        .select("need_id")
+        .eq("professional_email", professionalEmail)
+        .or("status.eq.pending,status.eq.accepted_by_requester")
+        .then((res) => res.data || []),
+      supabase
+        .from("chat_threads")
+        .select("need_id")
+        .eq("professional_email", professionalEmail)
+        .then((res) => res.data || []),
+    ])
+
+    const proposalNeedIds = proposalData.map((p) => p.need_id)
+    const chatNeedIds = chatThreadData.map((t) => t.need_id)
+    const combinedNeedIds = [...new Set([...proposalNeedIds, ...chatNeedIds])]
+
+    if (combinedNeedIds.length === 0) {
+      return []
+    }
+
+    let query = supabase
+      .from("needs")
+      .select(
+        `
+     *,
+     need_proposals!inner (
+       id, need_id, professional_email, type, message, when_iso, status, created_at, accepted_at, bid_amount
+     )
+   `,
+      )
+      .in("id", combinedNeedIds)
+
+    if (q) {
+      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,category.ilike.%${q}%`)
+    }
+    if (cidade) {
+      query = query.eq("city", cidade)
+    }
+    if (categoria) {
+      query = query.eq("category", categoria)
+    }
+    if (status) {
+      query = query.eq("status", status)
+    }
+
+    query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1)
+
+    const { data, error } = await query
+    if (error) {
+      console.error("Erro ao buscar pedidos (profissional):", error)
+      throw new Error("Falha ao buscar pedidos.")
+    }
+
+    return (data || []) as Need[]
+  }
+
+  // Query normal para outros casos
   let query = supabase.from("needs").select(
     `
    *,
@@ -168,38 +229,6 @@ export async function filterNeeds({
   }
   if (requesterEmail) {
     query = query.eq("requester_email", requesterEmail)
-  }
-  if (professionalEmail) {
-    const { data: proposalData, error: proposalError } = await supabase
-      .from("need_proposals")
-      .select("need_id")
-      .eq("professional_email", professionalEmail)
-      .or("status.eq.pending,status.eq.accepted_by_requester")
-
-    if (proposalError) {
-      console.error("Erro ao buscar propostas para filtro de profissional:", proposalError)
-      throw new Error("Falha ao filtrar pedidos por profissional (propostas).")
-    }
-    const proposalNeedIds = proposalData.map((p) => p.need_id)
-
-    const { data: chatThreadData, error: chatThreadError } = await supabase
-      .from("chat_threads")
-      .select("need_id")
-      .eq("professional_email", professionalEmail)
-
-    if (chatThreadError) {
-      console.error("Erro ao buscar threads de chat para filtro de profissional:", chatThreadError)
-      throw new Error("Falha ao filtrar pedidos por profissional (chats).")
-    }
-    const chatNeedIds = chatThreadData.map((t) => t.need_id)
-
-    const combinedNeedIds = [...new Set([...proposalNeedIds, ...chatNeedIds])]
-
-    if (combinedNeedIds.length === 0) {
-      return []
-    }
-
-    query = query.in("id", combinedNeedIds)
   }
 
   const { data, error } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1)
@@ -886,15 +915,11 @@ export async function declineProposal(proposalId: string) {
 
   console.log("[v0] Proposal updated to declined_by_requester")
 
-  const { data: needData } = await supabase
-    .from("needs")
-    .select("requester_email")
-    .eq("id", proposal.need_id)
-    .single()
+  const { data: needData } = await supabase.from("needs").select("requester_email").eq("id", proposal.need_id).single()
 
   if (needData) {
     const chatThread = await getChatThread(proposal.need_id, needData.requester_email, proposal.professional_email)
-    
+
     if (chatThread) {
       console.log("[v0] Chat thread found, updating messages...")
       const messages = chatThread.messages || []
@@ -922,11 +947,7 @@ export async function declineProposal(proposalId: string) {
       console.log("[v0] Chat message status updated to declined")
     }
 
-    const { data: needTitle } = await supabase
-      .from("needs")
-      .select("title")
-      .eq("id", proposal.need_id)
-      .single()
+    const { data: needTitle } = await supabase.from("needs").select("title").eq("id", proposal.need_id).single()
 
     if (needTitle) {
       await createNotification(
@@ -1192,7 +1213,7 @@ async function createNotification(
 ): Promise<boolean> {
   try {
     console.log("[v0] 🔔 Creating notification:", { userEmail, title, message, type, relatedNeedId, relatedProposalId })
-    
+
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -1224,10 +1245,7 @@ async function createNotification(
 
     console.log("[v0] 📝 Inserting notification data:", notificationData)
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .insert(notificationData)
-      .select()
+    const { data, error } = await supabase.from("notifications").insert(notificationData).select()
 
     if (error) {
       console.error("[v0] ❌ ERROR creating notification:", error.message, error)
@@ -1349,11 +1367,7 @@ export async function sendBidToChat({
     throw new Error(`Falha ao enviar lance: ${error.message}`)
   }
 
-  const { data: needData } = await supabase
-    .from("needs")
-    .select("title")
-    .eq("id", needId)
-    .single()
+  const { data: needData } = await supabase.from("needs").select("title").eq("id", needId).single()
 
   if (needData) {
     await createNotification(
@@ -1396,16 +1410,16 @@ const getUserProfile = async (email: string) => {
       persistSession: false,
     },
   })
-  
+
   const { data, error } = await supabase
     .from("users")
     .select("full_name, profile_image_url, rating")
     .eq("email", email)
-    .single();
+    .single()
 
   if (error) {
-    console.error(`Error fetching user profile for ${email}:`, error);
-    return null;
+    console.error(`Error fetching user profile for ${email}:`, error)
+    return null
   }
 
   if (data) {
@@ -1413,11 +1427,11 @@ const getUserProfile = async (email: string) => {
       fullName: data.full_name,
       photoUrl: data.profile_image_url,
       rating: data.rating,
-    };
+    }
   }
 
-  return null;
-};
+  return null
+}
 
 // Function to fetch proposals with professional profiles
 export async function fetchProposalsWithProfiles(needId: string): Promise<Bid[]> {
@@ -1431,38 +1445,40 @@ export async function fetchProposalsWithProfiles(needId: string): Promise<Bid[]>
   if (proposalsError) throw proposalsError
   console.log("[v0] Fetched proposals:", proposalsData)
 
-  const professionalEmails = Array.from(new Set(proposalsData.map(p => p.professional_email).filter(Boolean)))
+  const professionalEmails = Array.from(new Set(proposalsData.map((p) => p.professional_email).filter(Boolean)))
   console.log("[v0] Professional emails to fetch:", professionalEmails)
   const profiles: Record<string, { fullName: string; photoUrl?: string; rating?: number }> = {}
 
-  await Promise.all(professionalEmails.map(async (email) => {
-    try {
-      console.log("[v0] Fetching profile for:", email)
-      const profile = await getUserProfile(email)
-      console.log("[v0] Got profile:", email, profile)
-      if (profile) {
+  await Promise.all(
+    professionalEmails.map(async (email) => {
+      try {
+        console.log("[v0] Fetching profile for:", email)
+        const profile = await getUserProfile(email)
+        console.log("[v0] Got profile:", email, profile)
+        if (profile) {
+          profiles[email] = {
+            fullName: profile.fullName || email.split("@")[0],
+            photoUrl: profile.photoUrl,
+            rating: profile.rating || 0,
+          }
+        }
+      } catch (error) {
+        console.error(`Error fetching profile for ${email}:`, error)
         profiles[email] = {
-          fullName: profile.fullName || email.split('@')[0],
-          photoUrl: profile.photoUrl,
-          rating: profile.rating || 0
+          fullName: email.split("@")[0],
+          rating: 0,
         }
       }
-    } catch (error) {
-      console.error(`Error fetching profile for ${email}:`, error)
-      profiles[email] = {
-        fullName: email.split('@')[0],
-        rating: 0
-      }
-    }
-  }))
+    }),
+  )
 
   console.log("[v0] All profiles fetched:", profiles)
 
-  return proposalsData.map(proposal => ({
+  return proposalsData.map((proposal) => ({
     id: proposal.id,
     needId: proposal.need_id,
     professionalEmail: proposal.professional_email,
-    professionalName: profiles[proposal.professional_email]?.fullName || proposal.professional_email.split('@')[0],
+    professionalName: profiles[proposal.professional_email]?.fullName || proposal.professional_email.split("@")[0],
     professionalImage: profiles[proposal.professional_email]?.photoUrl || null,
     professionalRating: profiles[proposal.professional_email]?.rating,
     bidAmount: proposal.bid_amount,
@@ -1472,6 +1488,6 @@ export async function fetchProposalsWithProfiles(needId: string): Promise<Bid[]>
     whenIso: proposal.when_iso,
     declineReason: null,
     createdAt: proposal.created_at,
-    acceptedAt: proposal.accepted_at
+    acceptedAt: proposal.accepted_at,
   }))
 }
