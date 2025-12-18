@@ -1,14 +1,9 @@
 "use client"
 
 import React from "react"
-import { CategoryCombobox } from "@/components/category-combobox"
 import type { ReactElement } from "react"
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Card } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
@@ -22,6 +17,7 @@ import { SearchRequestsSkeleton } from "./search-requests-skeleton"
 import { CourseBannerAd } from "./course-banner-ad"
 import { GoogleAdSense } from "./google-adsense"
 import { AFFILIATE_CONFIG } from "@/lib/affiliate-config"
+import { FilterForm } from "./filter-form"
 
 interface SearchRequestsProps {
   initialShowMyRequests?: boolean
@@ -292,76 +288,6 @@ function SearchRequests({
       .replace(/[\u0300-\u036f]/g, "")
   }
 
-  const FilterForm = useMemo(() => {
-    return () => (
-      <form onSubmit={handleSearch} className="space-y-3 px-4">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="search-query" className="text-sm font-medium">
-              Palavra-chave
-            </Label>
-            <Input
-              id="search-query"
-              placeholder="Ex: encanador"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="search-city" className="text-sm font-medium">
-              Cidade
-            </Label>
-            <Input
-              id="search-city"
-              placeholder="Ex: Rio de Janeiro"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="search-status" className="text-sm font-medium">
-              Status
-            </Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger id="search-status" className="text-sm">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="aberto">Aberto</SelectItem>
-                <SelectItem value="visita-proposta">Visita Proposta</SelectItem>
-                <SelectItem value="aceito">Aceito</SelectItem>
-                <SelectItem value="concluido">Concluído</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="search-category" className="text-sm font-medium">
-              Categoria
-            </Label>
-            <CategoryCombobox
-              value={category}
-              onValueChange={setCategory}
-              placeholder="Todas as categorias"
-              className="text-sm"
-              includeAll={true}
-            />
-          </div>
-        </div>
-
-        <Button type="submit" className="w-full">
-          Aplicar Filtros
-        </Button>
-      </form>
-    )
-  }, [query, city, status])
-
   useEffect(() => {
     if (showFilters) {
       setIsMobileFilterOpen(true)
@@ -400,20 +326,31 @@ function SearchRequests({
   const filters = useMemo(() => ({ category, city, status }), [category, city, status])
 
   return (
-    <>
+    <div className="container mx-auto px-4 py-8 space-y-6">
       <AdWrapper freeUserOnly={isFreeUser}>
         <AffiliateSidebar />
       </AdWrapper>
 
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
+          {/* Mobile Filter Sheet */}
           <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-            <SheetContent side="left" className="w-[300px] sm:w-[350px]">
-              <SheetHeader>
-                <SheetTitle>Filtros de Busca</SheetTitle>
+            <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+              <SheetHeader className="px-4 py-3 border-b">
+                <SheetTitle className="text-lg">Filtros</SheetTitle>
               </SheetHeader>
-              <div className="mt-6">
-                <FilterForm />
+              <div className="py-4 overflow-y-auto max-h-[calc(100vh-80px)]">
+                <FilterForm
+                  query={query}
+                  setQuery={setQuery}
+                  city={city}
+                  setCity={setCity}
+                  status={status}
+                  setStatus={setStatus}
+                  category={category}
+                  setCategory={setCategory}
+                  onSubmit={handleSearch}
+                />
               </div>
             </SheetContent>
           </Sheet>
@@ -575,7 +512,7 @@ function SearchRequests({
           />
         </div>
       )}
-    </>
+    </div>
   )
 }
 
