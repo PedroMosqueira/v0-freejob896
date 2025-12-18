@@ -33,7 +33,7 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
         await loadNotifications()
         await loadUnreadCount()
       } catch (error) {
-        console.error("[v0] Error during initial load:", error)
+        console.error("Error during initial load:", error)
       }
     }
 
@@ -45,7 +45,6 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
     }, 10000)
 
     const handleNewNotification = () => {
-      console.log("[v0] New notification event received, reloading...")
       loadNotifications()
       loadUnreadCount()
     }
@@ -61,12 +60,10 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
   const loadNotifications = async () => {
     try {
       setLoading(true)
-      console.log("[v0] Loading notifications for:", userEmail)
       const data = await getNotifications(userEmail)
-      console.log("[v0] Loaded notifications:", data.length)
       setNotifications(data)
     } catch (error) {
-      console.error("[v0] Error loading notifications:", error)
+      console.error("Error loading notifications:", error)
     } finally {
       setLoading(false)
     }
@@ -101,19 +98,12 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
   }
 
   const handleNotificationClick = async (notification: Notification) => {
-    console.log("[v0] Notification clicked:", notification)
     await handleMarkAsRead(notification.id)
     setIsOpen(false)
 
     if (notification.related_need_id) {
-      console.log("[v0] Has related_need_id:", notification.related_need_id)
-      console.log("[v0] Dispatching openNeed event for need:", notification.related_need_id)
       const event = new CustomEvent("openNeed", { detail: notification.related_need_id })
-      console.log("[v0] Event created:", event)
       window.dispatchEvent(event)
-      console.log("[v0] Event dispatched")
-    } else {
-      console.log("[v0] No related_need_id found in notification")
     }
   }
 
@@ -193,33 +183,31 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {notifications
-                    .filter((notification) => notification.type !== "message")
-                    .map((notification) => (
-                      <div
-                        key={notification.id}
-                        className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
-                          !notification.is_read ? "bg-blue-50 dark:bg-blue-900/20" : ""
-                        }`}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <div className="flex items-start space-x-3">
-                          <span className="text-2xl flex-shrink-0">{getNotificationIcon(notification.type)}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
-                              {!notification.is_read && (
-                                <span className="ml-2 h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                              {formatDate(notification.created_at)}
-                            </p>
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+                        !notification.is_read ? "bg-blue-50 dark:bg-blue-900/20" : ""
+                      }`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <span className="text-2xl flex-shrink-0">{getNotificationIcon(notification.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{notification.title}</p>
+                            {!notification.is_read && (
+                              <span className="ml-2 h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400 flex-shrink-0" />
+                            )}
                           </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{notification.message}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            {formatDate(notification.created_at)}
+                          </p>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               )}
             </ScrollArea>

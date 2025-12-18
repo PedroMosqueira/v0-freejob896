@@ -118,10 +118,37 @@ function SearchRequests({
           })
         }
 
+        if (userLocation) {
+          fetchedNeeds = fetchedNeeds.map((need) => {
+            if (need.latitude && need.longitude) {
+              const distance = calculateDistance(
+                userLocation.latitude,
+                userLocation.longitude,
+                need.latitude,
+                need.longitude,
+              )
+              return { ...need, distance }
+            }
+            return need
+          })
+        }
+
         if (isLoadMore) {
-          setSearchResults((prev) => [...prev, ...fetchedNeeds])
+          setSearchResults((prev) => {
+            const combined = [...prev, ...fetchedNeeds]
+            return combined.sort((a, b) => {
+              const distA = a.distance ?? Number.POSITIVE_INFINITY
+              const distB = b.distance ?? Number.POSITIVE_INFINITY
+              return distA - distB
+            })
+          })
         } else {
-          setSearchResults(fetchedNeeds)
+          const sorted = fetchedNeeds.sort((a, b) => {
+            const distA = a.distance ?? Number.POSITIVE_INFINITY
+            const distB = b.distance ?? Number.POSITIVE_INFINITY
+            return distA - distB
+          })
+          setSearchResults(sorted)
         }
 
         if (!isLoadMore) {
@@ -141,8 +168,42 @@ function SearchRequests({
         }
       }
     },
-    [query, category, city, status, showMyRequests, showMyProfessionalServices, email, debouncedSearchQuery, page],
+    [
+      query,
+      category,
+      city,
+      status,
+      showMyRequests,
+      showMyProfessionalServices,
+      email,
+      debouncedSearchQuery,
+      page,
+      userLocation,
+    ],
   )
+
+  const handleSearch = useCallback(() => {
+    // Implement search logic here
+  }, [])
+
+  const getStatusBadgeClass = useCallback((status: NeedStatus) => {
+    switch (status) {
+      case "open":
+        return "bg-green-500"
+      case "pending":
+        return "bg-yellow-500"
+      case "accepted":
+        return "bg-blue-500"
+      case "completed":
+        return "bg-gray-500"
+      default:
+        return "bg-gray-500"
+    }
+  }, [])
+
+  const handleActionSuccess = useCallback(() => {
+    // Implement action success logic here
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -207,20 +268,13 @@ function SearchRequests({
               setUserCity(city)
             }
           } catch (error) {
-            console.error("[v0] Error getting user city:", error)
+            console.error("Error getting user city:", error)
           }
 
           setIsGettingLocation(false)
         },
         (error) => {
-          console.error("[v0] Geolocation error:", error.message, error.code)
-          if (error.code === 1) {
-            console.error("[v0] User denied location permission")
-          } else if (error.code === 2) {
-            console.error("[v0] Location unavailable")
-          } else if (error.code === 3) {
-            console.error("[v0] Location request timeout")
-          }
+          console.error("Geolocation error:", error.message, error.code)
           setIsGettingLocation(false)
         },
         {
@@ -233,69 +287,6 @@ function SearchRequests({
   }, [userLocation, isGettingLocation])
 
   useEffect(() => {
-    if (userLocation && searchResults.length > 0) {
-      setSearchResults((prevResults) => {
-        const resultsWithDistance = prevResults.map((need) => {
-          if (need.latitude && need.longitude && !need.distance) {
-            const distance = calculateDistance(
-              userLocation.latitude,
-              userLocation.longitude,
-              need.latitude,
-              need.longitude,
-            )
-            return { ...need, distance }
-          }
-          return need
-        })
-
-        // Ordenar por distância (mais próximos primeiro)
-        return resultsWithDistance.sort((a, b) => {
-          const distA = a.distance ?? Number.POSITIVE_INFINITY
-          const distB = b.distance ?? Number.POSITIVE_INFINITY
-          return distA - distB
-        })
-      })
-    }
-  }, [userLocation, searchResults.length])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    performSearch()
-    setIsMobileFilterOpen(false)
-  }
-
-  const handleActionSuccess = () => {
-    performSearch()
-    setSelectedNeedForInterest(null)
-  }
-
-  const getStatusBadgeClass = (s: NeedStatus) => {
-    switch (s) {
-      case "aberto":
-        return "bg-green-500 text-white"
-      case "visita-proposta":
-        return "bg-blue-400 text-white"
-      case "aceito":
-        return "bg-blue-500 text-white"
-      case "concluido":
-        return "bg-purple-500 text-white"
-      case "cancelado":
-        return "bg-red-500 text-white"
-      default:
-        return "bg-gray-500 text-white"
-    }
-  }
-
-  const normalizeCityName = (city: string | undefined) => {
-    if (!city) return ""
-    return city
-      .toLowerCase()
-      .trim()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-  }
-
-  useEffect(() => {
     if (showFilters) {
       setIsMobileFilterOpen(true)
     }
@@ -306,7 +297,6 @@ function SearchRequests({
       const needId = event.detail
 
       if (!needId) {
-        console.warn("[v0] SearchRequests: No needId in event")
         return
       }
 
@@ -315,11 +305,9 @@ function SearchRequests({
 
         if (need) {
           setSelectedNeedForDetails(need)
-        } else {
-          console.warn("[v0] SearchRequests: No need found with ID:", needId)
         }
       } catch (error) {
-        console.error("[v0] SearchRequests: Error opening need:", error)
+        console.error("Error opening need:", error)
       }
     }
 
