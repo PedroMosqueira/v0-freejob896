@@ -18,14 +18,23 @@ export interface Notification {
 export async function getNotifications(userEmail: string): Promise<Notification[]> {
   const supabase = createClient()
 
-  const { data, error } = await supabase
+  console.log("[v0] 🔍 getNotifications called with email:", userEmail)
+
+  const { data, error, count } = await supabase
     .from("notifications")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("user_id", userEmail)
     .order("created_at", { ascending: false })
 
+  console.log("[v0] 🔍 Notifications query result:", {
+    data,
+    error,
+    count,
+    dataLength: data?.length || 0,
+  })
+
   if (error) {
-    console.error("Error fetching notifications:", error)
+    console.error("[v0] ❌ Error fetching notifications:", error)
     return []
   }
 
