@@ -287,7 +287,16 @@ function SearchRequests({
   }, [userLocation, isGettingLocation])
 
   useEffect(() => {
+    console.log("[v0] useEffect distância disparado", {
+      hasUserLocation: !!userLocation,
+      searchResultsLength: searchResults.length,
+      firstResultHasDistance: searchResults[0]?.distance,
+      firstResultCoords: { lat: searchResults[0]?.latitude, lng: searchResults[0]?.longitude },
+    })
+
     if (userLocation && searchResults.length > 0) {
+      console.log("[v0] Recalculando distâncias para", searchResults.length, "cards")
+
       const updatedResults = searchResults.map((need) => {
         if (need.latitude && need.longitude && !need.distance) {
           const distance = calculateDistance(
@@ -296,6 +305,7 @@ function SearchRequests({
             need.latitude,
             need.longitude,
           )
+          console.log("[v0] Calculada distância para", need.title, ":", distance)
           return { ...need, distance }
         }
         return need
@@ -305,6 +315,11 @@ function SearchRequests({
         const distA = a.distance ?? Number.POSITIVE_INFINITY
         const distB = b.distance ?? Number.POSITIVE_INFINITY
         return distA - distB
+      })
+
+      console.log("[v0] Resultados ordenados, primeiro card:", {
+        title: sorted[0]?.title,
+        distance: sorted[0]?.distance,
       })
 
       setSearchResults(sorted)
