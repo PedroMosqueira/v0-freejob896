@@ -287,6 +287,41 @@ function SearchRequests({
   }, [userLocation, isGettingLocation])
 
   useEffect(() => {
+    if (userLocation && searchResults.length > 0) {
+      const resultsWithDistance = searchResults.map((need) => {
+        // Se já tem distância calculada, não recalcular
+        if (need.distance !== undefined && need.distance !== null) {
+          return need
+        }
+
+        // Calcular distância se o serviço tem coordenadas
+        if (need.latitude && need.longitude) {
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            need.latitude,
+            need.longitude,
+          )
+          return { ...need, distance }
+        }
+        return need
+      })
+
+      // Ordenar por distância (mais próximos primeiro)
+      const sorted = resultsWithDistance.sort((a, b) => {
+        const distA = a.distance ?? Number.POSITIVE_INFINITY
+        const distB = b.distance ?? Number.POSITIVE_INFINITY
+        return distA - distB
+      })
+
+      // Só atualizar se realmente mudou algo
+      if (JSON.stringify(sorted) !== JSON.stringify(searchResults)) {
+        setSearchResults(sorted)
+      }
+    }
+  }, [userLocation]) // Só depende de userLocation, não de searchResults para evitar loop
+
+  useEffect(() => {
     if (showFilters) {
       setIsMobileFilterOpen(true)
     }

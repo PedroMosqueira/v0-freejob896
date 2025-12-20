@@ -25,35 +25,14 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    const checkRecoverySession = async () => {
-      // Nosso sistema customizado usa tokens na URL que vão direto para /auth/reset-password
-    }
-
-    // Não executar mais essa verificação
-    // checkRecoverySession()
-  }, [router])
-
-  useEffect(() => {
     const code = searchParams?.get("code")
-    const type = searchParams?.get("type")
 
-    console.log("[v0] ========== PAGE LOAD ==========")
-    console.log("[v0] Current URL:", window.location.href)
-    console.log("[v0] Code param:", code)
-    console.log("[v0] Type param:", type)
-    console.log("[v0] All search params:", Object.fromEntries(searchParams?.entries() || []))
-
-    // Apenas redirecionar se tiver code nos QUERY PARAMS (não no hash)
     if (code) {
-      console.log("[v0] 🚨 CODE DETECTED - REDIRECTING TO API CALLBACK 🚨")
       const params = new URLSearchParams(window.location.search)
       const callbackUrl = `/api/auth/callback?${params.toString()}`
-      console.log("[v0] Redirecting to:", callbackUrl)
       window.location.href = callbackUrl
       return
     }
-
-    console.log("[v0] No code detected, staying on main page")
   }, [searchParams])
 
   useEffect(() => {
@@ -61,7 +40,6 @@ export default function Home() {
 
     const needId = searchParams?.get("needId")
     if (needId) {
-      console.log("[v0] Opening need from URL parameter:", needId)
       window.dispatchEvent(new CustomEvent("openNeed", { detail: needId }))
     }
   }, [searchParams, authenticatedEmail])
@@ -141,7 +119,6 @@ export default function Home() {
   }
 
   const handleSearchChange = (query: string) => {
-    console.log("[v0] Header search changed to:", query)
     setSearchQuery(query)
   }
 

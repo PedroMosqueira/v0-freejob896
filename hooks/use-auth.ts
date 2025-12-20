@@ -9,29 +9,24 @@ export function useAuth() {
   const [isFreeUser, setIsFreeUser] = useState(true)
 
   useEffect(() => {
-    console.log("[v0] 🟡 useAuth - Status:", status, "Email:", session?.user?.email || "No email")
-  }, [status, session])
-
-  useEffect(() => {
     async function fetchSubscription() {
       if (session?.user?.email) {
         try {
           const response = await fetch("/api/user/subscription")
           if (!response.ok) {
-            console.error("[v0] Subscription API returned error:", response.status)
+            console.error("Subscription API returned error:", response.status)
             setIsFreeUser(true)
             return
           }
 
           const data = await response.json()
-          // Usuário é free se não tem plano premium ativo
           setIsFreeUser(data.plan !== "premium" || !data.is_active)
         } catch (error) {
-          console.error("[v0] Error fetching subscription:", error)
-          setIsFreeUser(true) // Default para free em caso de erro
+          console.error("Error fetching subscription:", error)
+          setIsFreeUser(true)
         }
       } else {
-        setIsFreeUser(true) // Usuário não logado = free
+        setIsFreeUser(true)
       }
     }
 

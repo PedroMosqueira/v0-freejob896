@@ -18,11 +18,8 @@ export function useNotifications() {
       return
     }
 
-    console.log("[v0] Notifications hook active for:", session.user.email)
-
     const supabase = createSupabaseBrowserClient()
 
-    // Subscribe to notifications table for real-time updates
     const channel = supabase
       .channel("user-notifications")
       .on(
@@ -34,7 +31,6 @@ export function useNotifications() {
           filter: `user_id=eq.${session.user.email}`,
         },
         (payload) => {
-          console.log("[v0] New notification received:", payload)
           const notification = payload.new as {
             title: string
             message: string
@@ -43,7 +39,6 @@ export function useNotifications() {
             related_proposal_id?: string
           }
 
-          // Show browser notification
           notificationManager.show({
             title: notification.title,
             body: notification.message,
@@ -51,19 +46,15 @@ export function useNotifications() {
             needId: notification.related_need_id,
             proposalId: notification.related_proposal_id,
           })
-          
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('new-notification'))
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log("[v0] Notification subscription status:", status)
-      })
 
-    // Clean up subscription on unmount
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("new-notification"))
+          }
+        },
+      )
+      .subscribe()
+
     return () => {
-      console.log("[v0] Unsubscribing from notifications")
       supabase.removeChannel(channel)
     }
   }, [mounted, session])
