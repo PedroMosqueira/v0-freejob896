@@ -287,6 +287,31 @@ function SearchRequests({
   }, [userLocation, isGettingLocation])
 
   useEffect(() => {
+    if (userLocation && searchResults.length > 0) {
+      const updatedResults = searchResults.map((need) => {
+        if (need.latitude && need.longitude && !need.distance) {
+          const distance = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            need.latitude,
+            need.longitude,
+          )
+          return { ...need, distance }
+        }
+        return need
+      })
+
+      const sorted = updatedResults.sort((a, b) => {
+        const distA = a.distance ?? Number.POSITIVE_INFINITY
+        const distB = b.distance ?? Number.POSITIVE_INFINITY
+        return distA - distB
+      })
+
+      setSearchResults(sorted)
+    }
+  }, [userLocation])
+
+  useEffect(() => {
     if (showFilters) {
       setIsMobileFilterOpen(true)
     }
