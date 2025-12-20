@@ -189,16 +189,28 @@ function SearchRequests({
 
   const getStatusBadgeClass = useCallback((status: NeedStatus) => {
     switch (status) {
+      case "aberto":
+        return "bg-green-500 text-white"
       case "open":
-        return "bg-green-500"
+        return "bg-green-500 text-white"
+      case "visita-proposta":
+        return "bg-yellow-500 text-white"
       case "pending":
-        return "bg-yellow-500"
+        return "bg-yellow-500 text-white"
+      case "aceito":
+        return "bg-blue-500 text-white"
       case "accepted":
-        return "bg-blue-500"
+        return "bg-blue-500 text-white"
+      case "concluido":
+        return "bg-purple-500 text-white"
       case "completed":
-        return "bg-gray-500"
+        return "bg-purple-500 text-white"
+      case "cancelado":
+        return "bg-red-500 text-white"
+      case "cancelled":
+        return "bg-red-500 text-white"
       default:
-        return "bg-gray-500"
+        return "bg-gray-500 text-white"
     }
   }, [])
 
@@ -412,7 +424,7 @@ function SearchRequests({
                             need.distance !== null &&
                             need.distance !== Number.POSITIVE_INFINITY &&
                             !isNaN(need.distance) && (
-                              <div className="absolute top-2 right-2 z-30">
+                              <div className="absolute top-2 right-2 z-40">
                                 <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
                                   ⚡ {formatDistance(need.distance)}
                                 </span>

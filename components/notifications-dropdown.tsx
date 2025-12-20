@@ -110,15 +110,33 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "proposal":
-        return "💼"
+        return "💼" // Lance/Proposta recebida
+      case "proposal_accepted":
+        return "✅" // Proposta aceita
+      case "proposal_rejected":
+        return "❌" // Proposta recusada
       case "message":
-        return "💬"
+        return "💬" // Nova mensagem
+      case "new_message":
+        return "💬" // Nova mensagem (alternativo)
       case "status":
-        return "📋"
+        return "📋" // Mudança de status
+      case "status_change":
+        return "🔄" // Mudança de status (alternativo)
       case "completion":
-        return "✅"
+        return "✅" // Serviço concluído
+      case "completed":
+        return "🎉" // Serviço concluído (alternativo)
+      case "interest":
+        return "⭐" // Interesse demonstrado
+      case "visit":
+        return "📅" // Visita agendada
+      case "cancellation":
+        return "🚫" // Cancelamento
+      case "cancelled":
+        return "🚫" // Cancelamento (alternativo)
       default:
-        return "🔔"
+        return "🔔" // Notificação genérica
     }
   }
 
