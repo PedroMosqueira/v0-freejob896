@@ -61,6 +61,7 @@ function SearchRequests({
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null)
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [userCity, setUserCity] = useState<string>("")
+  const [locationAttempted, setLocationAttempted] = useState(false)
 
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
 
@@ -253,12 +254,19 @@ function SearchRequests({
   }, [page])
 
   useEffect(() => {
-    if (!userLocation && !isGettingLocation && navigator.geolocation) {
+    if (!locationAttempted && navigator.geolocation) {
       setIsGettingLocation(true)
+      setLocationAttempted(true)
+
+      const timeoutId = setTimeout(() => {
+        setIsGettingLocation(false)
+        setUserLocation(null)
+      }, 3000)
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          clearTimeout(timeoutId)
           const { latitude, longitude } = position.coords
-          console.log("[v0] Localização do usuário obtida:", { latitude, longitude })
           setUserLocation({ latitude, longitude })
 
           try {
@@ -275,67 +283,24 @@ function SearchRequests({
           setIsGettingLocation(false)
         },
         (error) => {
+          clearTimeout(timeoutId)
           console.error("Geolocation error:", error.message, error.code)
           setIsGettingLocation(false)
         },
         {
           enableHighAccuracy: false,
-          timeout: 10000,
+          timeout: 3000,
           maximumAge: 300000,
         },
       )
     }
-  }, [userLocation, isGettingLocation])
+  }, [locationAttempted])
 
   useEffect(() => {
-    if (userLocation && searchResults.length > 0) {
-      console.log("[v0] useEffect disparado - userLocation existe:", userLocation)
-      console.log("[v0] searchResults.length:", searchResults.length)
-      console.log(
-        "[v0] Cards com distância:",
-        searchResults.filter((r) => r.distance !== undefined && r.distance !== null).length,
-      )
-      console.log("[v0] Cards sem distância:", searchResults.filter((r) => !r.distance).length)
-
-      const resultsWithDistance = searchResults.map((need) => {
-        // Se já tem distância calculada, não recalcular
-        if (need.distance !== undefined && need.distance !== null) {
-          return need
-        }
-
-        // Calcular distância se o serviço tem coordenadas
-        if (need.latitude && need.longitude) {
-          const distance = calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            need.latitude,
-            need.longitude,
-          )
-          console.log("[v0] Calculando distância para card:", need.id, "distância:", distance)
-          return { ...need, distance }
-        }
-        console.log("[v0] Card sem coordenadas:", need.id)
-        return need
-      })
-
-      // Ordenar por distância (mais próximos primeiro)
-      const sorted = resultsWithDistance.sort((a, b) => {
-        const distA = a.distance ?? Number.POSITIVE_INFINITY
-        const distB = b.distance ?? Number.POSITIVE_INFINITY
-        return distA - distB
-      })
-
-      console.log("[v0] Após cálculo - Cards com distância:", sorted.filter((r) => r.distance).length)
-
-      // Só atualizar se realmente mudou algo
-      if (JSON.stringify(sorted) !== JSON.stringify(searchResults)) {
-        console.log("[v0] Atualizando searchResults com distâncias calculadas")
-        setSearchResults(sorted)
-      } else {
-        console.log("[v0] Nenhuma mudança detectada, não atualizando")
-      }
+    if (!isGettingLocation && locationAttempted) {
+      performSearch()
     }
-  }, [userLocation]) // Só depende de userLocation, não de searchResults para evitar loop
+  }, [isGettingLocation, locationAttempted, performSearch])
 
   useEffect(() => {
     if (showFilters) {
