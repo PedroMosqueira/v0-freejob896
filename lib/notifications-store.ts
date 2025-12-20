@@ -16,6 +16,7 @@ export interface Notification {
 }
 
 export async function getNotifications(userEmail: string): Promise<Notification[]> {
+  console.log("[v0] getNotifications chamado com userEmail:", userEmail)
   const supabase = createClient()
 
   const { data, error } = await supabase
@@ -23,6 +24,8 @@ export async function getNotifications(userEmail: string): Promise<Notification[
     .select("*")
     .eq("user_id", userEmail)
     .order("created_at", { ascending: false })
+
+  console.log("[v0] getNotifications resultado:", { data, error })
 
   if (error) {
     console.error("Error fetching notifications:", error)
@@ -33,6 +36,7 @@ export async function getNotifications(userEmail: string): Promise<Notification[
 }
 
 export async function getUnreadCount(userEmail: string): Promise<number> {
+  console.log("[v0] getUnreadCount chamado com userEmail:", userEmail)
   const supabase = createClient()
 
   const { count, error } = await supabase
@@ -40,6 +44,8 @@ export async function getUnreadCount(userEmail: string): Promise<number> {
     .select("*", { count: "exact", head: true })
     .eq("user_id", userEmail)
     .eq("is_read", false)
+
+  console.log("[v0] getUnreadCount resultado:", { count, error })
 
   if (error) {
     console.error("Error fetching unread count:", error)
