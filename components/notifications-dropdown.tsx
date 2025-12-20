@@ -111,6 +111,8 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
     switch (type) {
       case "proposal":
         return "💼" // Lance/Proposta recebida
+      case "acceptance":
+        return "✅" // Proposta aceita (tipo do banco)
       case "proposal_accepted":
         return "✅" // Proposta aceita
       case "proposal_rejected":
@@ -124,7 +126,7 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
       case "status_change":
         return "🔄" // Mudança de status (alternativo)
       case "completion":
-        return "✅" // Serviço concluído
+        return "🎉" // Serviço concluído
       case "completed":
         return "🎉" // Serviço concluído (alternativo)
       case "interest":

@@ -424,7 +424,7 @@ function SearchRequests({
                             need.distance !== null &&
                             need.distance !== Number.POSITIVE_INFINITY &&
                             !isNaN(need.distance) && (
-                              <div className="absolute top-2 right-2 z-40">
+                              <div className="absolute top-2 right-2 z-10">
                                 <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
                                   ⚡ {formatDistance(need.distance)}
                                 </span>
