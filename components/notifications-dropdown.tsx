@@ -59,10 +59,8 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
 
   const loadNotifications = async () => {
     try {
-      console.log("[v0] Carregando notificações para:", userEmail)
       setLoading(true)
       const data = await getNotifications(userEmail)
-      console.log("[v0] Notificações carregadas:", data.length, data)
       setNotifications(data)
     } catch (error) {
       console.error("Error loading notifications:", error)
@@ -73,9 +71,7 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
 
   const loadUnreadCount = async () => {
     try {
-      console.log("[v0] Carregando contagem não lida para:", userEmail)
       const count = await getUnreadCount(userEmail)
-      console.log("[v0] Contagem não lida:", count)
       setUnreadCount(count)
     } catch (error) {
       console.error("Error loading unread count:", error)
