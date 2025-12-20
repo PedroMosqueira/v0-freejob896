@@ -258,6 +258,7 @@ function SearchRequests({
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords
+          console.log("[v0] Localização do usuário obtida:", { latitude, longitude })
           setUserLocation({ latitude, longitude })
 
           try {
@@ -288,6 +289,14 @@ function SearchRequests({
 
   useEffect(() => {
     if (userLocation && searchResults.length > 0) {
+      console.log("[v0] useEffect disparado - userLocation existe:", userLocation)
+      console.log("[v0] searchResults.length:", searchResults.length)
+      console.log(
+        "[v0] Cards com distância:",
+        searchResults.filter((r) => r.distance !== undefined && r.distance !== null).length,
+      )
+      console.log("[v0] Cards sem distância:", searchResults.filter((r) => !r.distance).length)
+
       const resultsWithDistance = searchResults.map((need) => {
         // Se já tem distância calculada, não recalcular
         if (need.distance !== undefined && need.distance !== null) {
@@ -302,8 +311,10 @@ function SearchRequests({
             need.latitude,
             need.longitude,
           )
+          console.log("[v0] Calculando distância para card:", need.id, "distância:", distance)
           return { ...need, distance }
         }
+        console.log("[v0] Card sem coordenadas:", need.id)
         return need
       })
 
@@ -314,9 +325,14 @@ function SearchRequests({
         return distA - distB
       })
 
+      console.log("[v0] Após cálculo - Cards com distância:", sorted.filter((r) => r.distance).length)
+
       // Só atualizar se realmente mudou algo
       if (JSON.stringify(sorted) !== JSON.stringify(searchResults)) {
+        console.log("[v0] Atualizando searchResults com distâncias calculadas")
         setSearchResults(sorted)
+      } else {
+        console.log("[v0] Nenhuma mudança detectada, não atualizando")
       }
     }
   }, [userLocation]) // Só depende de userLocation, não de searchResults para evitar loop
