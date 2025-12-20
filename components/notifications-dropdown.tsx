@@ -59,13 +59,11 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
 
   const loadNotifications = async () => {
     try {
-      console.log("[v0] 🔵 loadNotifications iniciado para:", userEmail)
       setLoading(true)
       const data = await getNotifications(userEmail)
-      console.log("[v0] 🔵 Notificações carregadas:", data.length, data)
       setNotifications(data)
     } catch (error) {
-      console.error("[v0] ❌ Error loading notifications:", error)
+      console.error("Error loading notifications:", error)
     } finally {
       setLoading(false)
     }
@@ -73,12 +71,10 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
 
   const loadUnreadCount = async () => {
     try {
-      console.log("[v0] 🔵 loadUnreadCount iniciado para:", userEmail)
       const count = await getUnreadCount(userEmail)
-      console.log("[v0] 🔵 Unread count:", count)
       setUnreadCount(count)
     } catch (error) {
-      console.error("[v0] ❌ Error loading unread count:", error)
+      console.error("Error loading unread count:", error)
     }
   }
 
