@@ -307,6 +307,11 @@ export function SiteHeader({
                   </DropdownMenu>
                 </div>
 
+                {/* Mobile Notifications */}
+                <div className="md:hidden">
+                  <NotificationsDropdown userEmail={email} />
+                </div>
+
                 {/* DropdownMenu Mobile without Interesses and Pedidos */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -352,11 +357,6 @@ export function SiteHeader({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                {/* NotificationsDropdown for Mobile */}
-                <div className="md:hidden">
-                  <NotificationsDropdown userEmail={email} />
-                </div>
               </>
             ) : (
               <Button
