@@ -1,7 +1,6 @@
 function utf8ToBase64Manual(str: string): string {
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
-  // Converte string para UTF-8 bytes
   const utf8Bytes: number[] = []
   for (let i = 0; i < str.length; i++) {
     const charCode = str.charCodeAt(i)
@@ -24,7 +23,6 @@ function utf8ToBase64Manual(str: string): string {
     }
   }
 
-  // Converte bytes para Base64
   let result = ""
   for (let i = 0; i < utf8Bytes.length; i += 3) {
     const byte1 = utf8Bytes[i]
@@ -40,29 +38,11 @@ function utf8ToBase64Manual(str: string): string {
   return result
 }
 
-// Sobrescreve btoa no navegador para suportar UTF-8
-if (typeof window !== "undefined") {
-  const originalBtoa = window.btoa
-  window.btoa = (str: string): string => {
-    // Tenta usar a versão nativa para ASCII simples (melhor performance)
-    if (!/[^\x00-\x7F]/.test(str)) {
-      try {
-        return originalBtoa.call(window, str)
-      } catch (e) {
-        // Fallback para implementação manual
-      }
-    }
-    // Usa implementação manual para UTF-8
-    return utf8ToBase64Manual(str)
-  }
-}
-
-// Define btoa no servidor Node.js onde não existe nativamente
+// NÃO sobrescreve no navegador para evitar conflitos
 if (typeof globalThis !== "undefined" && typeof globalThis.btoa === "undefined") {
   ;(globalThis as any).btoa = utf8ToBase64Manual
 }
 
-// Polyfill para Buffer no servidor
 if (typeof Buffer === "undefined") {
   ;(global as any).Buffer = {
     from: (data: string | Uint8Array, encoding?: string) => {

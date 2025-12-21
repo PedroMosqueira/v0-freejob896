@@ -313,7 +313,7 @@ export function SiteHeader({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="md:hidden h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                       <Menu className="h-5 w-5" />
                       <span className="sr-only">Menu</span>
@@ -352,6 +352,11 @@ export function SiteHeader({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* NotificationsDropdown for Mobile */}
+                <div className="md:hidden">
+                  <NotificationsDropdown userEmail={email} />
+                </div>
               </>
             ) : (
               <Button
