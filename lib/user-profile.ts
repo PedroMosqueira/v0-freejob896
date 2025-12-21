@@ -225,10 +225,12 @@ export async function sendPhoneVerificationCode(
 
       const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
 
+      const credentials = btoa(`${accountSid}:${authToken}`)
+
       const response = await fetch(messageUrl, {
         method: "POST",
         headers: {
-          Authorization: "Basic " + Buffer.from(`${accountSid}:${authToken}`).toString("base64"),
+          Authorization: `Basic ${credentials}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
