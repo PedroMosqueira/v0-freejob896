@@ -38,7 +38,26 @@ function utf8ToBase64Manual(str: string): string {
   return result
 }
 
-// NÃO sobrescreve no navegador para evitar conflitos
+if (typeof window !== "undefined") {
+  // Salvar referência à função nativa
+  const nativeBtoa = window.btoa
+
+  // Sobrescrever com versão que suporta UTF-8
+  window.btoa = (str: string): string => {
+    // Tentar usar btoa nativo para strings ASCII simples (melhor performance)
+    if (/^[\x00-\x7F]*$/.test(str)) {
+      try {
+        return nativeBtoa(str)
+      } catch (e) {
+        // Se falhar, usar implementação manual
+      }
+    }
+
+    // Para strings com caracteres UTF-8, usar implementação manual
+    return utf8ToBase64Manual(str)
+  }
+}
+
 if (typeof globalThis !== "undefined" && typeof globalThis.btoa === "undefined") {
   ;(globalThis as any).btoa = utf8ToBase64Manual
 }
