@@ -16,12 +16,13 @@ interface PhoneVerificationProps {
 }
 
 function formatPhoneNumber(value: string): string {
-  const cleaned = value.replace(/\D/g, "")
+  const cleaned = value.replace(/\D/g, "").replace(/^55/, "")
 
-  if (cleaned.length <= 2) return `+55 ${cleaned}`
-  if (cleaned.length <= 6) return `+55 (${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-  if (cleaned.length <= 10) return `+55 (${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`
-  return `+55 (${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+  if (cleaned.length === 0) return ""
+  if (cleaned.length <= 2) return `(${cleaned}`
+  if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
+  if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`
+  return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
 }
 
 function unformatPhoneNumber(value: string): string {
@@ -46,7 +47,7 @@ export function PhoneVerification({ profile }: PhoneVerificationProps) {
 
     try {
       const formData = new FormData()
-      const cleanPhone = unformatPhoneNumber(phone)
+      const cleanPhone = "+55" + phone.replace(/\D/g, "")
       formData.append("phone", cleanPhone)
 
       const result = await sendPhoneVerificationCode(null, formData)
@@ -141,11 +142,11 @@ export function PhoneVerification({ profile }: PhoneVerificationProps) {
                   type="tel"
                   value={phone}
                   onChange={handlePhoneChange}
-                  placeholder="+55 (00) 00000-0000"
+                  placeholder="(00) 00000-0000"
                   required
                   disabled={isLoading}
                 />
-                <p className="text-xs text-muted-foreground">Digite apenas os números. Ex: 51999999999</p>
+                <p className="text-xs text-muted-foreground">Digite seu número com DDD. Ex: (51) 99999-9999</p>
               </div>
               <Button type="submit" size="sm" disabled={isLoading}>
                 {isLoading ? (
