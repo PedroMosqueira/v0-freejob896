@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, User, Briefcase, List, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
+import { MessageCircle, Menu, Briefcase, List, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useRef, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
@@ -251,7 +251,7 @@ export function SiteHeader({
             </div>
           )}
 
-          {/* Actions - Right */}
+          {/* Desktop Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2">
             {email ? (
               <>
@@ -286,272 +286,125 @@ export function SiteHeader({
                   <NotificationsDropdown userEmail={email} />
                   <ThemeToggle />
                 </div>
-                {/* </CHANGE> */}
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                >
-                  <Search className="h-5 w-5" />
-                  <span className="sr-only">Buscar</span>
-                </Button>
+                <div className="md:hidden flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                  >
+                    <Search className="h-5 w-5" />
+                    <span className="sr-only">Buscar</span>
+                  </Button>
 
-                <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-                  <SheetTrigger className="md:hidden inline-flex items-center justify-center h-8 w-8 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Menu</span>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-80 p-0">
-                    <div className="flex flex-col h-full">
-                      {/* User Profile Section */}
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                        onClick={() => setIsMobileSheetOpen(false)}
-                      >
-                        <Avatar className="h-12 w-12">
-                          {userProfile?.profileImageUrl && (
-                            <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
-                          )}
-                          <AvatarFallback className="bg-blue-600 text-white text-base font-semibold">
-                            {displayName.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{email}</p>
-                        </div>
-                      </Link>
+                  <NotificationsDropdown userEmail={email} />
 
-                      <div className="flex items-center justify-around px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                        <button
-                          className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            onHomeClick?.()
-                            setIsMobileSheetOpen(false)
-                          }}
-                          title="Serviços Disponíveis"
+                  <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+                    <SheetTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Menu className="h-5 w-5" />
+                      <span className="sr-only">Menu</span>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-80 p-0">
+                      <div className="flex flex-col h-full">
+                        {/* User Profile Section */}
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
+                          onClick={() => setIsMobileSheetOpen(false)}
                         >
-                          <Home className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </button>
-                        <button
-                          className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors relative"
-                          onClick={() => {
-                            setIsMyChatsDialogOpen(true)
-                            setIsMobileSheetOpen(false)
-                          }}
-                          title="Meus Chats"
-                        >
-                          <MessageCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                          {mounted && unreadMessagesCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-semibold">
-                              {unreadMessagesCount > 9 ? "9" : unreadMessagesCount}
-                            </span>
-                          )}
-                        </button>
-                        <div className="p-1.5">
-                          <InstallAppButton />
-                        </div>
-                        <div className="p-1.5">
-                          <NotificationsDropdown userEmail={email} />
-                        </div>
-                        <button
-                          className="p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors"
-                          onClick={() => {
-                            onSolicitarClick?.()
-                            setIsMobileSheetOpen(false)
-                          }}
-                          title="Solicitar Serviço"
-                        >
-                          <Plus className="h-5 w-5 text-white" />
-                        </button>
-                      </div>
-                      {/* </CHANGE> */}
+                          <Avatar className="h-12 w-12">
+                            {userProfile?.profileImageUrl && (
+                              <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
+                            )}
+                            <AvatarFallback className="bg-blue-600 text-white text-base font-semibold">
+                              {displayName.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{email}</p>
+                          </div>
+                        </Link>
 
-                      {/* Navigation Options */}
-                      <div className="flex-1 overflow-y-auto py-2">
-                        <button
-                          className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            onMeusServicosClick?.()
-                            setIsMobileSheetOpen(false)
-                          }}
-                        >
-                          <Briefcase className="h-5 w-5" />
-                          <span>Interesses</span>
-                        </button>
-                        <button
-                          className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            onMinhasSolicitacoesClick?.()
-                            setIsMobileSheetOpen(false)
-                          }}
-                        >
-                          <List className="h-5 w-5" />
-                          <span>Solicitações</span>
-                        </button>
-                      </div>
-
-                      {/* Bottom Actions */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 p-2">
-                        <div className="w-full flex items-center gap-3 px-6 py-4 rounded-lg">
-                          <span className="text-base font-medium text-gray-700 dark:text-gray-300">Tema</span>
+                        {/* Navigation Options */}
+                        <div className="flex-1 overflow-y-auto py-2">
                           <button
-                            onClick={toggleTheme}
-                            className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
-                            style={{ width: "66px", height: "42px" }}
+                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              onMeusServicosClick?.()
+                              setIsMobileSheetOpen(false)
+                            }}
                           >
-                            <div className="relative h-full flex items-center justify-between px-[3px]">
-                              {/* Sun icon inside slider */}
-                              <Sun className="h-5 w-5 text-yellow-500 flex-shrink-0 z-0" />
-
-                              {/* Moving ball with current theme icon */}
-                              <div
-                                className="absolute h-8 w-8 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
-                                style={{
-                                  left: effectiveTheme === "dark" ? "calc(100% - 33px)" : "2px",
-                                }}
-                              >
-                                {mounted && effectiveTheme === "dark" ? (
-                                  <Moon className="h-4 w-4 text-white" />
-                                ) : (
-                                  <Sun className="h-4 w-4 text-white" />
-                                )}
-                              </div>
-
-                              {/* Moon icon inside slider */}
-                              <Moon className="h-5 w-5 text-blue-400 flex-shrink-0 z-0" />
-                            </div>
+                            <Briefcase className="h-5 w-5" />
+                            <span>Interesses</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              onMinhasSolicitacoesClick?.()
+                              setIsMobileSheetOpen(false)
+                            }}
+                          >
+                            <List className="h-5 w-5" />
+                            <span>Solicitações</span>
                           </button>
                         </div>
-                        {/* </CHANGE> */}
 
-                        <button
-                          className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            setIsPasswordDialogOpen(true)
-                            setIsMobileSheetOpen(false)
-                          }}
-                        >
-                          <Lock className="h-4 w-4" />
-                          <span>Alterar Senha</span>
-                        </button>
-                        <button
-                          className="w-full flex items-center gap-3 px-6 py-3 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            logout()
-                            setIsMobileSheetOpen(false)
-                          }}
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <span>Sair</span>
-                        </button>
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                        {/* Bottom Actions */}
+                        <div className="border-t border-gray-200 dark:border-gray-700 p-2">
+                          <div className="w-full flex items-center gap-3 px-6 py-4 rounded-lg">
+                            <span className="text-base font-medium text-gray-700 dark:text-gray-300">Tema</span>
+                            <button
+                              onClick={toggleTheme}
+                              className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
+                              style={{ width: "66px", height: "42px" }}
+                            >
+                              <div className="relative h-full flex items-center justify-between px-[3px]">
+                                <Sun className="h-5 w-5 text-yellow-500 flex-shrink-0 z-0" />
 
-                <div className="relative hidden md:block" ref={userMenuRef}>
-                  <button
-                    className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-gray-200 dark:ring-gray-700 hover:ring-blue-500 dark:hover:ring-blue-400 transition-all focus:outline-none focus:ring-blue-500"
-                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    aria-label="Menu do usuário"
-                  >
-                    <Avatar className="h-10 w-10">
-                      {userProfile?.profileImageUrl && (
-                        <AvatarImage
-                          src={userProfile.profileImageUrl || "/placeholder.svg"}
-                          alt={displayName}
-                          onError={(e) => {
-                            console.log("[v0] Failed to load image:", userProfile.profileImageUrl)
-                            e.currentTarget.style.display = "none"
-                          }}
-                        />
-                      )}
-                      <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
-                        {displayName.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
+                                <div
+                                  className="absolute h-8 w-8 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
+                                  style={{
+                                    left: effectiveTheme === "dark" ? "calc(100% - 33px)" : "2px",
+                                  }}
+                                >
+                                  {mounted && effectiveTheme === "dark" ? (
+                                    <Moon className="h-4 w-4 text-white" />
+                                  ) : (
+                                    <Sun className="h-4 w-4 text-white" />
+                                  )}
+                                </div>
 
-                  {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-[100]">
-                      <Link
-                        href="/profile"
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Avatar className="h-12 w-12">
-                          {userProfile?.profileImageUrl && (
-                            <AvatarImage
-                              src={userProfile.profileImageUrl || "/placeholder.svg"}
-                              alt={displayName}
-                              onError={(e) => {
-                                console.log("[v0] Failed to load image:", userProfile.profileImageUrl)
-                                e.currentTarget.style.display = "none"
-                              }}
-                            />
-                          )}
-                          <AvatarFallback className="bg-blue-600 text-white text-base font-semibold">
-                            {displayName.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{email}</p>
+                                <Moon className="h-5 w-5 text-blue-400 flex-shrink-0 z-0" />
+                              </div>
+                            </button>
+                          </div>
+
+                          <button
+                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              setIsPasswordDialogOpen(true)
+                              setIsMobileSheetOpen(false)
+                            }}
+                          >
+                            <Lock className="h-4 w-4" />
+                            <span>Alterar Senha</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 px-6 py-3 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              logout()
+                              setIsMobileSheetOpen(false)
+                            }}
+                          >
+                            <LogOut className="h-4 w-4" />
+                            <span>Sair</span>
+                          </button>
                         </div>
-                        <User className="h-4 w-4 text-gray-400" />
-                      </Link>
-
-                      <div className="py-2">
-                        <button
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            onMeusServicosClick?.()
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          <Briefcase className="h-4 w-4" />
-                          <span>Interesses</span>
-                        </button>
-                        <button
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            onMinhasSolicitacoesClick?.()
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          <List className="h-4 w-4" />
-                          <span>Solicitações</span>
-                        </button>
                       </div>
-
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-                        <button
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            setIsPasswordDialogOpen(true)
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          <Lock className="h-4 w-4" />
-                          <span>Alterar Senha</span>
-                        </button>
-                        <button
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          onClick={() => {
-                            logout()
-                            setIsUserMenuOpen(false)
-                          }}
-                        >
-                          <LogOut className="h-4 w-4" />
-                          <span>Sair</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    </SheetContent>
+                  </Sheet>
                 </div>
               </>
             ) : (
@@ -566,24 +419,77 @@ export function SiteHeader({
           </div>
         </div>
 
+        {/* Mobile Search Bar */}
         {email && isMobileSearchOpen && (
-          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <div className="container px-4 py-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar serviços ou profissionais..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  autoFocus
-                />
-              </div>
+          <div className="md:hidden border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar serviços ou profissionais..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="w-full h-10 pl-10 pr-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
             </div>
           </div>
         )}
       </header>
+
+      {email && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
+          <div className="flex items-center justify-around px-2 py-2">
+            <button
+              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+              onClick={onHomeClick}
+              title="Início"
+            >
+              <Home className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Início</span>
+            </button>
+
+            <button
+              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative min-w-[64px]"
+              onClick={() => setIsMyChatsDialogOpen(true)}
+              title="Chats"
+            >
+              <MessageCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              {mounted && unreadMessagesCount > 0 && (
+                <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                  {unreadMessagesCount > 9 ? "9" : unreadMessagesCount}
+                </span>
+              )}
+              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Chats</span>
+            </button>
+
+            <button
+              className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg transition-colors"
+              onClick={onSolicitarClick}
+              title="Solicitar"
+            >
+              <Plus className="h-7 w-7 text-white" />
+            </button>
+
+            <button
+              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+              onClick={onMeusServicosClick}
+              title="Interesses"
+            >
+              <Briefcase className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Interesses</span>
+            </button>
+
+            <button
+              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+              onClick={onMinhasSolicitacoesClick}
+              title="Solicitações"
+            >
+              <List className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Pedidos</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Dialogs */}
       {email && (
