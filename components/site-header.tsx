@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, Briefcase, List, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
+import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useRef, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
@@ -50,7 +50,6 @@ export function SiteHeader({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
 
-  // Calculate effective theme considering "system"
   const effectiveTheme = mounted
     ? theme === "system"
       ? typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -285,6 +284,92 @@ export function SiteHeader({
 
                   <NotificationsDropdown userEmail={email} />
                   <ThemeToggle />
+
+                  <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon" title="Menu">
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Menu</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-64 p-0">
+                      <div className="flex flex-col h-full">
+                        {/* User Profile Section */}
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-3 px-4 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
+                          onClick={() => setIsMobileSheetOpen(false)}
+                        >
+                          <Avatar className="h-10 w-10">
+                            {userProfile?.profileImageUrl && (
+                              <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
+                            )}
+                            <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
+                              {displayName.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
+                          </div>
+                        </Link>
+
+                        {/* Bottom Actions */}
+                        <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-2">
+                          <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tema</span>
+                            <button
+                              onClick={toggleTheme}
+                              className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
+                              style={{ width: "60px", height: "36px" }}
+                            >
+                              <div className="relative h-full flex items-center justify-between px-[3px]">
+                                <Sun className="h-4 w-4 text-yellow-500 flex-shrink-0 z-0" />
+
+                                <div
+                                  className="absolute h-7 w-7 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
+                                  style={{
+                                    left: effectiveTheme === "dark" ? "calc(100% - 29px)" : "2px",
+                                  }}
+                                >
+                                  {mounted && effectiveTheme === "dark" ? (
+                                    <Moon className="h-3 w-3 text-white" />
+                                  ) : (
+                                    <Sun className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+
+                                <Moon className="h-4 w-4 text-blue-400 flex-shrink-0 z-0" />
+                              </div>
+                            </button>
+                          </div>
+
+                          <button
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
+                            onClick={() => {
+                              setIsPasswordDialogOpen(true)
+                              setIsMobileSheetOpen(false)
+                            }}
+                          >
+                            <Lock className="h-4 w-4" />
+                            <span>Alterar Senha</span>
+                          </button>
+                          <button
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
+                            onClick={() => {
+                              logout()
+                              setIsMobileSheetOpen(false)
+                            }}
+                          >
+                            <LogOut className="h-4 w-4" />
+                            <span>Sair</span>
+                          </button>
+                        </div>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
                 </div>
 
                 <div className="md:hidden flex items-center gap-2">
@@ -305,84 +390,62 @@ export function SiteHeader({
                       <Menu className="h-5 w-5" />
                       <span className="sr-only">Menu</span>
                     </SheetTrigger>
-                    <SheetContent side="left" className="w-80 p-0">
+                    <SheetContent side="left" className="w-64 p-0">
                       <div className="flex flex-col h-full">
                         {/* User Profile Section */}
                         <Link
                           href="/profile"
-                          className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
+                          className="flex items-center gap-3 px-4 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
                           onClick={() => setIsMobileSheetOpen(false)}
                         >
-                          <Avatar className="h-12 w-12">
+                          <Avatar className="h-10 w-10">
                             {userProfile?.profileImageUrl && (
                               <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
                             )}
-                            <AvatarFallback className="bg-blue-600 text-white text-base font-semibold">
+                            <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
                               {displayName.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{email}</p>
+                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                              {displayName}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
                           </div>
                         </Link>
 
-                        {/* Navigation Options */}
-                        <div className="flex-1 overflow-y-auto py-2">
-                          <button
-                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            onClick={() => {
-                              onMeusServicosClick?.()
-                              setIsMobileSheetOpen(false)
-                            }}
-                          >
-                            <Briefcase className="h-5 w-5" />
-                            <span>Interesses</span>
-                          </button>
-                          <button
-                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            onClick={() => {
-                              onMinhasSolicitacoesClick?.()
-                              setIsMobileSheetOpen(false)
-                            }}
-                          >
-                            <List className="h-5 w-5" />
-                            <span>Solicitações</span>
-                          </button>
-                        </div>
-
                         {/* Bottom Actions */}
-                        <div className="border-t border-gray-200 dark:border-gray-700 p-2">
-                          <div className="w-full flex items-center gap-3 px-6 py-4 rounded-lg">
-                            <span className="text-base font-medium text-gray-700 dark:text-gray-300">Tema</span>
+                        <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-2">
+                          <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tema</span>
                             <button
                               onClick={toggleTheme}
                               className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
-                              style={{ width: "66px", height: "42px" }}
+                              style={{ width: "60px", height: "36px" }}
                             >
                               <div className="relative h-full flex items-center justify-between px-[3px]">
-                                <Sun className="h-5 w-5 text-yellow-500 flex-shrink-0 z-0" />
+                                <Sun className="h-4 w-4 text-yellow-500 flex-shrink-0 z-0" />
 
                                 <div
-                                  className="absolute h-8 w-8 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
+                                  className="absolute h-7 w-7 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
                                   style={{
-                                    left: effectiveTheme === "dark" ? "calc(100% - 33px)" : "2px",
+                                    left: effectiveTheme === "dark" ? "calc(100% - 29px)" : "2px",
                                   }}
                                 >
                                   {mounted && effectiveTheme === "dark" ? (
-                                    <Moon className="h-4 w-4 text-white" />
+                                    <Moon className="h-3 w-3 text-white" />
                                   ) : (
-                                    <Sun className="h-4 w-4 text-white" />
+                                    <Sun className="h-3 w-3 text-white" />
                                   )}
                                 </div>
 
-                                <Moon className="h-5 w-5 text-blue-400 flex-shrink-0 z-0" />
+                                <Moon className="h-4 w-4 text-blue-400 flex-shrink-0 z-0" />
                               </div>
                             </button>
                           </div>
 
                           <button
-                            className="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
                             onClick={() => {
                               setIsPasswordDialogOpen(true)
                               setIsMobileSheetOpen(false)
@@ -392,7 +455,7 @@ export function SiteHeader({
                             <span>Alterar Senha</span>
                           </button>
                           <button
-                            className="w-full flex items-center gap-3 px-6 py-3 text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
                             onClick={() => {
                               logout()
                               setIsMobileSheetOpen(false)
@@ -436,64 +499,85 @@ export function SiteHeader({
         )}
       </header>
 
-      {email && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
-          <div className="flex items-center justify-around px-2 py-2">
-            <button
-              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
-              onClick={onHomeClick}
-              title="Início"
-            >
-              <Home className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Início</span>
-            </button>
-
-            <button
-              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative min-w-[64px]"
-              onClick={() => setIsMyChatsDialogOpen(true)}
-              title="Chats"
-            >
-              <MessageCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              {mounted && unreadMessagesCount > 0 && (
-                <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
-                  {unreadMessagesCount > 9 ? "9" : unreadMessagesCount}
-                </span>
-              )}
-              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Chats</span>
-            </button>
-
-            <button
-              className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg transition-colors"
-              onClick={onSolicitarClick}
-              title="Solicitar"
-            >
-              <Plus className="h-7 w-7 text-white" />
-            </button>
-
-            <button
-              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
-              onClick={onMeusServicosClick}
-              title="Interesses"
-            >
-              <Briefcase className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Interesses</span>
-            </button>
-
-            <button
-              className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
-              onClick={onMinhasSolicitacoesClick}
-              title="Solicitações"
-            >
-              <List className="h-6 w-6 text-gray-600 dark:text-gray-400" />
-              <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Pedidos</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Dialogs */}
       {email && (
         <>
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
+            <div className="flex items-center justify-around px-2 py-2">
+              <button
+                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+                onClick={onHomeClick}
+                title="Início"
+              >
+                <Home className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Início</span>
+              </button>
+
+              <button
+                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px] relative"
+                onClick={() => setIsMyChatsDialogOpen(true)}
+                title="Chats"
+              >
+                <MessageCircle className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                {mounted && unreadMessagesCount > 0 && (
+                  <span className="absolute top-1 right-3 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                    {unreadMessagesCount > 9 ? "9" : unreadMessagesCount}
+                  </span>
+                )}
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Chats</span>
+              </button>
+
+              <button
+                className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg transition-colors"
+                onClick={onSolicitarClick}
+                title="Solicitar"
+              >
+                <Plus className="h-7 w-7 text-white" />
+              </button>
+
+              <button
+                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+                onClick={onMeusServicosClick}
+                title="Interesses"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-600 dark:text-gray-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Interesses</span>
+              </button>
+
+              <button
+                className="flex flex-col items-center justify-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-w-[64px]"
+                onClick={onMinhasSolicitacoesClick}
+                title="Pedidos"
+              >
+                <svg
+                  className="h-6 w-6 text-gray-600 dark:text-gray-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">Pedidos</span>
+              </button>
+            </div>
+          </div>
+
           <MyChatsDialog
             isOpen={isMyChatsDialogOpen}
             onClose={() => setIsMyChatsDialogOpen(false)}
