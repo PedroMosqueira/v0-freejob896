@@ -386,13 +386,14 @@ function SearchRequests({
             <>
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((need: any, index: number) => {
-                  const hasProposedInterest = email
-                    ? need.proposals.some(
-                        (p) =>
-                          p.professionalEmail === email &&
-                          (p.status === "pending" || p.status === "accepted_by_requester"),
-                      )
-                    : false
+                  const hasProposedInterest =
+                    email && need.proposals
+                      ? need.proposals.some(
+                          (p: any) =>
+                            p.professionalEmail === email &&
+                            (p.status === "pending" || p.status === "accepted_by_requester"),
+                        )
+                      : false
 
                   const isRequesterOfNeed = email === need.requesterEmail
 
