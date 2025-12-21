@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -308,104 +307,51 @@ export function SiteHeader({
                   </DropdownMenu>
                 </div>
 
-                <div className="md:hidden flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                  >
-                    <Search className="h-5 w-5" />
-                    <span className="sr-only">Buscar</span>
-                  </Button>
-
-                  <NotificationsDropdown userEmail={email} />
-
-                  {/* Sheet Mobile without Interesses and Pedidos */}
-                  <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
-                    <SheetTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                {/* DropdownMenu Mobile without Interesses and Pedidos */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 sm:h-10 sm:w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
                       <Menu className="h-5 w-5" />
                       <span className="sr-only">Menu</span>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-64 p-0">
-                      <div className="flex flex-col h-full">
-                        {/* User Profile Section */}
-                        <Link
-                          href="/profile"
-                          className="flex items-center gap-3 px-4 py-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700"
-                          onClick={() => setIsMobileSheetOpen(false)}
-                        >
-                          <Avatar className="h-10 w-10">
-                            {userProfile?.profileImageUrl && (
-                              <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
-                            )}
-                            <AvatarFallback className="bg-blue-600 text-white text-sm font-semibold">
-                              {displayName.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                              {displayName}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
-                          </div>
-                        </Link>
-
-                        {/* Bottom Actions */}
-                        <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-2">
-                          <div className="w-full flex items-center gap-3 px-4 py-3 rounded-lg">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tema</span>
-                            <button
-                              onClick={toggleTheme}
-                              className="border border-gray-300 dark:border-gray-600 rounded-full p-[1px] cursor-pointer hover:border-blue-500 transition-colors relative"
-                              style={{ width: "60px", height: "36px" }}
-                            >
-                              <div className="relative h-full flex items-center justify-between px-[3px]">
-                                <Sun className="h-4 w-4 text-yellow-500 flex-shrink-0 z-0" />
-
-                                <div
-                                  className="absolute h-7 w-7 bg-blue-600 dark:bg-blue-500 rounded-full shadow-md transition-all duration-300 ease-in-out flex items-center justify-center z-10"
-                                  style={{
-                                    left: effectiveTheme === "dark" ? "calc(100% - 29px)" : "2px",
-                                  }}
-                                >
-                                  {mounted && effectiveTheme === "dark" ? (
-                                    <Moon className="h-3 w-3 text-white" />
-                                  ) : (
-                                    <Sun className="h-3 w-3 text-white" />
-                                  )}
-                                </div>
-
-                                <Moon className="h-4 w-4 text-blue-400 flex-shrink-0 z-0" />
-                              </div>
-                            </button>
-                          </div>
-
-                          <button
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
-                            onClick={() => {
-                              setIsPasswordDialogOpen(true)
-                              setIsMobileSheetOpen(false)
-                            }}
-                          >
-                            <Lock className="h-4 w-4" />
-                            <span>Alterar Senha</span>
-                          </button>
-                          <button
-                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded"
-                            onClick={() => {
-                              logout()
-                              setIsMobileSheetOpen(false)
-                            }}
-                          >
-                            <LogOut className="h-4 w-4" />
-                            <span>Sair</span>
-                          </button>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="flex items-center gap-3 cursor-pointer">
+                        <Avatar className="h-8 w-8">
+                          {userProfile?.profileImageUrl && (
+                            <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
+                          )}
+                          <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
+                            {displayName.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{displayName}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
                         </div>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
+                      {effectiveTheme === "dark" ? <Sun className="h-4 w-4 mr-3" /> : <Moon className="h-4 w-4 mr-3" />}
+                      <span>Tema: {effectiveTheme === "dark" ? "Claro" : "Escuro"}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)} className="cursor-pointer">
+                      <Lock className="h-4 w-4 mr-3" />
+                      <span>Alterar Senha</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 dark:text-red-400">
+                      <LogOut className="h-4 w-4 mr-3" />
+                      <span>Sair</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <Button
@@ -477,7 +423,7 @@ export function SiteHeader({
               variant="ghost"
               size="icon"
               className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-              onClick={onMeusServicosClick}
+              onClick={() => onMeusServicosClick?.()}
             >
               <Heart className="h-5 w-5" />
               <span className="text-xs">Interesses</span>
@@ -487,7 +433,7 @@ export function SiteHeader({
               variant="ghost"
               size="icon"
               className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-              onClick={onMinhasSolicitacoesClick}
+              onClick={() => onMinhasSolicitacoesClick?.()}
             >
               <FileText className="h-5 w-5" />
               <span className="text-xs">Pedidos</span>
