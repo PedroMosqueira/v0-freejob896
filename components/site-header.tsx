@@ -2,12 +2,19 @@
 
 import type React from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon } from "lucide-react"
+import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon, Heart, FileText } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
 import UpdatePasswordForm from "@/components/update-password-form"
 import NotificationsDropdown from "@/components/notifications-dropdown"
@@ -44,10 +51,6 @@ export function SiteHeader({
   const [displayName, setDisplayName] = useState<string>("")
   const [userProfile, setUserProfile] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const userMenuRef = useRef<HTMLDivElement>(null)
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
 
   const effectiveTheme = mounted
@@ -60,7 +63,6 @@ export function SiteHeader({
 
   const toggleTheme = () => {
     const newTheme = effectiveTheme === "dark" ? "light" : "dark"
-    console.log("[v0] Toggle theme from", theme, "to", newTheme)
     setTheme(newTheme)
   }
 
@@ -76,7 +78,6 @@ export function SiteHeader({
         const profile = await getUserProfile(email)
         if (profile) {
           setUserProfile(profile)
-          console.log("[v0] User profile loaded:", { email, profileImageUrl: profile.profileImageUrl })
           const name = formatUserName(profile.fullName, email, false)
           setDisplayName(name)
         } else {
@@ -92,60 +93,31 @@ export function SiteHeader({
   }, [email])
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsMobileSheetOpen(false)
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
-  useEffect(() => {
     async function loadUnreadCount() {
       if (!email || !mounted) return
 
       try {
-        console.log("[v0] 🟡 Loading unread count for:", email)
         const threads = await listAllChatThreadsForUser(email)
-        console.log("[v0] 🟡 Total threads:", threads.length)
         let count = 0
 
         threads.forEach((thread) => {
           const messages = thread.messages || []
           if (messages.length > 0) {
             const lastMessage = messages[messages.length - 1]
-
-            const isRequester = thread.requesterEmail === email
-            const lastReadTimestamp = isRequester ? thread.lastReadByRequester : thread.lastReadByProfessional
-
-            console.log("[v0] 🟡 Thread:", thread.id, {
-              lastMessage: lastMessage.text.substring(0, 30),
-              lastMessageEmail: lastMessage.email,
-              currentUserEmail: email,
-              lastReadTimestamp,
-              lastMessageCreatedAt: lastMessage.createdAt,
-            })
-
             if (lastMessage.email !== email && lastMessage.type === "user") {
+              const isRequester = thread.requesterEmail === email
+              const lastReadTimestamp = isRequester ? thread.lastReadByRequester : thread.lastReadByProfessional
+
               if (!lastReadTimestamp || new Date(lastMessage.createdAt) > new Date(lastReadTimestamp)) {
                 count++
-                console.log("[v0] 🟡 Thread marked as unread:", thread.id)
               }
             }
           }
         })
 
-        console.log("[v0] 🟡 Final unread count:", count)
         setUnreadMessagesCount(count)
       } catch (error) {
-        console.error("[v0] 🔴 Error loading unread messages count:", error)
+        console.error("Error loading unread messages count:", error)
       }
     }
 
@@ -196,12 +168,11 @@ export function SiteHeader({
   }, [email, mounted])
 
   useEffect(() => {
-    console.log("[v0] Current theme:", theme)
+    console.log("Current theme:", theme)
   }, [theme])
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value
-    console.log("[v0] Search input changed to:", query)
     setSearchQuery(query)
     onSearchChange?.(query)
   }
@@ -250,10 +221,11 @@ export function SiteHeader({
             </div>
           )}
 
-          {/* Desktop Actions */}
+          {/* Desktop & Mobile Actions */}
           <div className="flex items-center space-x-1 sm:space-x-2">
             {email ? (
               <>
+                {/* Desktop Actions with DropdownMenu */}
                 <div className="hidden md:flex items-center gap-2">
                   <Button
                     variant="default"
@@ -284,6 +256,56 @@ export function SiteHeader({
 
                   <NotificationsDropdown userEmail={email} />
                   <ThemeToggle />
+
+                  {/* DropdownMenu Desktop with Interesses and Pedidos */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Menu className="h-5 w-5" />
+                        <span className="sr-only">Menu</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-3 cursor-pointer">
+                          <Avatar className="h-8 w-8">
+                            {userProfile?.profileImageUrl && (
+                              <AvatarImage src={userProfile.profileImageUrl || "/placeholder.svg"} alt={displayName} />
+                            )}
+                            <AvatarFallback className="bg-blue-600 text-white text-xs font-semibold">
+                              {displayName.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm truncate">{displayName}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{email}</p>
+                          </div>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={onMeusServicosClick} className="cursor-pointer">
+                        <Heart className="h-4 w-4 mr-3" />
+                        <span>Meus Interesses</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={onMinhasSolicitacoesClick} className="cursor-pointer">
+                        <FileText className="h-4 w-4 mr-3" />
+                        <span>Minhas Solicitações</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)} className="cursor-pointer">
+                        <Lock className="h-4 w-4 mr-3" />
+                        <span>Alterar Senha</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 dark:text-red-400">
+                        <LogOut className="h-4 w-4 mr-3" />
+                        <span>Sair</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 <div className="md:hidden flex items-center gap-2">
@@ -299,6 +321,7 @@ export function SiteHeader({
 
                   <NotificationsDropdown userEmail={email} />
 
+                  {/* Sheet Mobile without Interesses and Pedidos */}
                   <Sheet open={isMobileSheetOpen} onOpenChange={setIsMobileSheetOpen}>
                     <SheetTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <Menu className="h-5 w-5" />
@@ -412,6 +435,66 @@ export function SiteHeader({
           </div>
         )}
       </header>
+
+      {email && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 pb-safe">
+          <div className="flex items-center justify-around h-16 px-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              onClick={onHomeClick}
+            >
+              <Home className="h-5 w-5" />
+              <span className="text-xs">Início</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 relative"
+              onClick={() => setIsMyChatsDialogOpen(true)}
+            >
+              <MessageCircle className="h-5 w-5" />
+              <span className="text-xs">Chats</span>
+              {mounted && unreadMessagesCount > 0 && (
+                <span className="absolute top-1 right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-semibold">
+                  {unreadMessagesCount > 9 ? "9" : unreadMessagesCount}
+                </span>
+              )}
+            </Button>
+
+            <Button
+              variant="default"
+              size="icon"
+              className="flex flex-col items-center justify-center h-14 w-14 -mt-6 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+              onClick={onSolicitarClick}
+            >
+              <Plus className="h-6 w-6" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              onClick={onMeusServicosClick}
+            >
+              <Heart className="h-5 w-5" />
+              <span className="text-xs">Interesses</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex flex-col items-center justify-center gap-1 h-14 w-14 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              onClick={onMinhasSolicitacoesClick}
+            >
+              <FileText className="h-5 w-5" />
+              <span className="text-xs">Pedidos</span>
+            </Button>
+          </div>
+        </nav>
+      )}
 
       {/* Dialogs */}
       {email && (
