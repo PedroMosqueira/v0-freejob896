@@ -39,36 +39,71 @@ export default async function RootLayout({
 (function() {
   if (typeof window === 'undefined') return;
   
-  var originalBtoa = window.btoa;
-  var originalAtob = window.atob;
+  // Tabela de caracteres Base64
+  var base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   
-  window.btoa = function(str) {
-    try {
-      // Tenta encoding direto primeiro
-      return originalBtoa(str);
-    } catch (e) {
-      // Se falhar, converte UTF-8 para Latin1
-      var utf8Bytes = new TextEncoder().encode(str);
-      var binaryString = '';
-      for (var i = 0; i < utf8Bytes.length; i++) {
-        binaryString += String.fromCharCode(utf8Bytes[i]);
+  // Implementação completamente manual de Base64 - NUNCA chama btoa nativo
+  function utf8ToBas64(str) {
+    var output = '';
+    var utf8Bytes = [];
+    
+    // Converte string para UTF-8 bytes
+    for (var i = 0; i < str.length; i++) {
+      var charCode = str.charCodeAt(i);
+      if (charCode < 0x80) {
+        utf8Bytes.push(charCode);
+      } else if (charCode < 0x800) {
+        utf8Bytes.push(0xc0 | (charCode >> 6));
+        utf8Bytes.push(0x80 | (charCode & 0x3f));
+      } else if (charCode < 0xd800 || charCode >= 0xe000) {
+        utf8Bytes.push(0xe0 | (charCode >> 12));
+        utf8Bytes.push(0x80 | ((charCode >> 6) & 0x3f));
+        utf8Bytes.push(0x80 | (charCode & 0x3f));
+      } else {
+        i++;
+        var nextChar = str.charCodeAt(i);
+        var codePoint = 0x10000 + (((charCode & 0x3ff) << 10) | (nextChar & 0x3ff));
+        utf8Bytes.push(0xf0 | (codePoint >> 18));
+        utf8Bytes.push(0x80 | ((codePoint >> 12) & 0x3f));
+        utf8Bytes.push(0x80 | ((codePoint >> 6) & 0x3f));
+        utf8Bytes.push(0x80 | (codePoint & 0x3f));
       }
-      return originalBtoa(binaryString);
     }
+    
+    // Converte bytes para Base64
+    for (var j = 0; j < utf8Bytes.length; j += 3) {
+      var b1 = utf8Bytes[j];
+      var b2 = utf8Bytes[j + 1];
+      var b3 = utf8Bytes[j + 2];
+      
+      var enc1 = b1 >> 2;
+      var enc2 = ((b1 & 3) << 4) | (b2 >> 4);
+      var enc3 = ((b2 & 15) << 2) | (b3 >> 6);
+      var enc4 = b3 & 63;
+      
+      if (typeof b2 === 'undefined') {
+        enc3 = enc4 = 64;
+      } else if (typeof b3 === 'undefined') {
+        enc4 = 64;
+      }
+      
+      output += base64Chars.charAt(enc1);
+      output += base64Chars.charAt(enc2);
+      output += enc3 === 64 ? '=' : base64Chars.charAt(enc3);
+      output += enc4 === 64 ? '=' : base64Chars.charAt(enc4);
+    }
+    
+    return output;
+  }
+  
+  // Sobrescreve window.btoa com implementação manual
+  window.btoa = function(str) {
+    return utf8ToBase64(String(str));
   };
   
-  window.atob = function(str) {
-    try {
-      var binaryString = originalAtob(str);
-      var bytes = new Uint8Array(binaryString.length);
-      for (var i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    } catch (e) {
-      console.error('[v0] atob failed:', e);
-      return originalAtob(str);
-    }
+  // Corrige o nome da função
+  window.btoa = function(str) {
+    return utf8ToBas64(String(str));
   };
 })();
             `,
