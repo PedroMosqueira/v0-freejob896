@@ -16,7 +16,7 @@ interface PhoneVerificationProps {
 }
 
 function formatPhoneNumber(value: string): string {
-  const cleaned = value.replace(/\D/g, "").replace(/^55/, "")
+  const cleaned = value.replace(/\D/g, "")
 
   if (cleaned.length === 0) return ""
   if (cleaned.length <= 2) return `(${cleaned}`
