@@ -25,6 +25,22 @@ export interface UserProfile {
   updatedAt?: string
 }
 
+function encodeBase64(str: string): string {
+  // No navegador ou Edge Runtime, usar btoa nativo (só funciona com ASCII)
+  if (typeof btoa !== "undefined") {
+    // Para credenciais Twilio, usar btoa diretamente pois são apenas ASCII
+    return btoa(str)
+  }
+
+  // No servidor Node.js, usar Buffer
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(str).toString("base64")
+  }
+
+  // Fallback manual (não deve ser necessário)
+  throw new Error("Nenhum método de encoding Base64 disponível")
+}
+
 export async function getUserProfile(email: string): Promise<UserProfile | null> {
   const supabase = await createSupabaseServerClient()
 
@@ -258,11 +274,8 @@ export async function sendPhoneVerificationCode(
       console.log("[v0]    - credentialsString length:", credentialsString.length)
       console.log("[v0]    - credentialsString format: AC....:....") // Sem expor valores
 
-      console.log("[v0] 3. Convertendo para Base64 com Buffer:")
-      const credentialsBuffer = Buffer.from(credentialsString)
-      console.log("[v0]    - Buffer created, length:", credentialsBuffer.length)
-
-      const credentials = credentialsBuffer.toString("base64")
+      console.log("[v0] 3. Convertendo para Base64 com encodeBase64():")
+      const credentials = encodeBase64(credentialsString)
       console.log("[v0]    - Base64 result length:", credentials.length)
       console.log("[v0]    - Base64 first 10 chars:", credentials.substring(0, 10))
       console.log("[v0]    - Base64 last 10 chars:", credentials.substring(credentials.length - 10))
