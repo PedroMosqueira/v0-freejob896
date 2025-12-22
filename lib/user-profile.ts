@@ -234,57 +234,50 @@ export async function sendPhoneVerificationCode(
 
     const accountSid = process.env.TWILIO_ACCOUNT_SID
     const authToken = process.env.TWILIO_AUTH_TOKEN
-    const twilioPhone = process.env.TWILIO_PHONE_NUMBER || ""
+    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID
 
-    if (!accountSid || !authToken || !twilioPhone) {
+    if (!accountSid || !authToken || !verifyServiceSid) {
       return {
         success: false,
-        message: "Serviço de SMS não configurado. Contate o suporte.",
+        message: "Serviço de verificação não configurado. Contate o suporte.",
       }
     }
 
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-
-    const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
+    const verifyUrl = `https://verify.twilio.com/v2/Services/${verifyServiceSid}/Verifications`
 
     const credentials = encodeBase64(`${accountSid}:${authToken}`)
 
-    const response = await fetch(messageUrl, {
+    const response = await fetch(verifyUrl, {
       method: "POST",
       headers: {
         Authorization: `Basic ${credentials}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        From: twilioPhone,
         To: formattedPhone,
-        Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
+        Channel: "sms",
       }),
     })
 
     if (!response.ok) {
       const errorData = await response.json()
-      console.error("[v0] Twilio SMS error:", errorData)
+      console.error("[v0] Twilio Verify error:", errorData)
       return {
         success: false,
-        message: `Erro Twilio ${errorData.code}: ${errorData.message || "Erro ao enviar SMS"}`,
+        message: `Erro ao enviar código: ${errorData.message || "Tente novamente"}`,
       }
     }
-
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     const { error: updateError } = await supabase
       .from("users")
       .update({
         phone: formattedPhone,
-        phone_verification_code: verificationCode,
-        phone_verification_expires_at: expiresAt.toISOString(),
       })
       .eq("email", session.user.email)
 
     if (updateError) {
-      console.error("Error saving verification code:", updateError)
-      return { success: false, message: "Erro ao salvar código de verificação" }
+      console.error("Error saving phone:", updateError)
+      return { success: false, message: "Erro ao salvar telefone" }
     }
 
     return {
@@ -292,7 +285,7 @@ export async function sendPhoneVerificationCode(
       message: "Código de verificação enviado por SMS!",
     }
   } catch (twilioError) {
-    console.error("[v0] Error with Twilio SMS:", twilioError)
+    console.error("[v0] Error with Twilio Verify:", twilioError)
     return {
       success: false,
       message: "Erro ao enviar código de verificação. Tente novamente.",
@@ -319,7 +312,7 @@ export async function verifyPhoneCode(
 
     const { data: user, error: fetchError } = await supabase
       .from("users")
-      .select("phone, phone_verification_code, phone_verification_expires_at")
+      .select("phone")
       .eq("email", session.user.email)
       .single()
 
@@ -327,17 +320,49 @@ export async function verifyPhoneCode(
       return { success: false, message: "Telefone não encontrado" }
     }
 
-    if (!user.phone_verification_code || !user.phone_verification_expires_at) {
-      return { success: false, message: "Nenhum código de verificação pendente" }
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID
+
+    if (!accountSid || !authToken || !verifyServiceSid) {
+      return {
+        success: false,
+        message: "Serviço de verificação não configurado. Contate o suporte.",
+      }
     }
 
-    const expiresAt = new Date(user.phone_verification_expires_at)
-    if (expiresAt < new Date()) {
-      return { success: false, message: "Código expirado. Solicite um novo código." }
+    const verifyCheckUrl = `https://verify.twilio.com/v2/Services/${verifyServiceSid}/VerificationCheck`
+
+    const credentials = encodeBase64(`${accountSid}:${authToken}`)
+
+    const response = await fetch(verifyCheckUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        To: user.phone,
+        Code: code,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("[v0] Twilio Verify check error:", errorData)
+      return {
+        success: false,
+        message: "Erro ao verificar código. Tente novamente.",
+      }
     }
 
-    if (user.phone_verification_code !== code) {
-      return { success: false, message: "Código incorreto" }
+    const verifyData = await response.json()
+
+    if (verifyData.status !== "approved") {
+      return {
+        success: false,
+        message: verifyData.status === "pending" ? "Código incorreto" : "Código expirado ou inválido",
+      }
     }
 
     console.log("[v0] Phone verified successfully")
