@@ -213,6 +213,17 @@ export async function sendPhoneVerificationCode(
       const authToken = process.env.TWILIO_AUTH_TOKEN
       const twilioPhone = process.env.TWILIO_PHONE_NUMBER
 
+      console.log("[v0] === INÍCIO DO RASTREAMENTO ===")
+      console.log("[v0] 1. Credenciais lidas do environment:")
+      console.log("[v0]    - accountSid exists:", !!accountSid)
+      console.log("[v0]    - accountSid length:", accountSid?.length)
+      console.log("[v0]    - accountSid prefix:", accountSid?.substring(0, 2))
+      console.log("[v0]    - authToken exists:", !!authToken)
+      console.log("[v0]    - authToken length:", authToken?.length)
+      console.log("[v0]    - authToken first 4 chars:", authToken?.substring(0, 4))
+      console.log("[v0]    - authToken last 4 chars:", authToken?.substring(authToken.length - 4))
+      console.log("[v0]    - twilioPhone:", twilioPhone)
+
       if (!accountSid || !authToken || !twilioPhone) {
         return {
           success: false,
@@ -231,6 +242,7 @@ export async function sendPhoneVerificationCode(
 
       if (authToken.length !== 32) {
         console.error("[v0] TWILIO_AUTH_TOKEN inválido - deve ter 32 caracteres")
+        console.error("[v0] authToken atual tem:", authToken.length, "caracteres")
         return {
           success: false,
           message: "Credenciais Twilio inválidas. Verifique TWILIO_AUTH_TOKEN.",
@@ -241,9 +253,25 @@ export async function sendPhoneVerificationCode(
 
       const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
 
-      const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64")
+      console.log("[v0] 2. Criando string de credenciais:")
+      const credentialsString = `${accountSid}:${authToken}`
+      console.log("[v0]    - credentialsString length:", credentialsString.length)
+      console.log("[v0]    - credentialsString format: AC....:....") // Sem expor valores
 
-      console.log("[v0] Enviando SMS para:", formattedPhone)
+      console.log("[v0] 3. Convertendo para Base64 com Buffer:")
+      const credentialsBuffer = Buffer.from(credentialsString)
+      console.log("[v0]    - Buffer created, length:", credentialsBuffer.length)
+
+      const credentials = credentialsBuffer.toString("base64")
+      console.log("[v0]    - Base64 result length:", credentials.length)
+      console.log("[v0]    - Base64 first 10 chars:", credentials.substring(0, 10))
+      console.log("[v0]    - Base64 last 10 chars:", credentials.substring(credentials.length - 10))
+
+      console.log("[v0] 4. Preparando requisição HTTP:")
+      console.log("[v0]    - URL:", messageUrl)
+      console.log("[v0]    - Authorization header:", `Basic ${credentials.substring(0, 20)}...`)
+
+      console.log("[v0] 5. Enviando SMS para:", formattedPhone)
 
       const response = await fetch(messageUrl, {
         method: "POST",
@@ -258,25 +286,35 @@ export async function sendPhoneVerificationCode(
         }),
       })
 
+      console.log("[v0] 6. Resposta recebida:")
+      console.log("[v0]    - Status:", response.status)
+      console.log("[v0]    - Status Text:", response.statusText)
+
       if (!response.ok) {
         const errorData = await response.json()
-        console.error("[v0] Twilio SMS error:", errorData)
+        console.error("[v0] 7. ERRO na resposta Twilio:")
+        console.error("[v0]    - Error code:", errorData.code)
+        console.error("[v0]    - Error message:", errorData.message)
+        console.error("[v0]    - More info:", errorData.more_info)
+        console.error("[v0] === FIM DO RASTREAMENTO (COM ERRO) ===")
 
         if (errorData.code === 20003) {
           return {
             success: false,
-            message: "Credenciais Twilio incorretas. Verifique as variáveis de ambiente no Vercel.",
+            message: "Erro 20003: Credenciais Twilio incorretas. Verifique Account SID e Auth Token no Vercel.",
           }
         }
 
         return {
           success: false,
-          message: `Erro Twilio: ${errorData.message || "Erro ao enviar SMS"}`,
+          message: `Erro Twilio ${errorData.code}: ${errorData.message || "Erro ao enviar SMS"}`,
         }
       }
 
       const result = await response.json()
-      console.log("[v0] SMS enviado com sucesso. SID:", result.sid)
+      console.log("[v0] 7. SMS enviado com sucesso!")
+      console.log("[v0]    - Message SID:", result.sid)
+      console.log("[v0] === FIM DO RASTREAMENTO (SUCESSO) ===")
 
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
