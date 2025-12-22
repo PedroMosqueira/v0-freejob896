@@ -35,35 +35,74 @@ if (typeof globalThis.btoa === "undefined") {
 }
 
 if (typeof globalThis.Buffer === "undefined") {
-  globalThis.Buffer = {
-    from: (data: string, encoding?: string) => {
+  class BufferPolyfill {
+    private data: Uint8Array
+
+    constructor(data: Uint8Array) {
+      this.data = data
+    }
+
+    toString(encoding?: string): string {
+      if (!encoding || encoding === "utf8" || encoding === "utf-8") {
+        return new TextDecoder().decode(this.data)
+      }
       if (encoding === "base64") {
-        // Decode base64
-        const binaryString = atob(data)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
+        const bytes = this.data
+        let binary = ""
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i])
         }
-        return {
-          toString: (enc: string) => {
-            if (enc === "utf8" || enc === "utf-8") {
-              return new TextDecoder().decode(bytes)
-            }
-            return data
-          },
-        }
+        return btoa(binary)
       }
-      // Default: treat as UTF-8 string
-      return {
-        toString: (enc: string) => {
-          if (enc === "base64") {
-            return btoa(data)
+      if (encoding === "hex") {
+        return Array.from(this.data)
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+      }
+      return new TextDecoder().decode(this.data)
+    }
+
+    static from(input: string | Uint8Array | number[], encoding?: string): BufferPolyfill {
+      if (input instanceof Uint8Array) {
+        return new BufferPolyfill(input)
+      }
+
+      if (Array.isArray(input)) {
+        return new BufferPolyfill(new Uint8Array(input))
+      }
+
+      if (typeof input === "string") {
+        if (!encoding || encoding === "utf8" || encoding === "utf-8") {
+          const bytes = new TextEncoder().encode(input)
+          return new BufferPolyfill(bytes)
+        }
+
+        if (encoding === "base64") {
+          const binary = atob(input)
+          const bytes = new Uint8Array(binary.length)
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i)
           }
-          return data
-        },
+          return new BufferPolyfill(bytes)
+        }
+
+        if (encoding === "hex") {
+          const bytes = new Uint8Array(input.length / 2)
+          for (let i = 0; i < input.length; i += 2) {
+            bytes[i / 2] = Number.parseInt(input.substr(i, 2), 16)
+          }
+          return new BufferPolyfill(bytes)
+        }
+
+        const bytes = new TextEncoder().encode(input)
+        return new BufferPolyfill(bytes)
       }
-    },
-  } as any
+
+      return new BufferPolyfill(new Uint8Array(0))
+    }
+  }
+
+  globalThis.Buffer = BufferPolyfill as any
 }
 
 import { createServerClient } from "@supabase/ssr"
