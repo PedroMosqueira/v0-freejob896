@@ -216,6 +216,7 @@ export async function sendPhoneVerificationCode(
     }
 
     const phone = formData.get("phone") as string
+
     if (!phone) {
       return { success: false, message: "Telefone é obrigatório" }
     }
@@ -224,152 +225,78 @@ export async function sendPhoneVerificationCode(
 
     const supabase = await createSupabaseServerClient()
 
-    try {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID
-      const authToken = process.env.TWILIO_AUTH_TOKEN
-      const twilioPhone = "+555581277346" // Temporário - substituir pela env var depois
+    const { data, error } = await supabase.from("users").select("*").eq("email", session.user.email).single()
 
-      console.log("[v0] === INÍCIO DO RASTREAMENTO ===")
-      console.log("[v0] 1. Credenciais lidas do environment:")
-      console.log("[v0]    - accountSid exists:", !!accountSid)
-      console.log("[v0]    - accountSid length:", accountSid?.length)
-      console.log("[v0]    - accountSid prefix:", accountSid?.substring(0, 2))
-      console.log("[v0]    - authToken exists:", !!authToken)
-      console.log("[v0]    - authToken length:", authToken?.length)
-      console.log("[v0]    - authToken first 4 chars:", authToken?.substring(0, 4))
-      console.log("[v0]    - authToken last 4 chars:", authToken?.substring(authToken.length - 4))
-      console.log("[v0]    - twilioPhone (hardcoded):", twilioPhone)
+    if (error || !data) {
+      console.error("Error fetching user profile:", error)
+      return { success: false, message: "Erro ao buscar perfil de usuário" }
+    }
 
-      if (!accountSid || !authToken) {
-        return {
-          success: false,
-          message: "Serviço de SMS não configurado. Contate o suporte.",
-        }
-      }
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    const twilioPhone = process.env.TWILIO_PHONE_NUMBER || ""
 
-      // Verificar se as credenciais parecem válidas
-      if (!accountSid.startsWith("AC") || accountSid.length !== 34) {
-        console.error("[v0] TWILIO_ACCOUNT_SID inválido - deve começar com AC e ter 34 caracteres")
-        return {
-          success: false,
-          message: "Credenciais Twilio inválidas. Verifique TWILIO_ACCOUNT_SID.",
-        }
-      }
-
-      if (authToken.length !== 32) {
-        console.error("[v0] TWILIO_AUTH_TOKEN inválido - deve ter 32 caracteres")
-        console.error("[v0] authToken atual tem:", authToken.length, "caracteres")
-        return {
-          success: false,
-          message: "Credenciais Twilio inválidas. Verifique TWILIO_AUTH_TOKEN.",
-        }
-      }
-
-      console.log("[v0]    - twilioPhone validado:", twilioPhone)
-
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-
-      const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
-
-      console.log("[v0] 2. Criando string de credenciais:")
-      const credentialsString = `${accountSid}:${authToken}`
-      console.log("[v0]    - credentialsString length:", credentialsString.length)
-      console.log("[v0]    - credentialsString format: AC....:....") // Sem expor valores
-
-      console.log("[v0] 3. Convertendo para Base64 com encodeBase64():")
-      const credentials = encodeBase64(credentialsString)
-      console.log("[v0]    - Base64 result length:", credentials.length)
-      console.log("[v0]    - Base64 first 10 chars:", credentials.substring(0, 10))
-      console.log("[v0]    - Base64 last 10 chars:", credentials.substring(credentials.length - 10))
-
-      console.log("[v0] 4. Preparando requisição HTTP:")
-      console.log("[v0]    - URL:", messageUrl)
-      console.log("[v0]    - Authorization header:", `Basic ${credentials.substring(0, 20)}...`)
-
-      console.log("[v0] 5. Enviando SMS:")
-      console.log("[v0]    - From:", twilioPhone)
-      console.log("[v0]    - To:", formattedPhone)
-
-      const response = await fetch(messageUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${credentials}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          From: twilioPhone,
-          To: formattedPhone,
-          Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
-        }),
-      })
-
-      console.log("[v0] 6. Resposta recebida:")
-      console.log("[v0]    - Status:", response.status)
-      console.log("[v0]    - Status Text:", response.statusText)
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error("[v0] 7. ERRO na resposta Twilio:")
-        console.error("[v0]    - Error code:", errorData.code)
-        console.error("[v0]    - Error message:", errorData.message)
-        console.error("[v0]    - More info:", errorData.more_info)
-        console.error("[v0] === FIM DO RASTREAMENTO (COM ERRO) ===")
-
-        if (errorData.code === 20003) {
-          return {
-            success: false,
-            message: "Erro 20003: Credenciais Twilio incorretas. Verifique Account SID e Auth Token no Vercel.",
-          }
-        }
-
-        if (errorData.code === 21212 || errorData.code === 21659) {
-          return {
-            success: false,
-            message: `Número Twilio inválido. Configure TWILIO_PHONE_NUMBER no formato internacional: +55XXXXXXXXXXX (com código do país)`,
-          }
-        }
-
-        return {
-          success: false,
-          message: `Erro Twilio ${errorData.code}: ${errorData.message || "Erro ao enviar SMS"}`,
-        }
-      }
-
-      const result = await response.json()
-      console.log("[v0] 7. SMS enviado com sucesso!")
-      console.log("[v0]    - Message SID:", result.sid)
-      console.log("[v0] === FIM DO RASTREAMENTO (SUCESSO) ===")
-
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
-
-      const { error } = await supabase
-        .from("users")
-        .update({
-          phone: formattedPhone,
-          phone_verification_code: verificationCode,
-          phone_verification_expires_at: expiresAt.toISOString(),
-        })
-        .eq("email", session.user.email)
-
-      if (error) {
-        console.error("[v0] Error saving verification code:", error)
-        return { success: false, message: "Erro ao salvar código de verificação" }
-      }
-
-      return {
-        success: true,
-        message: "Código de verificação enviado por SMS!",
-      }
-    } catch (twilioError) {
-      console.error("[v0] Error with Twilio SMS:", twilioError)
+    if (!accountSid || !authToken || !twilioPhone) {
       return {
         success: false,
-        message: "Erro ao enviar código de verificação. Tente novamente.",
+        message: "Serviço de SMS não configurado. Contate o suporte.",
       }
     }
-  } catch (error) {
-    console.error("[v0] Unexpected error sending verification code:", error)
-    return { success: false, message: "Erro inesperado ao enviar código" }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+
+    const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
+
+    const credentials = encodeBase64(`${accountSid}:${authToken}`)
+
+    const response = await fetch(messageUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        From: twilioPhone,
+        To: formattedPhone,
+        Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("[v0] Twilio SMS error:", errorData)
+      return {
+        success: false,
+        message: `Erro Twilio ${errorData.code}: ${errorData.message || "Erro ao enviar SMS"}`,
+      }
+    }
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        phone: formattedPhone,
+        phone_verification_code: verificationCode,
+        phone_verification_expires_at: expiresAt.toISOString(),
+      })
+      .eq("email", session.user.email)
+
+    if (updateError) {
+      console.error("Error saving verification code:", updateError)
+      return { success: false, message: "Erro ao salvar código de verificação" }
+    }
+
+    return {
+      success: true,
+      message: "Código de verificação enviado por SMS!",
+    }
+  } catch (twilioError) {
+    console.error("[v0] Error with Twilio SMS:", twilioError)
+    return {
+      success: false,
+      message: "Erro ao enviar código de verificação. Tente novamente.",
+    }
   }
 }
 
