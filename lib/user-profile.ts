@@ -227,7 +227,7 @@ export async function sendPhoneVerificationCode(
     try {
       const accountSid = process.env.TWILIO_ACCOUNT_SID
       const authToken = process.env.TWILIO_AUTH_TOKEN
-      const twilioPhone = process.env.TWILIO_PHONE_NUMBER
+      const twilioPhone = "+555581277346" // Temporário - substituir pela env var depois
 
       console.log("[v0] === INÍCIO DO RASTREAMENTO ===")
       console.log("[v0] 1. Credenciais lidas do environment:")
@@ -238,9 +238,9 @@ export async function sendPhoneVerificationCode(
       console.log("[v0]    - authToken length:", authToken?.length)
       console.log("[v0]    - authToken first 4 chars:", authToken?.substring(0, 4))
       console.log("[v0]    - authToken last 4 chars:", authToken?.substring(authToken.length - 4))
-      console.log("[v0]    - twilioPhone:", twilioPhone)
+      console.log("[v0]    - twilioPhone (hardcoded):", twilioPhone)
 
-      if (!accountSid || !authToken || !twilioPhone) {
+      if (!accountSid || !authToken) {
         return {
           success: false,
           message: "Serviço de SMS não configurado. Contate o suporte.",
@@ -265,13 +265,6 @@ export async function sendPhoneVerificationCode(
         }
       }
 
-      if (!twilioPhone.startsWith("+")) {
-        console.error("[v0] TWILIO_PHONE_NUMBER deve começar com + e código do país")
-        return {
-          success: false,
-          message: "Número Twilio inválido. Configure TWILIO_PHONE_NUMBER no formato +55XXXXXXXXXXX",
-        }
-      }
       console.log("[v0]    - twilioPhone validado:", twilioPhone)
 
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
@@ -304,7 +297,7 @@ export async function sendPhoneVerificationCode(
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          From: twilioPhone, // Usar número direto da env var sem modificar
+          From: twilioPhone,
           To: formattedPhone,
           Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
         }),
