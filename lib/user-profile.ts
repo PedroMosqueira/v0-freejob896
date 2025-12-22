@@ -265,6 +265,9 @@ export async function sendPhoneVerificationCode(
         }
       }
 
+      const formattedTwilioPhone = twilioPhone.startsWith("+") ? twilioPhone : `+${twilioPhone}`
+      console.log("[v0]    - formattedTwilioPhone:", formattedTwilioPhone)
+
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
 
       const messageUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`
@@ -284,7 +287,9 @@ export async function sendPhoneVerificationCode(
       console.log("[v0]    - URL:", messageUrl)
       console.log("[v0]    - Authorization header:", `Basic ${credentials.substring(0, 20)}...`)
 
-      console.log("[v0] 5. Enviando SMS para:", formattedPhone)
+      console.log("[v0] 5. Enviando SMS:")
+      console.log("[v0]    - From:", formattedTwilioPhone)
+      console.log("[v0]    - To:", formattedPhone)
 
       const response = await fetch(messageUrl, {
         method: "POST",
@@ -293,7 +298,7 @@ export async function sendPhoneVerificationCode(
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          From: twilioPhone,
+          From: formattedTwilioPhone, // Usando número formatado com +
           To: formattedPhone,
           Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
         }),
@@ -315,6 +320,13 @@ export async function sendPhoneVerificationCode(
           return {
             success: false,
             message: "Erro 20003: Credenciais Twilio incorretas. Verifique Account SID e Auth Token no Vercel.",
+          }
+        }
+
+        if (errorData.code === 21212) {
+          return {
+            success: false,
+            message: `Erro 21212: Número Twilio inválido (${formattedTwilioPhone}). Verifique TWILIO_PHONE_NUMBER no formato +55XXXXXXXXXXX`,
           }
         }
 
