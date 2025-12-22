@@ -34,6 +34,38 @@ if (typeof globalThis.btoa === "undefined") {
   }
 }
 
+if (typeof globalThis.Buffer === "undefined") {
+  globalThis.Buffer = {
+    from: (data: string, encoding?: string) => {
+      if (encoding === "base64") {
+        // Decode base64
+        const binaryString = atob(data)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        return {
+          toString: (enc: string) => {
+            if (enc === "utf8" || enc === "utf-8") {
+              return new TextDecoder().decode(bytes)
+            }
+            return data
+          },
+        }
+      }
+      // Default: treat as UTF-8 string
+      return {
+        toString: (enc: string) => {
+          if (enc === "base64") {
+            return btoa(data)
+          }
+          return data
+        },
+      }
+    },
+  } as any
+}
+
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
