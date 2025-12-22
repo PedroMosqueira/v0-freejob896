@@ -265,8 +265,14 @@ export async function sendPhoneVerificationCode(
         }
       }
 
-      const formattedTwilioPhone = twilioPhone.startsWith("+") ? twilioPhone : `+${twilioPhone}`
-      console.log("[v0]    - formattedTwilioPhone:", formattedTwilioPhone)
+      if (!twilioPhone.startsWith("+")) {
+        console.error("[v0] TWILIO_PHONE_NUMBER deve começar com + e código do país")
+        return {
+          success: false,
+          message: "Número Twilio inválido. Configure TWILIO_PHONE_NUMBER no formato +55XXXXXXXXXXX",
+        }
+      }
+      console.log("[v0]    - twilioPhone validado:", twilioPhone)
 
       const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -288,7 +294,7 @@ export async function sendPhoneVerificationCode(
       console.log("[v0]    - Authorization header:", `Basic ${credentials.substring(0, 20)}...`)
 
       console.log("[v0] 5. Enviando SMS:")
-      console.log("[v0]    - From:", formattedTwilioPhone)
+      console.log("[v0]    - From:", twilioPhone)
       console.log("[v0]    - To:", formattedPhone)
 
       const response = await fetch(messageUrl, {
@@ -298,7 +304,7 @@ export async function sendPhoneVerificationCode(
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({
-          From: formattedTwilioPhone, // Usando número formatado com +
+          From: twilioPhone, // Usar número direto da env var sem modificar
           To: formattedPhone,
           Body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
         }),
@@ -323,10 +329,10 @@ export async function sendPhoneVerificationCode(
           }
         }
 
-        if (errorData.code === 21212) {
+        if (errorData.code === 21212 || errorData.code === 21659) {
           return {
             success: false,
-            message: `Erro 21212: Número Twilio inválido (${formattedTwilioPhone}). Verifique TWILIO_PHONE_NUMBER no formato +55XXXXXXXXXXX`,
+            message: `Número Twilio inválido. Configure TWILIO_PHONE_NUMBER no formato internacional: +55XXXXXXXXXXX (com código do país)`,
           }
         }
 
