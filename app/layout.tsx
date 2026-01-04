@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import "@/lib/buffer-polyfill"
 import { Toaster } from "@/components/ui/toaster"
 import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
@@ -40,6 +39,28 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Freejob" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const originalBtoa = window.btoa;
+                window.btoa = function(str) {
+                  try {
+                    return originalBtoa(str);
+                  } catch (e) {
+                    // Se falhar (caracteres UTF-8), converter primeiro
+                    const encoder = new TextEncoder();
+                    const bytes = encoder.encode(str);
+                    const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+                    return originalBtoa(binString);
+                  }
+                };
+                console.log('[v0] btoa polyfill loaded');
+              })();
+            `,
+          }}
+        />
 
         <Script
           async
