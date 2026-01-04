@@ -47,6 +47,7 @@ import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
 import SendBidDialog from "@/components/send-bid-dialog"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
+import { PaymentDialog } from "@/components/payment-dialog"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -99,6 +100,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [proposals, setProposals] = useState<NeedProposal[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [selectedProposalForPayment, setSelectedProposalForPayment] = useState<NeedProposal | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
   const [canRateProfessional, setCanRateProfessional] = useState(false)
@@ -308,7 +311,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       await fetchProposals()
       onStatusUpdate?.()
 
-      onClose()
+      if (proposal) {
+        setSelectedProposalForPayment(proposal)
+        setShowPaymentDialog(true)
+      }
     } catch (error) {
       console.error("Erro ao aceitar proposta:", error)
       alert("Erro ao aceitar proposta. Tente novamente.")
@@ -1381,6 +1387,22 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           requesterEmail={email || ""}
           needId={currentNeed.id}
           onSuccess={handleRatingSuccess}
+        />
+      )}
+
+      {selectedProposalForPayment && (
+        <PaymentDialog
+          open={showPaymentDialog}
+          onClose={() => {
+            setShowPaymentDialog(false)
+            setSelectedProposalForPayment(null)
+            onClose()
+          }}
+          proposalId={selectedProposalForPayment.id}
+          needId={currentNeed.id}
+          bidAmount={Number(selectedProposalForPayment.bid_amount)}
+          professionalName={selectedProposalForPayment.professional_email}
+          needTitle={currentNeed.title}
         />
       )}
     </>
