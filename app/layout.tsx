@@ -32,6 +32,33 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined') {
+                  var originalBtoa = window.btoa;
+                  window.btoa = function(str) {
+                    try {
+                      return originalBtoa(str);
+                    } catch (e) {
+                      // Converte UTF-8 para Latin1 usando TextEncoder
+                      var encoder = new TextEncoder();
+                      var bytes = encoder.encode(str);
+                      var binary = '';
+                      for (var i = 0; i < bytes.length; i++) {
+                        binary += String.fromCharCode(bytes[i]);
+                      }
+                      return originalBtoa(binary);
+                    }
+                  };
+                  console.log('[v0] ✅ btoa polyfill aplicado com sucesso');
+                }
+              })();
+            `,
+          }}
+        />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
