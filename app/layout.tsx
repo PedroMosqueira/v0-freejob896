@@ -44,19 +44,27 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                const originalBtoa = window.btoa;
+                if (typeof window === 'undefined') return;
+                
+                var originalBtoa = window.btoa;
+                
                 window.btoa = function(str) {
                   try {
+                    // Tenta usar btoa nativo primeiro (mais rápido para ASCII)
                     return originalBtoa(str);
                   } catch (e) {
-                    // Se falhar (caracteres UTF-8), converter primeiro
-                    const encoder = new TextEncoder();
-                    const bytes = encoder.encode(str);
-                    const binString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
-                    return originalBtoa(binString);
+                    // Fallback para UTF-8: usa o método unescape + encodeURIComponent
+                    // Este é o método mais compatível com navegadores antigos
+                    try {
+                      return originalBtoa(unescape(encodeURIComponent(str)));
+                    } catch (e2) {
+                      console.error('[v0] btoa polyfill failed:', e2);
+                      throw e2;
+                    }
                   }
                 };
-                console.log('[v0] btoa polyfill loaded');
+                
+                console.log('[v0] ✅ btoa polyfill loaded successfully');
               })();
             `,
           }}
