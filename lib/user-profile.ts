@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { auth } from "@/auth"
+import { revalidatePath } from "next/cache"
 
 export interface UserProfile {
   id: string
@@ -23,22 +24,6 @@ export interface UserProfile {
   verifiedAt?: string
   createdAt: string
   updatedAt?: string
-}
-
-function encodeBase64(str: string): string {
-  // No navegador ou Edge Runtime, usar btoa nativo (só funciona com ASCII)
-  if (typeof btoa !== "undefined") {
-    // Para credenciais Twilio, usar btoa diretamente pois são apenas ASCII
-    return btoa(str)
-  }
-
-  // No servidor Node.js, usar Buffer
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(str).toString("base64")
-  }
-
-  // Fallback manual (não deve ser necessário)
-  throw new Error("Nenhum método de encoding Base64 disponível")
 }
 
 export async function getUserProfile(email: string): Promise<UserProfile | null> {
@@ -178,213 +163,41 @@ export async function updateUserProfile(
           .filter(Boolean)
       : []
 
+    console.log("[v0] Updating profile for:", session.user.email)
+    console.log("[v0] Full name from form:", fullName)
+    console.log("[v0] Other data:", { phone, bio, city, isClient, isProfessional, skills })
+
     const supabase = await createSupabaseServerClient()
 
-    const { error } = await supabase
-      .from("users")
-      .update({
-        full_name: fullName || null,
-        phone: phone || null,
-        bio: bio || null,
-        city: city || null,
-        is_client: isClient,
-        is_professional: isProfessional,
-        skills: skills.length > 0 ? skills : null,
-      })
-      .eq("email", session.user.email)
+    const updateData = {
+      full_name: fullName || null,
+      phone: phone || null,
+      bio: bio || null,
+      city: city || null,
+      is_client: isClient,
+      is_professional: isProfessional,
+      skills: skills.length > 0 ? skills : null,
+      updated_at: new Date().toISOString(),
+    }
+
+    console.log("[v0] Update data being sent:", updateData)
+
+    const { data, error } = await supabase.from("users").update(updateData).eq("email", session.user.email).select()
 
     if (error) {
-      console.error("Error updating profile:", error)
+      console.error("[v0] Error updating profile:", error)
       return { success: false, message: "Erro ao atualizar perfil" }
     }
 
+    console.log("[v0] Profile updated successfully, data returned:", data)
+
+    revalidatePath("/profile")
+    revalidatePath("/profile/[email]", "page")
+
     return { success: true, message: "Perfil atualizado com sucesso!" }
   } catch (error) {
-    console.error("Unexpected error updating profile:", error)
+    console.error("[v0] Unexpected error updating profile:", error)
     return { success: false, message: "Erro inesperado ao atualizar perfil" }
-  }
-}
-
-export async function sendPhoneVerificationCode(
-  prevState: { success: boolean; message: string } | null,
-  formData: FormData,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const session = await auth()
-    if (!session?.user?.email) {
-      return { success: false, message: "Você precisa estar autenticado" }
-    }
-
-    const phone = formData.get("phone") as string
-
-    if (!phone) {
-      return { success: false, message: "Telefone é obrigatório" }
-    }
-
-    const formattedPhone = phone.startsWith("+") ? phone : `+55${phone.replace(/\D/g, "")}`
-
-    const supabase = await createSupabaseServerClient()
-
-    const { data, error } = await supabase.from("users").select("*").eq("email", session.user.email).single()
-
-    if (error || !data) {
-      console.error("Error fetching user profile:", error)
-      return { success: false, message: "Erro ao buscar perfil de usuário" }
-    }
-
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const authToken = process.env.TWILIO_AUTH_TOKEN
-    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID
-
-    if (!accountSid || !authToken || !verifyServiceSid) {
-      return {
-        success: false,
-        message: "Serviço de verificação não configurado. Contate o suporte.",
-      }
-    }
-
-    const verifyUrl = `https://verify.twilio.com/v2/Services/${verifyServiceSid}/Verifications`
-
-    const credentials = encodeBase64(`${accountSid}:${authToken}`)
-
-    const response = await fetch(verifyUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        To: formattedPhone,
-        Channel: "sms",
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("[v0] Twilio Verify error:", errorData)
-      return {
-        success: false,
-        message: `Erro ao enviar código: ${errorData.message || "Tente novamente"}`,
-      }
-    }
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        phone: formattedPhone,
-      })
-      .eq("email", session.user.email)
-
-    if (updateError) {
-      console.error("Error saving phone:", updateError)
-      return { success: false, message: "Erro ao salvar telefone" }
-    }
-
-    return {
-      success: true,
-      message: "Código de verificação enviado por SMS!",
-    }
-  } catch (twilioError) {
-    console.error("[v0] Error with Twilio Verify:", twilioError)
-    return {
-      success: false,
-      message: "Erro ao enviar código de verificação. Tente novamente.",
-    }
-  }
-}
-
-export async function verifyPhoneCode(
-  prevState: { success: boolean; message: string } | null,
-  formData: FormData,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const session = await auth()
-    if (!session?.user?.email) {
-      return { success: false, message: "Você precisa estar autenticado" }
-    }
-
-    const code = formData.get("code") as string
-    if (!code) {
-      return { success: false, message: "Código é obrigatório" }
-    }
-
-    const supabase = await createSupabaseServerClient()
-
-    const { data: user, error: fetchError } = await supabase
-      .from("users")
-      .select("phone")
-      .eq("email", session.user.email)
-      .single()
-
-    if (fetchError || !user || !user.phone) {
-      return { success: false, message: "Telefone não encontrado" }
-    }
-
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const authToken = process.env.TWILIO_AUTH_TOKEN
-    const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID
-
-    if (!accountSid || !authToken || !verifyServiceSid) {
-      return {
-        success: false,
-        message: "Serviço de verificação não configurado. Contate o suporte.",
-      }
-    }
-
-    const verifyCheckUrl = `https://verify.twilio.com/v2/Services/${verifyServiceSid}/VerificationCheck`
-
-    const credentials = encodeBase64(`${accountSid}:${authToken}`)
-
-    const response = await fetch(verifyCheckUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        To: user.phone,
-        Code: code,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("[v0] Twilio Verify check error:", errorData)
-      return {
-        success: false,
-        message: "Erro ao verificar código. Tente novamente.",
-      }
-    }
-
-    const verifyData = await response.json()
-
-    if (verifyData.status !== "approved") {
-      return {
-        success: false,
-        message: verifyData.status === "pending" ? "Código incorreto" : "Código expirado ou inválido",
-      }
-    }
-
-    console.log("[v0] Phone verified successfully")
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        phone_verified: true,
-        phone_verification_code: null,
-        phone_verification_expires_at: null,
-      })
-      .eq("email", session.user.email)
-
-    if (updateError) {
-      console.error("[v0] Error verifying phone:", updateError)
-      return { success: false, message: "Erro ao verificar telefone" }
-    }
-
-    return { success: true, message: "Telefone verificado com sucesso!" }
-  } catch (error) {
-    console.error("[v0] Unexpected error verifying phone:", error)
-    return { success: false, message: "Erro inesperado ao verificar telefone" }
   }
 }
 
@@ -408,10 +221,11 @@ export async function uploadProfileImage(
       return { success: false, message: "O arquivo deve ser uma imagem" }
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return { success: false, message: "A imagem deve ter no máximo 5MB" }
+    if (file.size > 10 * 1024 * 1024) {
+      return { success: false, message: "A imagem deve ter no máximo 10MB" }
     }
+
+    console.log("[v0] Uploading image:", { size: `${(file.size / 1024 / 1024).toFixed(2)}MB`, type: file.type })
 
     const supabase = await createSupabaseServerClient()
 
@@ -426,7 +240,7 @@ export async function uploadProfileImage(
     })
 
     if (uploadError) {
-      console.error("Error uploading image:", uploadError)
+      console.error("[v0] Error uploading image:", uploadError)
       return { success: false, message: "Erro ao fazer upload da imagem" }
     }
 
@@ -438,13 +252,18 @@ export async function uploadProfileImage(
     // Update user profile with image URL
     const { error: updateError } = await supabase
       .from("users")
-      .update({ profile_image_url: imageUrl })
+      .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq("email", session.user.email)
 
     if (updateError) {
-      console.error("Error updating profile image URL:", updateError)
+      console.error("[v0] Error updating profile image URL:", updateError)
       return { success: false, message: "Erro ao atualizar foto de perfil" }
     }
+
+    console.log("[v0] Profile image uploaded successfully:", imageUrl)
+
+    revalidatePath("/profile")
+    revalidatePath("/profile/[email]", "page")
 
     return {
       success: true,
@@ -452,7 +271,7 @@ export async function uploadProfileImage(
       imageUrl,
     }
   } catch (error) {
-    console.error("Unexpected error uploading image:", error)
+    console.error("[v0] Unexpected error uploading image:", error)
     return { success: false, message: "Erro inesperado ao fazer upload da imagem" }
   }
 }

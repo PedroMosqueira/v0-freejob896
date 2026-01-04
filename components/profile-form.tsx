@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { useFormState } from "react-dom"
 import { useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 interface ProfileFormProps {
   profile: UserProfile
@@ -17,6 +18,7 @@ interface ProfileFormProps {
 export function ProfileForm({ profile }: ProfileFormProps) {
   const [state, formAction] = useFormState(updateUserProfile, null)
   const { toast } = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     if (state?.success) {
@@ -24,6 +26,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         title: "Sucesso!",
         description: state.message,
       })
+      router.refresh()
     } else if (state?.message) {
       toast({
         title: "Erro",
@@ -31,7 +34,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         variant: "destructive",
       })
     }
-  }, [state, toast])
+  }, [state, toast, router])
 
   return (
     <Card className="p-6 dark:bg-gray-800/50 dark:border-gray-700">

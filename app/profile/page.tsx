@@ -6,7 +6,6 @@ import { useAuth } from "@/hooks/use-auth"
 import { ProfileForm } from "@/components/profile-form"
 import { ProfileHeader } from "@/components/profile-header"
 import { ProfileStats } from "@/components/profile-stats"
-import { PhoneVerification } from "@/components/phone-verification"
 import { getUserProfile, type UserProfile } from "@/lib/user-profile"
 import { Loader2, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,6 +18,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     async function loadProfile() {
@@ -47,7 +47,7 @@ export default function ProfilePage() {
     }
 
     loadProfile()
-  }, [email, isAuthLoading, router])
+  }, [email, isAuthLoading, router, refreshKey])
 
   if (isAuthLoading || isLoading) {
     return (
@@ -86,7 +86,6 @@ export default function ProfilePage() {
           <RatingsList userEmail={profile.email} />
         </div>
 
-        <PhoneVerification profile={profile} />
         <ProfileForm profile={profile} />
       </div>
     </div>
