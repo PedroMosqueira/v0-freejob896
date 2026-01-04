@@ -35,23 +35,24 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
-                if (typeof window === "undefined") return;
-                var originalBtoa = window.btoa;
-                window.btoa = function(str) {
-                  try {
-                    return originalBtoa(str);
-                  } catch (e) {
-                    try {
-                      return originalBtoa(unescape(encodeURIComponent(str)));
-                    } catch (e2) {
-                      console.error("[v0] btoa UTF-8 failed:", e2);
-                      throw e2;
-                    }
-                  }
-                };
-                console.log("[v0] ✅ btoa UTF-8 polyfill loaded inline");
-              })();
+(function() {
+  if (!window.btoa) return;
+  var nativeBtoa = window.btoa;
+  window.btoa = function(str) {
+    try {
+      return nativeBtoa(str);
+    } catch (e) {
+      var encoder = new TextEncoder();
+      var bytes = encoder.encode(str);
+      var binary = '';
+      for (var i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return nativeBtoa(binary);
+    }
+  };
+  console.log('[v0] btoa UTF-8 fix applied');
+})();
             `,
           }}
         />
