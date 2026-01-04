@@ -40,35 +40,7 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Freejob" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
 
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                if (typeof window === 'undefined') return;
-                
-                var originalBtoa = window.btoa;
-                
-                window.btoa = function(str) {
-                  try {
-                    // Tenta usar btoa nativo primeiro (mais rápido para ASCII)
-                    return originalBtoa(str);
-                  } catch (e) {
-                    // Fallback para UTF-8: usa o método unescape + encodeURIComponent
-                    // Este é o método mais compatível com navegadores antigos
-                    try {
-                      return originalBtoa(unescape(encodeURIComponent(str)));
-                    } catch (e2) {
-                      console.error('[v0] btoa polyfill failed:', e2);
-                      throw e2;
-                    }
-                  }
-                };
-                
-                console.log('[v0] ✅ btoa polyfill loaded successfully');
-              })();
-            `,
-          }}
-        />
+        <Script src="/btoa-utf8-fix.js" strategy="beforeInteractive" />
 
         <Script
           async
