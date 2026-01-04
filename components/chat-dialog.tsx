@@ -455,22 +455,14 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                               <>
                                 <div className="space-y-2 mb-3">
                                   <div className="flex items-center justify-between text-sm pb-2 border-b border-gray-200 dark:border-gray-600">
-                                    <span className="text-gray-600 dark:text-gray-400">Profissional recebe:</span>
-                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                    <span className="text-gray-600 dark:text-gray-400">Valor do lance:</span>
+                                    <span className="font-bold text-green-600 dark:text-green-400 text-lg">
                                       {formatCurrency(msg.metadata.bidAmount)}
                                     </span>
                                   </div>
 
-                                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span>Taxa da plataforma (15%):</span>
-                                    <span>{formatCurrency(msg.metadata.bidAmount * 0.15)}</span>
-                                  </div>
-
-                                  <div className="flex items-center justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
-                                    <span className="text-gray-700 dark:text-gray-300">Solicitante paga:</span>
-                                    <span className="text-blue-600 dark:text-blue-400">
-                                      {formatCurrency(msg.metadata.bidAmount * 1.15)}
-                                    </span>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                    Sem taxas ou comissões para assinantes
                                   </div>
                                 </div>
 
