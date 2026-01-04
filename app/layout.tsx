@@ -33,33 +33,37 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        {/* Polyfill btoa corrigido para suportar UTF-8 corretamente */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 if (typeof window !== 'undefined') {
                   var originalBtoa = window.btoa;
+                  
                   window.btoa = function(str) {
+                    // Tenta usar o btoa original primeiro (mais rápido para ASCII puro)
                     try {
                       return originalBtoa(str);
                     } catch (e) {
-                      // Converte UTF-8 para Base64 usando TextEncoder se disponível
-                      if (typeof TextEncoder !== 'undefined') {
-                        var bytes = new TextEncoder().encode(str);
-                        var binary = '';
-                        for (var i = 0; i < bytes.length; i++) {
-                          binary += String.fromCharCode(bytes[i]);
-                        }
-                        return originalBtoa(binary);
+                      // Se falhar, converte UTF-8 para base64 usando Uint8Array
+                      console.log('[v0] btoa fallback para UTF-8');
+                      
+                      // Converte string UTF-8 para bytes
+                      var utf8Bytes = new TextEncoder().encode(str);
+                      
+                      // Converte bytes para string binária
+                      var binaryString = '';
+                      for (var i = 0; i < utf8Bytes.length; i++) {
+                        binaryString += String.fromCharCode(utf8Bytes[i]);
                       }
-                      // Fallback para método antigo
-                      return originalBtoa(
-                        encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-                          return String.fromCharCode(parseInt(p1, 16));
-                        })
-                      );
+                      
+                      // Usa btoa original com string binária
+                      return originalBtoa(binaryString);
                     }
                   };
+                  
+                  console.log('[v0] ✅ btoa polyfill com suporte UTF-8 instalado');
                 }
               })();
             `,
