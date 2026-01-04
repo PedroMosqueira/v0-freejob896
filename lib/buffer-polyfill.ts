@@ -1,7 +1,18 @@
-// O navegador moderno já tem btoa nativo que funciona
-// Apenas definimos btoa no servidor Node.js onde não existe
+function utf8ToBase64(str: string): string {
+  try {
+    // Tenta usar o btoa nativo primeiro (mais rápido para ASCII puro)
+    const testBtoa = typeof window !== "undefined" ? window.btoa : globalThis.btoa
+    if (typeof testBtoa === "function") {
+      // Testa se a string é ASCII puro
+      if (/^[\x00-\x7F]*$/.test(str)) {
+        return testBtoa(str)
+      }
+    }
+  } catch (e) {
+    // Ignora erro e usa fallback
+  }
 
-function utf8ToBase64Manual(str: string): string {
+  // Fallback: converte UTF-8 para base64 manualmente
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
   const utf8Bytes: number[] = []
@@ -41,9 +52,8 @@ function utf8ToBase64Manual(str: string): string {
   return result
 }
 
-// Não sobrescrever no navegador
-if (typeof globalThis !== "undefined" && typeof globalThis.btoa === "undefined") {
-  ;(globalThis as any).btoa = utf8ToBase64Manual
+if (typeof globalThis !== "undefined") {
+  ;(globalThis as any).btoa = utf8ToBase64
 }
 
 if (typeof Buffer === "undefined") {

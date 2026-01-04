@@ -33,43 +33,6 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        {/* Polyfill btoa corrigido para suportar UTF-8 corretamente */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                if (typeof window !== 'undefined') {
-                  var originalBtoa = window.btoa;
-                  
-                  window.btoa = function(str) {
-                    // Tenta usar o btoa original primeiro (mais rápido para ASCII puro)
-                    try {
-                      return originalBtoa(str);
-                    } catch (e) {
-                      // Se falhar, converte UTF-8 para base64 usando Uint8Array
-                      console.log('[v0] btoa fallback para UTF-8');
-                      
-                      // Converte string UTF-8 para bytes
-                      var utf8Bytes = new TextEncoder().encode(str);
-                      
-                      // Converte bytes para string binária
-                      var binaryString = '';
-                      for (var i = 0; i < utf8Bytes.length; i++) {
-                        binaryString += String.fromCharCode(utf8Bytes[i]);
-                      }
-                      
-                      // Usa btoa original com string binária
-                      return originalBtoa(binaryString);
-                    }
-                  };
-                  
-                  console.log('[v0] ✅ btoa polyfill com suporte UTF-8 instalado');
-                }
-              })();
-            `,
-          }}
-        />
-
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
