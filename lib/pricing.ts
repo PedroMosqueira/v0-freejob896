@@ -1,7 +1,7 @@
 /**
- * Platform fee percentage (10%)
+ * Platform fee percentage (15%)
  */
-export const PLATFORM_FEE_PERCENTAGE = 0.1
+export const PLATFORM_FEE_PERCENTAGE = 0.15
 
 /**
  * Minimum bid amount in BRL

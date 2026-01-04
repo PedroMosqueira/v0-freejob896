@@ -13,6 +13,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createSupabaseServerClient()
 
     // Buscar proposta
+    console.log("[v0] Creating checkout session for proposal:", proposalId)
     const { data: proposal, error: proposalError } = await supabase
       .from("need_proposals")
       .select("*, needs(*)")
@@ -20,8 +21,15 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (proposalError || !proposal) {
+      console.error("[v0] Proposal not found:", proposalError)
       return NextResponse.json({ error: "Proposta não encontrada" }, { status: 404 })
     }
+
+    console.log("[v0] Proposal found:", {
+      id: proposal.id,
+      bidAmount: proposal.bid_amount,
+      status: proposal.status,
+    })
 
     // Verificar se proposta foi aceita
     if (proposal.status !== "accepted_by_requester") {
@@ -30,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     // Calcular valores
     const amounts = calculatePaymentAmounts(Number(proposal.bid_amount))
+    console.log("[v0] Calculated amounts:", amounts)
 
     // Criar ou buscar cliente Stripe
     const { data: user } = await supabase
@@ -60,6 +69,8 @@ export async function POST(request: NextRequest) {
       customerId = customer.id
     }
 
+    console.log("[v0] Stripe customer:", customerId)
+
     // Criar Payment Intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: toCents(amounts.totalAmount),
@@ -79,6 +90,8 @@ export async function POST(request: NextRequest) {
         enabled: true,
       },
     })
+
+    console.log("[v0] Payment Intent created:", paymentIntent.id)
 
     // Registrar pagamento no banco
     const { error: paymentError } = await supabase.from("payments").insert({

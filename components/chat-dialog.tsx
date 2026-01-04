@@ -1,15 +1,24 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useRef, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { MessageCircle } from 'lucide-react'
+import { MessageCircle } from "lucide-react"
 import SendBidDialog from "@/components/send-bid-dialog"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Send, Loader2 } from 'lucide-react'
-import { addChatMessage, getChatThreadById, markChatAsRead, acceptProposal, declineProposal, type Need } from "@/lib/needs-store"
+import { Send, Loader2 } from "lucide-react"
+import {
+  addChatMessage,
+  getChatThreadById,
+  markChatAsRead,
+  acceptProposal,
+  declineProposal,
+  type Need,
+} from "@/lib/needs-store"
 import type { ChatMessage } from "@/data/needs"
 import { createClient } from "@/lib/supabase/client"
 import { getUserNameByEmail } from "@/lib/format-user-name"
@@ -260,18 +269,18 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
         const profile = await getUserProfile(otherUserEmail)
         if (profile) {
           setOtherUserProfile({
-            fullName: profile.fullName || otherUserEmail.split('@')[0],
+            fullName: profile.fullName || otherUserEmail.split("@")[0],
             photoUrl: profile.photoUrl,
           })
         } else {
           setOtherUserProfile({
-            fullName: otherUserEmail.split('@')[0]
+            fullName: otherUserEmail.split("@")[0],
           })
         }
       } catch (error) {
         console.error("Error loading other user profile:", error)
         setOtherUserProfile({
-          fullName: otherUserEmail.split('@')[0]
+          fullName: otherUserEmail.split("@")[0],
         })
       }
     }
@@ -284,13 +293,13 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
   useEffect(() => {
     async function loadThreadInfo() {
       if (!chatThreadId) return
-      
+
       const thread = await getChatThreadById(chatThreadId)
       if (thread) {
         setChatThreadProfessionalEmail(thread.professionalEmail)
       }
     }
-    
+
     loadThreadInfo()
   }, [chatThreadId])
 
@@ -319,16 +328,16 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
         email: currentUserEmail,
         text: trimmedMessage,
       })
-      
+
       const otherEmail = need.requesterEmail === currentUserEmail ? need.professionalEmail : need.requesterEmail
       if (otherEmail) {
         await createNotificationViaAPI({
           userEmail: otherEmail,
-          title: 'Nova mensagem',
+          title: "Nova mensagem",
           message: `Você recebeu uma nova mensagem sobre "${need.title}"`,
-          type: 'message',
+          type: "message",
           needId: need.id,
-        }).catch(err => console.error('[v0] Failed to create message notification:', err))
+        }).catch((err) => console.error("[v0] Failed to create message notification:", err))
       }
     } catch (error) {
       console.error("Failed to send message:", error)
@@ -419,18 +428,20 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                         )}
                       >
                         {msg.type === "bid" ? (
-                          <div className={cn(
-                            "border-2 rounded-lg p-3",
-                            msg.metadata?.status === "accepted" 
-                              ? "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700"
-                              : msg.metadata?.status === "declined" || msg.metadata?.status === "cancelled"
-                                ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 opacity-60"
-                                : "bg-white dark:bg-gray-800 border-blue-300 dark:border-blue-700"
-                          )}>
+                          <div
+                            className={cn(
+                              "border-2 rounded-lg p-3",
+                              msg.metadata?.status === "accepted"
+                                ? "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700"
+                                : msg.metadata?.status === "declined" || msg.metadata?.status === "cancelled"
+                                  ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 opacity-60"
+                                  : "bg-white dark:bg-gray-800 border-blue-300 dark:border-blue-700",
+                            )}
+                          >
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-lg">💰</span>
                               <span className="font-semibold text-sm">
-                                {msg.metadata?.status === "accepted" 
+                                {msg.metadata?.status === "accepted"
                                   ? "Proposta Aceita!"
                                   : msg.metadata?.status === "declined"
                                     ? "Proposta Recusada"
@@ -439,7 +450,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                       : "Proposta de Valor"}
                               </span>
                             </div>
-                            
+
                             {msg.metadata?.status !== "cancelled" && msg.metadata?.bidAmount && (
                               <>
                                 <div className="space-y-2 mb-3">
@@ -449,16 +460,16 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                       {formatCurrency(msg.metadata.bidAmount)}
                                     </span>
                                   </div>
-                                  
+
                                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span>Taxa da plataforma (10%):</span>
-                                    <span>{formatCurrency(msg.metadata.bidAmount * 0.10)}</span>
+                                    <span>Taxa da plataforma (15%):</span>
+                                    <span>{formatCurrency(msg.metadata.bidAmount * 0.15)}</span>
                                   </div>
-                                  
+
                                   <div className="flex items-center justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
                                     <span className="text-gray-700 dark:text-gray-300">Solicitante paga:</span>
                                     <span className="text-blue-600 dark:text-blue-400">
-                                      {formatCurrency(msg.metadata.bidAmount * 1.10)}
+                                      {formatCurrency(msg.metadata.bidAmount * 1.15)}
                                     </span>
                                   </div>
                                 </div>
@@ -477,7 +488,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                               title: "Proposta aceita!",
                                               description: "O serviço está pronto para ser executado.",
                                             })
-                                            
+
                                             const updatedThread = await getChatThreadById(chatThreadId)
                                             if (updatedThread) {
                                               setMessages(updatedThread.messages || [])
@@ -498,7 +509,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="flex-1 border-red-500 text-red-600 hover:bg-red-50"
+                                      className="flex-1 border-red-500 text-red-600 hover:bg-red-50 bg-transparent"
                                       onClick={async () => {
                                         try {
                                           if (msg.metadata?.proposalId) {
@@ -507,7 +518,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                               title: "Proposta recusada",
                                               description: "O profissional foi notificado.",
                                             })
-                                            
+
                                             const updatedThread = await getChatThreadById(chatThreadId)
                                             if (updatedThread) {
                                               setMessages(updatedThread.messages || [])
@@ -527,7 +538,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                     </Button>
                                   </div>
                                 )}
-                                
+
                                 {msg.metadata?.status === "accepted" && (
                                   <div className="text-sm text-green-700 dark:text-green-300 font-medium">
                                     Serviço pronto para ser executado
@@ -535,7 +546,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                 )}
                               </>
                             )}
-                            
+
                             <span className="text-xs text-gray-500 dark:text-gray-400 mt-2 block">
                               {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </span>

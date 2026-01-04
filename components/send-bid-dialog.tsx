@@ -46,11 +46,11 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
       await createNotificationViaAPI({
         userEmail: need.requesterEmail,
-        title: 'Nova proposta recebida',
+        title: "Nova proposta recebida",
         message: `Você recebeu uma proposta de ${formatCurrency(amount)} para "${need.title}"`,
-        type: 'new_proposal',
+        type: "new_proposal",
         needId: need.id,
-      }).catch(err => console.error('[v0] Failed to create bid notification:', err))
+      }).catch((err) => console.error("[v0] Failed to create bid notification:", err))
 
       onSuccess?.()
       onClose()
@@ -64,7 +64,7 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
   const amount = Number(bidAmount) || 0
   const isValidAmount = amount >= MINIMUM_BID
-  const platformFee = amount * 0.10
+  const platformFee = amount * 0.15
   const clientTotal = amount + platformFee
 
   return (
@@ -91,33 +91,25 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
           {isValidAmount && (
             <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-3">
-              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Resumo de Valores
-              </div>
-              
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Resumo de Valores</div>
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between pb-2 border-b border-blue-200 dark:border-blue-800">
                   <span className="text-gray-600 dark:text-gray-400">Você receberá:</span>
-                  <span className="font-semibold text-green-600 dark:text-green-400">
-                    {formatCurrency(amount)}
-                  </span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(amount)}</span>
                 </div>
-                
+
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>Taxa da plataforma (10%):</span>
+                  <span>Taxa da plataforma (15%):</span>
                   <span>{formatCurrency(platformFee)}</span>
                 </div>
-                
+
                 <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-800">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">
-                    Solicitante pagará:
-                  </span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400">
-                    {formatCurrency(clientTotal)}
-                  </span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Solicitante pagará:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(clientTotal)}</span>
                 </div>
               </div>
-              
+
               <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 italic">
                 * A taxa é paga pelo solicitante para garantir segurança na transação
               </div>
@@ -125,7 +117,7 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
           )}
 
           <div className="flex gap-2">
-            <Button onClick={onClose} variant="outline" className="flex-1">
+            <Button onClick={onClose} variant="outline" className="flex-1 bg-transparent">
               Cancelar
             </Button>
             <Button
