@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Check } from "lucide-react"
 import { useState } from "react"
-import { createCheckoutSession, type SubscriptionPlan } from "@/lib/subscriptions"
-import { useRouter } from "next/navigation"
+import type { SubscriptionPlan } from "@/lib/subscriptions"
 import { Badge } from "@/components/ui/badge"
 
 interface PricingCardProps {
@@ -18,7 +17,6 @@ interface PricingCardProps {
 export function PricingCard({ plan, isFounder, isFreeYear, currentPlan }: PricingCardProps) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly")
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
 
   const isFree = plan.slug === "free"
   const isCurrent = currentPlan === plan.slug
@@ -36,11 +34,31 @@ export function PricingCard({ plan, isFounder, isFreeYear, currentPlan }: Pricin
 
     setLoading(true)
     try {
-      const { url } = await createCheckoutSession(plan.slug, billingCycle)
+      console.log("[v0] Creating checkout for plan:", plan.slug, "cycle:", billingCycle)
+
+      const response = await fetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          planSlug: plan.slug,
+          billingCycle,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Erro ao criar checkout")
+      }
+
+      const { url } = await response.json()
+
+      console.log("[v0] Redirecting to checkout:", url)
       window.location.href = url
     } catch (error) {
       console.error("[v0] Error creating checkout:", error)
-      alert("Erro ao criar checkout. Tente novamente.")
+      alert(error instanceof Error ? error.message : "Erro ao criar checkout. Tente novamente.")
     } finally {
       setLoading(false)
     }
