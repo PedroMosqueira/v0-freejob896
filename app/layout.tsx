@@ -33,6 +33,39 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined') {
+                  var originalBtoa = window.btoa;
+                  window.btoa = function(str) {
+                    try {
+                      return originalBtoa(str);
+                    } catch (e) {
+                      // Converte UTF-8 para Base64 usando TextEncoder se disponível
+                      if (typeof TextEncoder !== 'undefined') {
+                        var bytes = new TextEncoder().encode(str);
+                        var binary = '';
+                        for (var i = 0; i < bytes.length; i++) {
+                          binary += String.fromCharCode(bytes[i]);
+                        }
+                        return originalBtoa(binary);
+                      }
+                      // Fallback para método antigo
+                      return originalBtoa(
+                        encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                          return String.fromCharCode(parseInt(p1, 16));
+                        })
+                      );
+                    }
+                  };
+                }
+              })();
+            `,
+          }}
+        />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
