@@ -139,8 +139,12 @@ export function ImageCaptureInput({
     }
   }
 
+  const isMobile =
+    typeof window !== "undefined" &&
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col sm:flex-row gap-2 w-full">
       {/* Botão para escolher arquivo */}
       <Button
         type="button"
@@ -162,27 +166,30 @@ export function ImageCaptureInput({
         disabled={disabled || isCompressing}
       />
 
-      {/* Botão para tirar foto com câmera */}
-      <Button
-        type="button"
-        variant="outline"
-        onClick={handleButtonClick(cameraInputRef)}
-        disabled={disabled || isCompressing}
-        className="flex-1 gap-2 bg-transparent"
-      >
-        <Camera className="h-4 w-4" />
-        {isCompressing ? "Processando..." : "Tirar foto"}
-      </Button>
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple={multiple}
-        onChange={handleFileSelect}
-        className="hidden"
-        disabled={disabled || isCompressing}
-      />
+      {isMobile && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleButtonClick(cameraInputRef)}
+            disabled={disabled || isCompressing}
+            className="flex-1 gap-2 bg-transparent"
+          >
+            <Camera className="h-4 w-4" />
+            {isCompressing ? "Processando..." : "Tirar foto"}
+          </Button>
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple={multiple}
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={disabled || isCompressing}
+          />
+        </>
+      )}
     </div>
   )
 }

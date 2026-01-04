@@ -60,7 +60,7 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
             </button>
 
             {showCaptureButtons && (
-              <div className="absolute top-full right-0 mt-2 z-10 bg-background border rounded-lg shadow-lg p-3 min-w-[280px]">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 mt-2 z-10 bg-background border rounded-lg shadow-lg p-3 w-[90vw] max-w-[320px]">
                 <ImageCaptureInput onCapture={handleFileCapture} disabled={isUploading} label="Foto de perfil" />
               </div>
             )}
