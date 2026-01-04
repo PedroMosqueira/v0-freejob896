@@ -9,7 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Nenhuma configuração experimental ou complexa aqui
+  experimental: {
+    instrumentationHook: true,
+  },
 };
 
 export default nextConfig;
