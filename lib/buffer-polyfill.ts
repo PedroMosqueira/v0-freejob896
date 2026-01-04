@@ -1,17 +1,4 @@
 function utf8ToBase64(str: string): string {
-  try {
-    // Tenta usar o btoa nativo primeiro (mais rápido para ASCII puro)
-    const testBtoa = typeof window !== "undefined" ? window.btoa : globalThis.btoa
-    if (typeof testBtoa === "function") {
-      // Testa se a string é ASCII puro
-      if (/^[\x00-\x7F]*$/.test(str)) {
-        return testBtoa(str)
-      }
-    }
-  } catch (e) {
-    // Ignora erro e usa fallback
-  }
-
   // Fallback: converte UTF-8 para base64 manualmente
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
@@ -52,7 +39,10 @@ function utf8ToBase64(str: string): string {
   return result
 }
 
-if (typeof globalThis !== "undefined") {
+// Sobrescrever window.btoa no navegador e no servidor (globalThis)
+if (typeof window !== "undefined") {
+  window.btoa = utf8ToBase64
+} else if (typeof globalThis !== "undefined") {
   ;(globalThis as any).btoa = utf8ToBase64
 }
 
