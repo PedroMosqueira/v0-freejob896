@@ -1,5 +1,31 @@
 "use server"
 
+if (typeof globalThis.atob === "undefined") {
+  const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+  globalThis.atob = (base64: string): string => {
+    const str = base64.replace(/[^A-Za-z0-9+/=]/g, "")
+    let output = ""
+
+    for (let i = 0; i < str.length; i += 4) {
+      const enc1 = base64Chars.indexOf(str.charAt(i))
+      const enc2 = base64Chars.indexOf(str.charAt(i + 1))
+      const enc3 = base64Chars.indexOf(str.charAt(i + 2))
+      const enc4 = base64Chars.indexOf(str.charAt(i + 3))
+
+      const chr1 = (enc1 << 2) | (enc2 >> 4)
+      const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2)
+      const chr3 = ((enc3 & 3) << 6) | enc4
+
+      output += String.fromCharCode(chr1)
+      if (enc3 !== 64) output += String.fromCharCode(chr2)
+      if (enc4 !== 64) output += String.fromCharCode(chr3)
+    }
+
+    return output
+  }
+}
+
 if (typeof globalThis.btoa === "undefined") {
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
