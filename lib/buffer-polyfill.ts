@@ -1,45 +1,37 @@
 function utf8ToBase64(str: string): string {
-  // Fallback: converte UTF-8 para base64 manualmente
-  const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
-  const utf8Bytes: number[] = []
-  for (let i = 0; i < str.length; i++) {
-    const charCode = str.charCodeAt(i)
-    if (charCode < 0x80) {
-      utf8Bytes.push(charCode)
-    } else if (charCode < 0x800) {
-      utf8Bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f))
-    } else if (charCode < 0xd800 || charCode >= 0xe000) {
-      utf8Bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f))
-    } else {
-      // Surrogate pair
-      i++
-      const surrogate = 0x10000 + (((charCode & 0x3ff) << 10) | (str.charCodeAt(i) & 0x3ff))
-      utf8Bytes.push(
-        0xf0 | (surrogate >> 18),
-        0x80 | ((surrogate >> 12) & 0x3f),
-        0x80 | ((surrogate >> 6) & 0x3f),
-        0x80 | (surrogate & 0x3f),
-      )
+  try {
+    // Tentar btoa original primeiro (mais rápido para ASCII puro)
+    const testBtoa = typeof window !== "undefined" ? window.btoa || globalThis.btoa : globalThis.btoa
+    if (testBtoa && typeof testBtoa === "function") {
+      return testBtoa.call(typeof window !== "undefined" ? window : globalThis, str)
     }
+  } catch (e) {
+    // Continuar para método UTF-8
   }
 
+  // Método robusto para UTF-8 usando TextEncoder
+  const encoder = new TextEncoder()
+  const bytes = encoder.encode(str)
+  const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+
+  // Base64 encode manualmente se btoa não existir
+  const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
   let result = ""
-  for (let i = 0; i < utf8Bytes.length; i += 3) {
-    const byte1 = utf8Bytes[i]
-    const byte2 = i + 1 < utf8Bytes.length ? utf8Bytes[i + 1] : 0
-    const byte3 = i + 2 < utf8Bytes.length ? utf8Bytes[i + 2] : 0
+
+  for (let i = 0; i < binString.length; i += 3) {
+    const byte1 = binString.charCodeAt(i)
+    const byte2 = i + 1 < binString.length ? binString.charCodeAt(i + 1) : 0
+    const byte3 = i + 2 < binString.length ? binString.charCodeAt(i + 2) : 0
 
     result += base64Chars[byte1 >> 2]
     result += base64Chars[((byte1 & 0x3) << 4) | (byte2 >> 4)]
-    result += i + 1 < utf8Bytes.length ? base64Chars[((byte2 & 0xf) << 2) | (byte3 >> 6)] : "="
-    result += i + 2 < utf8Bytes.length ? base64Chars[byte3 & 0x3f] : "="
+    result += i + 1 < binString.length ? base64Chars[((byte2 & 0xf) << 2) | (byte3 >> 6)] : "="
+    result += i + 2 < binString.length ? base64Chars[byte3 & 0x3f] : "="
   }
 
   return result
 }
 
-// Sobrescrever window.btoa no navegador e no servidor (globalThis)
 if (typeof window !== "undefined") {
   window.btoa = utf8ToBase64
 } else if (typeof globalThis !== "undefined") {
