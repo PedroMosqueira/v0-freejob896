@@ -32,6 +32,30 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window === "undefined") return;
+                var originalBtoa = window.btoa;
+                window.btoa = function(str) {
+                  try {
+                    return originalBtoa(str);
+                  } catch (e) {
+                    try {
+                      return originalBtoa(unescape(encodeURIComponent(str)));
+                    } catch (e2) {
+                      console.error("[v0] btoa UTF-8 failed:", e2);
+                      throw e2;
+                    }
+                  }
+                };
+                console.log("[v0] ✅ btoa UTF-8 polyfill loaded inline");
+              })();
+            `,
+          }}
+        />
+
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -39,8 +63,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Freejob" />
         <link rel="apple-touch-icon" href="/images/logo.png" />
-
-        <Script src="/btoa-utf8-fix.js" strategy="beforeInteractive" />
 
         <Script
           async
