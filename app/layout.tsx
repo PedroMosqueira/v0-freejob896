@@ -32,31 +32,6 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-(function() {
-  if (!window.btoa) return;
-  var nativeBtoa = window.btoa;
-  window.btoa = function(str) {
-    try {
-      return nativeBtoa(str);
-    } catch (e) {
-      var encoder = new TextEncoder();
-      var bytes = encoder.encode(str);
-      var binary = '';
-      for (var i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return nativeBtoa(binary);
-    }
-  };
-  console.log('[v0] btoa UTF-8 fix applied');
-})();
-            `,
-          }}
-        />
-
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
