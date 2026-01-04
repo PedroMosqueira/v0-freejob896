@@ -43,19 +43,19 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       <form action={formAction} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nome Completo</Label>
-            <Input
-              id="fullName"
-              name="fullName"
-              defaultValue={profile.fullName || ""}
-              placeholder="Seu nome completo"
-            />
+            <Label htmlFor="firstName">Nome</Label>
+            <Input id="firstName" name="firstName" defaultValue={profile.firstName || ""} placeholder="Seu nome" />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">Cidade</Label>
-            <Input id="city" name="city" defaultValue={profile.city || ""} placeholder="Sua cidade" />
+            <Label htmlFor="lastName">Sobrenome</Label>
+            <Input id="lastName" name="lastName" defaultValue={profile.lastName || ""} placeholder="Seu sobrenome" />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="city">Cidade</Label>
+          <Input id="city" name="city" defaultValue={profile.city || ""} placeholder="Sua cidade" />
         </div>
 
         <div className="space-y-2">

@@ -7,7 +7,9 @@ import { revalidatePath } from "next/cache"
 export interface UserProfile {
   id: string
   email: string
-  fullName?: string
+  firstName?: string
+  lastName?: string
+  fullName?: string // Computed from firstName + lastName
   photoUrl?: string
   phone?: string
   phoneVerified: boolean
@@ -18,9 +20,9 @@ export interface UserProfile {
   isProfessional: boolean
   skills?: string[]
   rating: number
-  servicesExecuted: number // Services completed as professional
-  requestsCompleted: number // Requests completed as requester
-  totalServices: number // Total for backward compatibility
+  servicesExecuted: number
+  requestsCompleted: number
+  totalServices: number
   verifiedAt?: string
   createdAt: string
   updatedAt?: string
@@ -64,10 +66,16 @@ export async function getUserProfile(email: string): Promise<UserProfile | null>
 
   const requestsCompleted = requesterServices?.length || 0
 
+  const firstName = data.first_name || ""
+  const lastName = data.last_name || ""
+  const fullName = `${firstName} ${lastName}`.trim() || data.full_name || ""
+
   return {
     id: data.id,
     email: data.email,
-    fullName: data.full_name,
+    firstName,
+    lastName,
+    fullName,
     photoUrl: data.profile_image_url,
     phone: data.phone,
     phoneVerified: data.phone_verified || false,
@@ -102,10 +110,16 @@ export async function getUserProfiles(emails: string[]): Promise<Record<string, 
   const profiles: Record<string, UserProfile> = {}
 
   for (const user of data) {
+    const firstName = user.first_name || ""
+    const lastName = user.last_name || ""
+    const fullName = `${firstName} ${lastName}`.trim() || user.full_name || ""
+
     profiles[user.email] = {
       id: user.id,
       email: user.email,
-      fullName: user.full_name,
+      firstName,
+      lastName,
+      fullName,
       photoUrl: user.profile_image_url,
       phone: user.phone,
       phoneVerified: user.phone_verified || false,
@@ -132,10 +146,9 @@ export async function getPublicProfile(email: string): Promise<UserProfile | nul
   const profile = await getUserProfile(email)
   if (!profile) return null
 
-  // Retornar apenas informações públicas
   return {
     ...profile,
-    phone: undefined, // Não expor telefone publicamente
+    phone: undefined,
   }
 }
 
@@ -149,7 +162,8 @@ export async function updateUserProfile(
       return { success: false, message: "Você precisa estar autenticado" }
     }
 
-    const fullName = formData.get("fullName") as string
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
     const phone = formData.get("phone") as string
     const bio = formData.get("bio") as string
     const city = formData.get("city") as string
@@ -164,12 +178,16 @@ export async function updateUserProfile(
       : []
 
     console.log("[v0] Updating profile for:", session.user.email)
-    console.log("[v0] Full name from form:", fullName)
+    console.log("[v0] First name:", firstName, "Last name:", lastName)
     console.log("[v0] Other data:", { phone, bio, city, isClient, isProfessional, skills })
 
     const supabase = await createSupabaseServerClient()
 
+    const fullName = `${firstName || ""} ${lastName || ""}`.trim()
+
     const updateData = {
+      first_name: firstName || null,
+      last_name: lastName || null,
       full_name: fullName || null,
       phone: phone || null,
       bio: bio || null,
@@ -216,7 +234,6 @@ export async function uploadProfileImage(
       return { success: false, message: "Nenhum arquivo selecionado" }
     }
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       return { success: false, message: "O arquivo deve ser uma imagem" }
     }
@@ -229,7 +246,6 @@ export async function uploadProfileImage(
 
     const supabase = await createSupabaseServerClient()
 
-    // Upload to Supabase Storage
     const fileExt = file.name.split(".").pop()
     const fileName = `${session.user.email}-${Date.now()}.${fileExt}`
     const filePath = `profile-images/${fileName}`
@@ -244,12 +260,10 @@ export async function uploadProfileImage(
       return { success: false, message: "Erro ao fazer upload da imagem" }
     }
 
-    // Get public URL
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath)
 
     const imageUrl = urlData.publicUrl
 
-    // Update user profile with image URL
     const { error: updateError } = await supabase
       .from("users")
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
