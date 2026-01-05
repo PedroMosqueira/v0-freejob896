@@ -1,19 +1,6 @@
 "use server"
 
-if (typeof btoa === "function") {
-  const originalBtoa = btoa
-  globalThis.btoa = (str: string): string => {
-    try {
-      return originalBtoa(str)
-    } catch (e) {
-      // Converter UTF-8 para Latin1
-      return originalBtoa(unescape(encodeURIComponent(str)))
-    }
-  }
-}
-
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createClient } from "@/lib/supabase/client"
 
 export async function checkUserStatus(prevState: any, formData: FormData) {
   const email = formData.get("email")
@@ -22,25 +9,11 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
     return { error: "Email é obrigatório" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
-      set(name: string, value: string, options: any) {
-        cookieStore.set({ name, value, ...options })
-      },
-      remove(name: string, options: any) {
-        cookieStore.set({ name, value: "", ...options })
-      },
-    },
-  })
+  const supabase = createClient()
 
   try {
     console.log("🔍 Checking user status for:", email.toString())
 
-    // Check Supabase Auth
     const { data: users, error: listError } = await supabase.auth.admin.listUsers()
     if (listError) {
       return { error: "Erro ao verificar status do usuário" }
@@ -48,7 +21,6 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
 
     const authUser = users.users.find((user) => user.email === email.toString())
 
-    // Check custom users table
     const { data: customUser } = await supabase
       .from("users")
       .select("id, email, created_at")
@@ -99,24 +71,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     return { error: "As senhas não conferem" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
+  const supabase = createClient()
 
   try {
     console.log("[v0] Starting registration for:", email.toString())
@@ -179,29 +134,11 @@ export async function clearUnverifiedUser(prevState: any, formData: FormData) {
     return { error: "Email é obrigatório" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role to delete users
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
+  const supabase = createClient()
 
   try {
     console.log("🗑️ Attempting to clear unverified user:", email.toString())
 
-    // First, find the user by email
     const { data: users, error: listError } = await supabase.auth.admin.listUsers()
 
     if (listError) {
@@ -219,7 +156,6 @@ export async function clearUnverifiedUser(prevState: any, formData: FormData) {
       }
     }
 
-    // Delete the unverified user
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userToDelete.id)
 
     if (deleteError) {
@@ -249,24 +185,7 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
     return { error: "Email é obrigatório" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
+  const supabase = createClient()
 
   try {
     console.log("🔄 Resending verification email to:", email.toString())
