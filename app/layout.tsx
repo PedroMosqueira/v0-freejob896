@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
+import { BtoaPolyfillInit } from "@/components/btoa-polyfill-init"
 import { auth } from "@/auth"
 import Script from "next/script"
 
@@ -48,21 +49,6 @@ export default async function RootLayout({
                     }
                   }
                 }
-                
-                // 2. Depois: Aplicar polyfill do btoa para suportar UTF-8
-                if (typeof window !== 'undefined' && window.btoa) {
-                  var originalBtoa = window.btoa;
-                  window.btoa = function(str) {
-                    try {
-                      return originalBtoa(str);
-                    } catch (e) {
-                      // Converte UTF-8 para Latin1 antes de encodar
-                      console.log('[v0] btoa: convertendo UTF-8 para Latin1');
-                      return originalBtoa(unescape(encodeURIComponent(str)));
-                    }
-                  };
-                  console.log('[v0] ✅ btoa polyfill aplicado com sucesso');
-                }
               })();
             `,
           }}
@@ -83,6 +69,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.className} bg-background text-foreground`}>
+        <BtoaPolyfillInit />
         <ThemeProvider defaultTheme="system" storageKey="freejob-theme">
           <AuthProvider session={plainSession}>
             {children}
