@@ -36,6 +36,20 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                // 1. Primeiro: Limpar TODOS os cookies do Supabase que podem estar corrompidos
+                if (typeof document !== 'undefined') {
+                  var cookies = document.cookie.split(';');
+                  for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.indexOf('sb-') === 0 || cookie.indexOf('supabase') !== -1) {
+                      var cookieName = cookie.split('=')[0];
+                      document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                      console.log('[v0] Cookie Supabase removido:', cookieName);
+                    }
+                  }
+                }
+                
+                // 2. Depois: Aplicar polyfill do btoa para suportar UTF-8
                 if (typeof window !== 'undefined' && window.btoa) {
                   var originalBtoa = window.btoa;
                   window.btoa = function(str) {
@@ -43,11 +57,11 @@ export default async function RootLayout({
                       return originalBtoa(str);
                     } catch (e) {
                       // Converte UTF-8 para Latin1 antes de encodar
-                      console.log('[v0] btoa: converting UTF-8');
+                      console.log('[v0] btoa: convertendo UTF-8 para Latin1');
                       return originalBtoa(unescape(encodeURIComponent(str)));
                     }
                   };
-                  console.log('[v0] btoa polyfill aplicado');
+                  console.log('[v0] ✅ btoa polyfill aplicado com sucesso');
                 }
               })();
             `,
