@@ -32,28 +32,6 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                if (typeof window !== "undefined" && window.btoa) {
-                  var originalBtoa = window.btoa;
-                  window.btoa = function(str) {
-                    try {
-                      return originalBtoa(str);
-                    } catch (e) {
-                      return originalBtoa(unescape(encodeURIComponent(str)));
-                    }
-                  };
-                  console.log("[v0] btoa polyfill aplicado inline");
-                }
-              })();
-            `,
-          }}
-        />
-
-        <script src="/fix-btoa.js" />
-
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
