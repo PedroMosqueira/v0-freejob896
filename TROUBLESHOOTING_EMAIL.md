@@ -13,7 +13,7 @@ Acesse: `https://supabase.com/dashboard/project/[seu-project-id]/auth/providers`
 
 **Configurações obrigatórias:**
 
-```
+\`\`\`
 Enable Custom SMTP: ✅ ATIVADO
 
 Host: smtp.resend.com
@@ -23,7 +23,7 @@ Password: [sua_api_key_do_resend]
 
 Sender email: onboarding@resend.dev
 Sender name: FreeJob Brasil
-```
+\`\`\`
 
 ### 2. Verificar API Key do Resend
 
@@ -78,12 +78,12 @@ Sender name: FreeJob Brasil
 
 Enquanto resolve o SMTP, confirme emails manualmente via SQL:
 
-```sql
+\`\`\`sql
 UPDATE auth.users
 SET email_confirmed_at = NOW()
 WHERE email = 'email@do-usuario.com'
 AND email_confirmed_at IS NULL;
-```
+\`\`\`
 
 ## Próximos Passos
 
