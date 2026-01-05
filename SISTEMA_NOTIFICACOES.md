@@ -87,7 +87,7 @@
 
 ## Estrutura da Tabela Notifications
 
-\`\`\`sql
+```sql
 CREATE TABLE notifications (
   id: uuid (PK)
   user_id: text (email do usuário)
@@ -99,7 +99,7 @@ CREATE TABLE notifications (
   created_at: timestamp
   updated_at: timestamp
 )
-\`\`\`
+```
 
 ## Políticas RLS
 
@@ -110,7 +110,7 @@ CREATE TABLE notifications (
 
 ## Como Adicionar Nova Notificação
 
-\`\`\`typescript
+```typescript
 import { createNotification } from '@/lib/notifications-client'
 
 await createNotification({
@@ -120,7 +120,7 @@ await createNotification({
   type: 'tipo_notificacao',
   link: '/caminho/opcional' // opcional
 })
-\`\`\`
+```
 
 ## Melhorias Recomendadas
 

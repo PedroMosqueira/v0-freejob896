@@ -104,7 +104,7 @@ Se o Resend não funcionar, você pode voltar temporariamente ao provedor padrã
 
 1. Supabase Dashboard → Authentication → Email Templates
 2. SMTP Settings:
-   \`\`\`
+   ```
    Enable custom SMTP: ✅
    Sender email: onboarding@resend.dev
    Sender name: FreeJob Brasil
@@ -112,7 +112,7 @@ Se o Resend não funcionar, você pode voltar temporariamente ao provedor padrã
    Port number: 465
    Username: resend
    Password: [COLE A NOVA API KEY AQUI]
-   \`\`\`
+   ```
 3. Salve
 4. Clique em "Send test email"
 

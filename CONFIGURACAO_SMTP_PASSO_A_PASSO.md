@@ -32,7 +32,7 @@
 
 ### 3. Preencher os campos EXATAMENTE assim:
 
-\`\`\`
+```
 ┌─────────────────────────────────────────────┐
 │ ☑ Enable Custom SMTP                       │ ← MARQUE ESTA CAIXA!
 ├─────────────────────────────────────────────┤
@@ -54,7 +54,7 @@
 │ Password:                                   │
 │ re_sua_api_key_aqui                         │ ← Cole a API Key do Resend
 └─────────────────────────────────────────────┘
-\`\`\`
+```
 
 **Clique em "Save"** no canto inferior direito
 
