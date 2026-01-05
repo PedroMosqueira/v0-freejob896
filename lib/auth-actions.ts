@@ -1,5 +1,17 @@
 "use server"
 
+if (typeof btoa === "function") {
+  const originalBtoa = btoa
+  globalThis.btoa = (str: string): string => {
+    try {
+      return originalBtoa(str)
+    } catch (e) {
+      // Converter UTF-8 para Latin1
+      return originalBtoa(unescape(encodeURIComponent(str)))
+    }
+  }
+}
+
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
