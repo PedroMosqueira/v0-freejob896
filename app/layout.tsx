@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
-import { BtoaPolyfillInit } from "@/components/btoa-polyfill-init"
 import { auth } from "@/auth"
 import Script from "next/script"
 
@@ -33,26 +32,6 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                // 1. Primeiro: Limpar TODOS os cookies do Supabase que podem estar corrompidos
-                if (typeof document !== 'undefined') {
-                  var cookies = document.cookie.split(';');
-                  for (var i = 0; i < cookies.length; i++) {
-                    var cookie = cookies[i].trim();
-                    if (cookie.indexOf('sb-') === 0 || cookie.indexOf('supabase') !== -1) {
-                      var cookieName = cookie.split('=')[0];
-                      document.cookie = cookieName + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                      console.log('[v0] Cookie Supabase removido:', cookieName);
-                    }
-                  }
-                }
-              })();
-            `,
-          }}
-        />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -69,7 +48,6 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.className} bg-background text-foreground`}>
-        <BtoaPolyfillInit />
         <ThemeProvider defaultTheme="system" storageKey="freejob-theme">
           <AuthProvider session={plainSession}>
             {children}
