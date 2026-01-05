@@ -40,16 +40,16 @@ export default async function RootLayout({
                   var originalBtoa = window.btoa;
                   window.btoa = function(str) {
                     try {
+                      // Tenta usar o btoa nativo primeiro (mais rápido para strings ASCII)
                       return originalBtoa(str);
                     } catch (e) {
-                      // Converte UTF-8 para Latin1 usando TextEncoder
-                      var encoder = new TextEncoder();
-                      var bytes = encoder.encode(str);
-                      var binary = '';
-                      for (var i = 0; i < bytes.length; i++) {
-                        binary += String.fromCharCode(bytes[i]);
+                      // Se falhar, converte UTF-8 para Latin1 usando o método clássico
+                      try {
+                        return originalBtoa(unescape(encodeURIComponent(str)));
+                      } catch (e2) {
+                        console.error('[v0] ❌ Erro no polyfill btoa:', e2);
+                        throw e2;
                       }
-                      return originalBtoa(binary);
                     }
                   };
                   console.log('[v0] ✅ btoa polyfill aplicado com sucesso');
