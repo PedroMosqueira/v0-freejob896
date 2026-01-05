@@ -1,3 +1,15 @@
+if (typeof window !== "undefined" && typeof window.btoa === "function") {
+  const originalBtoa = window.btoa.bind(window)
+  window.btoa = (str: string): string => {
+    try {
+      return originalBtoa(str)
+    } catch {
+      // Converte UTF-8 para Latin1 usando unescape/encodeURIComponent
+      return originalBtoa(unescape(encodeURIComponent(str)))
+    }
+  }
+}
+
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 let supabaseInstance: ReturnType<typeof createSupabaseClient> | null = null
