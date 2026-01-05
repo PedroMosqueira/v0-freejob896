@@ -412,7 +412,10 @@ function SearchRequests({
                     <React.Fragment key={need.id}>
                       <Card
                         className="group relative overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 ease-out cursor-pointer dark:bg-gray-800 dark:border-gray-700 rounded-none border aspect-square p-[1px]"
-                        onClick={() => setSelectedNeedForDetails(need)}
+                        onClick={() => {
+                          console.log("[v0] Card clicado", need)
+                          setSelectedNeedForDetails(need)
+                        }}
                       >
                         <div className="relative w-full h-full">
                           <img
