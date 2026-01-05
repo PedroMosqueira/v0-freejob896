@@ -49,11 +49,15 @@ import SendBidDialog from "@/components/send-bid-dialog"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 // import { PaymentDialog } from "@/components/payment-dialog" // Removed
 
-// Assuming getUserProfile is defined elsewhere and fetches user details
-// import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
+console.log("[v0] btoa test:", typeof window !== "undefined" ? window.btoa.toString().slice(0, 50) : "server")
 
 // Mock getUserProfile for now if it's not provided
 const getUserProfile = async (email: string) => {
+  console.log(
+    "[v0] getUserProfile - btoa function:",
+    typeof window !== "undefined" ? (window.btoa.toString().includes("unescape") ? "POLYFILL" : "NATIVE") : "server",
+  )
+
   const supabase = createSupabaseBrowserClient()
 
   // Fetch from 'users' table directly
