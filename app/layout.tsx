@@ -32,32 +32,7 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                if (typeof window !== 'undefined') {
-                  var originalBtoa = window.btoa;
-                  window.btoa = function(str) {
-                    try {
-                      // Tenta usar o btoa nativo primeiro (mais rápido para strings ASCII)
-                      return originalBtoa(str);
-                    } catch (e) {
-                      // Se falhar, converte UTF-8 para Latin1 usando o método clássico
-                      try {
-                        return originalBtoa(unescape(encodeURIComponent(str)));
-                      } catch (e2) {
-                        console.error('[v0] ❌ Erro no polyfill btoa:', e2);
-                        throw e2;
-                      }
-                    }
-                  };
-                  console.log('[v0] ✅ btoa polyfill aplicado com sucesso');
-                }
-              })();
-            `,
-          }}
-        />
+        <script src="/fix-btoa.js" />
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />
