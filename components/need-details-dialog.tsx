@@ -210,16 +210,21 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
   }, [open, currentNeed.id, onStatusUpdate]) // Depend on 'open' prop
 
   const fetchProposals = async () => {
+    console.log("[v0] fetchProposals called for need:", currentNeed.id) // Added log
     setIsLoadingProposals(true)
     try {
       const supabase = createSupabaseBrowserClient()
+      console.log("[v0] Supabase client created, querying need_proposals") // Added log
       const { data, error } = await supabase
         .from("need_proposals")
         .select("*")
         .eq("need_id", currentNeed.id)
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Error fetching proposals:", error) // Added log
+        throw error
+      }
       console.log("[v0] Fetched proposals:", data)
       setProposals(data || [])
 
