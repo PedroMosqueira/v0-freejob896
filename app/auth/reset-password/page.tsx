@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import Image from "next/image"
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient } from "@/lib/supabase/client"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -23,10 +23,7 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
+    const supabase = createClient()
 
     const checkSession = async () => {
       const {
@@ -98,10 +95,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      )
+      const supabase = createClient()
 
       const { error: updateError } = await supabase.auth.updateUser({
         password: password,
