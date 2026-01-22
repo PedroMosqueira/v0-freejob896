@@ -1,43 +1,40 @@
 "use client"
 
-import Link from "next/link"
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Need, NeedProposal } from "@/data/needs" // Updated type import
 import {
-  Calendar,
-  User,
-  MessageCircle,
   CheckCircle,
-  XCircle,
-  ChevronLeft,
-  ChevronRight,
-  MessageSquare,
-  Star,
   AlertCircle,
+  XCircle,
+  Calendar,
+  MessageSquare,
+  User,
+  Star,
   ThumbsUp,
   ThumbsDown,
   Ban,
-} from "lucide-react" // Added relevant icons
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
 import {
-  acceptProposal,
   updateNeedStatus,
   cancelNeed,
+  acceptProposal,
   professionalRespondToVisit,
   professionalCancelService,
+  type Need,
+  type NeedStatus,
+  type NeedProposal,
   addNeedProposal,
   startChat,
   type ProposalType,
-} from "@/lib/needs-store" // Simplified import
-import { useEffect, useState } from "react"
-import { formatCurrency } from "@/lib/format-currency" // Updated import
+} from "@/lib/needs-store"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { canUserRate } from "@/lib/ratings"
+import { Textarea } from "@/components/ui/textarea"
 import ChatManagementDialog from "@/components/chat-management-dialog"
 import ChatDialog from "@/components/chat-dialog"
 import ImageViewerDialog from "@/components/image-viewer-dialog"
@@ -45,19 +42,18 @@ import InterestDialog from "@/components/interest-dialog"
 import EditNeedDialog from "@/components/edit-need-dialog"
 import { formatDistance } from "@/lib/calculate-distance"
 import RatingDialog from "@/components/rating-dialog"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import Link from "next/link"
+import { formatCurrency } from "@/lib/pricing"
 import SendBidDialog from "@/components/send-bid-dialog"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
-// import { PaymentDialog } from "@/components/payment-dialog" // Removed
+import { PaymentDialog } from "@/components/payment-dialog"
 
-console.log("[v0] btoa test:", typeof window !== "undefined" ? window.btoa.toString().slice(0, 50) : "server")
+// Assuming getUserProfile is defined elsewhere and fetches user details
+// import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
 
 // Mock getUserProfile for now if it's not provided
 const getUserProfile = async (email: string) => {
-  console.log(
-    "[v0] getUserProfile - btoa function:",
-    typeof window !== "undefined" ? (window.btoa.toString().includes("unescape") ? "POLYFILL" : "NATIVE") : "server",
-  )
-
   const supabase = createSupabaseBrowserClient()
 
   // Fetch from 'users' table directly
@@ -85,20 +81,15 @@ const getUserProfile = async (email: string) => {
 
 console.log("[v0] professionalRespondToVisit imported:", typeof professionalRespondToVisit)
 
-// Define NeedStatus type
-type NeedStatus = "aberto" | "visita-proposta" | "aceito" | "concluido" | "cancelado"
-
-// Updated interface for props
 interface NeedDetailsDialogProps {
   need: Need
-  open: boolean // Renamed from isOpen
+  isOpen: boolean
   onClose: () => void
   onStatusUpdate?: () => void
-  userEmail: string | null | undefined // Added userEmail prop
 }
 
-export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEmail }: NeedDetailsDialogProps) {
-  const email = userEmail // Use userEmail prop
+export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
+  const { email } = useAuth()
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
@@ -109,7 +100,8 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
   const [proposals, setProposals] = useState<NeedProposal[]>([])
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("details")
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [selectedProposalForPayment, setSelectedProposalForPayment] = useState<NeedProposal | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
   const [canRateProfessional, setCanRateProfessional] = useState(false)
@@ -153,20 +145,19 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
   }
 
   useEffect(() => {
-    if (open) {
-      // Use 'open' prop
+    if (isOpen) {
       setCurrentImageIndex(0)
       fetchProposals()
       fetchRequesterProfile()
       setHasMarkedAsCompleted(false)
     }
-    if (open && currentNeed.status === "concluido" && email === currentNeed.requesterEmail) {
+    if (isOpen && currentNeed.status === "concluido" && email === currentNeed.requesterEmail) {
       checkCanRate()
     }
-  }, [open, currentNeed.id, email, currentNeed.status, currentNeed.requesterEmail]) // Depend on 'open' prop
+  }, [isOpen, currentNeed.id, email, currentNeed.status, currentNeed.requesterEmail])
 
   useEffect(() => {
-    if (!open) return // Use 'open' prop
+    if (!isOpen) return
 
     const supabase = createSupabaseBrowserClient()
 
@@ -211,24 +202,19 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [open, currentNeed.id, onStatusUpdate]) // Depend on 'open' prop
+  }, [isOpen, currentNeed.id, onStatusUpdate])
 
   const fetchProposals = async () => {
-    console.log("[v0] fetchProposals called for need:", currentNeed.id) // Added log
     setIsLoadingProposals(true)
     try {
       const supabase = createSupabaseBrowserClient()
-      console.log("[v0] Supabase client created, querying need_proposals") // Added log
       const { data, error } = await supabase
         .from("need_proposals")
         .select("*")
         .eq("need_id", currentNeed.id)
         .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("[v0] Error fetching proposals:", error) // Added log
-        throw error
-      }
+      if (error) throw error
       console.log("[v0] Fetched proposals:", data)
       setProposals(data || [])
 
@@ -324,6 +310,11 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
 
       await fetchProposals()
       onStatusUpdate?.()
+
+      if (proposal) {
+        setSelectedProposalForPayment(proposal)
+        setShowPaymentDialog(true)
+      }
     } catch (error) {
       console.error("Erro ao aceitar proposta:", error)
       alert("Erro ao aceitar proposta. Tente novamente.")
@@ -625,9 +616,7 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose}>
-        {" "}
-        {/* Use 'open' prop */}
+      <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="w-[95vw] sm:max-w-[380px] md:max-w-[420px] lg:max-w-[450px] flex flex-col max-h-[90vh] md:max-h-[85vh] lg:max-h-[80vh] p-0 gap-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 dark:[&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
           {currentNeed.images && currentNeed.images.length > 0 && (
             <div className="relative w-full h-[380px] sm:h-[380px] md:h-[420px] lg:h-[450px] bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
@@ -809,579 +798,506 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
                 )}
               </div>
 
-              {/* Use Tabs for organizing sections */}
-              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "details" | "proposals")}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="details">Detalhes</TabsTrigger>
-                  <TabsTrigger value="proposals">Propostas</TabsTrigger>
-                </TabsList>
-
-                {/* Proposals Tab Content */}
-                <TabsContent value="proposals" className="p-0 mt-4">
-                  {isRequester && (
+              {/* Only show "Marcar como Concluído" after requester accepts the final proposal */}
+              {isRequester && (
+                <div className="pt-3 border-t dark:border-gray-700 space-y-2">
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Propostas Recebidas ({proposals.filter((p) => p.type !== "interest_only").length})
+                  </h3>
+                  {isLoadingProposals ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">Carregando...</p>
+                  ) : proposals.filter((p) => p.type !== "interest_only").length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-xs">Nenhuma proposta recebida.</p>
+                  ) : (
                     <div className="space-y-2">
-                      <h3 className="font-semibold text-sm flex items-center gap-2">
-                        <MessageCircle className="h-4 w-4" />
-                        Propostas Recebidas ({proposals.filter((p) => p.type !== "interest_only").length})
-                      </h3>
-                      {isLoadingProposals ? (
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">Carregando...</p>
-                      ) : proposals.filter((p) => p.type !== "interest_only").length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400 text-xs">Nenhuma proposta recebida.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {proposals
-                            .filter((p) => p.type !== "interest_only")
-                            .map((proposal) => {
-                              const professionalName =
-                                professionalProfiles[proposal.professional_email]?.fullName ||
-                                proposal.professional_email.split("@")[0]
-                              const professionalPhoto = professionalProfiles[proposal.professional_email]?.photoUrl
-                              const professionalRating = professionalProfiles[proposal.professional_email]?.rating || 0
+                      {proposals
+                        .filter((p) => p.type !== "interest_only")
+                        .map((proposal) => {
+                          const professionalName =
+                            professionalProfiles[proposal.professional_email]?.fullName ||
+                            proposal.professional_email.split("@")[0]
+                          const professionalPhoto = professionalProfiles[proposal.professional_email]?.photoUrl
+                          const professionalRating = professionalProfiles[proposal.professional_email]?.rating || 0
 
-                              const firstName = professionalName.split(" ")[0]
+                          const firstName = professionalName.split(" ")[0]
 
-                              const isProfessionalAcceptedVisit =
-                                proposal.type === "visit_proposal" &&
-                                proposal.status === "accepted_by_professional" &&
-                                proposal.professional_email !== email
+                          const isProfessionalAcceptedVisit =
+                            proposal.type === "visit_proposal" &&
+                            proposal.status === "accepted_by_professional" &&
+                            proposal.professional_email !== email
 
-                              if (isProfessionalAcceptedVisit && currentNeed.status === "aceito") {
-                                return (
-                                  <div
-                                    key={proposal.id}
-                                    className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800 space-y-3"
-                                  >
-                                    <div className="flex items-center gap-2 text-green-700 dark:text-green-500">
-                                      <CheckCircle className="h-4 w-4" />
-                                      <span className="font-semibold text-sm">
-                                        Profissional aceitou fazer o serviço após visita
-                                      </span>
-                                    </div>
+                          if (isProfessionalAcceptedVisit && currentNeed.status === "aceito") {
+                            return (
+                              <div
+                                key={proposal.id}
+                                className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800 space-y-3"
+                              >
+                                <div className="flex items-center gap-2 text-green-700 dark:text-green-500">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="font-semibold text-sm">
+                                    Profissional aceitou fazer o serviço após visita
+                                  </span>
+                                </div>
 
-                                    {proposal.bid_amount && (
-                                      <div className="p-3 bg-white dark:bg-gray-800 rounded space-y-2">
-                                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                          Valor acordado:
-                                        </p>
-                                        <div className="space-y-1.5 text-xs">
-                                          <div className="flex justify-between pb-1.5 border-b border-gray-200 dark:border-gray-600">
-                                            <span className="text-gray-600 dark:text-gray-400">
-                                              Profissional recebe:
-                                            </span>
-                                            <span className="font-bold text-green-600 dark:text-green-400 text-base">
-                                              {formatCurrency(proposal.bid_amount)}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                      Deseja aceitar esta proposta e iniciar o serviço?
+                                {proposal.bid_amount && (
+                                  <div className="p-3 bg-white dark:bg-gray-800 rounded space-y-2">
+                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                      Resumo de Valores:
                                     </p>
-
-                                    <div className="flex gap-2">
-                                      <Button
-                                        onClick={() => handleAcceptProposal(proposal.id)}
-                                        disabled={acceptingProposalId === proposal.id}
-                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white h-10 text-sm"
-                                        size="sm"
-                                      >
-                                        {acceptingProposalId === proposal.id ? "Aceitando..." : "Aceitar Proposta"}
-                                      </Button>
-                                      <Button
-                                        onClick={async () => {
-                                          try {
-                                            const supabase = createSupabaseBrowserClient()
-                                            await supabase
-                                              .from("need_proposals")
-                                              .update({ status: "declined_by_requester" })
-                                              .eq("id", proposal.id)
-
-                                            await fetchProposals()
-                                            onStatusUpdate?.()
-                                          } catch (error) {
-                                            console.error("Erro ao recusar proposta:", error)
-                                            alert("Erro ao recusar proposta. Tente novamente.")
-                                          }
-                                        }}
-                                        variant="outline"
-                                        className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-10 text-sm"
-                                        size="sm"
-                                      >
-                                        Recusar Proposta
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )
-                              }
-
-                              return (
-                                <div
-                                  key={proposal.id}
-                                  className="border dark:border-gray-700 rounded p-2.5 bg-white dark:bg-gray-800 space-y-1.5 shadow-sm"
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="h-8 w-8">
-                                        <AvatarImage src={professionalPhoto || "/placeholder.svg"} />
-                                        <AvatarFallback>
-                                          <User className="h-4 w-4" />
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="flex flex-col">
-                                        <span className="font-medium text-xs truncate">{firstName}</span>
-                                        {professionalRating > 0 ? (
-                                          <div className="flex items-center gap-1 text-xs">
-                                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                            <span className="font-medium text-gray-700 dark:text-gray-300">
-                                              {professionalRating.toFixed(1)}
-                                            </span>
-                                          </div>
-                                        ) : (
-                                          <span className="text-xs text-muted-foreground dark:text-gray-500">
-                                            Sem avaliações
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <Badge
-                                      variant={
-                                        proposal.status === "accepted_by_requester"
-                                          ? "secondary"
-                                          : proposal.status === "accepted_by_professional"
-                                            ? "default"
-                                            : proposal.status === "declined_by_professional" ||
-                                                proposal.status === "declined_by_requester"
-                                              ? "destructive"
-                                              : proposal.status === "cancelled"
-                                                ? "outline"
-                                                : "secondary"
-                                      }
-                                      className="text-xs"
-                                    >
-                                      {proposal.status === "accepted_by_requester" && proposal.type === "visit_proposal"
-                                        ? "Aguardando visita"
-                                        : proposal.status === "accepted_by_professional"
-                                          ? "Aceita pelo profissional"
-                                          : proposal.status === "declined_by_professional" ||
-                                              proposal.status === "declined_by_requester"
-                                            ? "Recusada"
-                                            : proposal.status === "cancelled"
-                                              ? "Cancelada"
-                                              : proposal.status === "accepted_by_requester"
-                                                ? "Aceita"
-                                                : "Pendente"}
-                                    </Badge>
-                                  </div>
-
-                                  {proposal.bid_amount && (
-                                    <div className="space-y-1.5 text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                                      <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                                        <span>Valor do lance:</span>
-                                        <span className="font-bold text-green-600 dark:text-green-400 text-base">
+                                    <div className="space-y-1.5 text-xs">
+                                      <div className="flex justify-between pb-1.5 border-b border-gray-200 dark:border-gray-600">
+                                        <span className="text-gray-600 dark:text-gray-400">Profissional recebe:</span>
+                                        <span className="font-semibold text-green-600 dark:text-green-400">
                                           {formatCurrency(proposal.bid_amount)}
                                         </span>
                                       </div>
-                                      <div className="text-[10px] text-gray-500 dark:text-gray-400 italic">
-                                        Sem comissões para assinantes
+                                      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                                        <span>Taxa da plataforma (15%):</span>
+                                        <span>{formatCurrency(proposal.bid_amount * 0.15)}</span>
                                       </div>
-                                    </div>
-                                  )}
-
-                                  {proposal.message && (
-                                    <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-xs italic">
-                                      {proposal.message}
-                                    </div>
-                                  )}
-
-                                  {proposal.status !== "accepted_by_requester" &&
-                                    proposal.status !== "declined_by_professional" &&
-                                    proposal.status !== "declined_by_requester" &&
-                                    currentNeed.status === "aberto" && (
-                                      <div className="flex gap-1.5 pt-1">
-                                        <Button
-                                          onClick={() => handleAcceptProposal(proposal.id)}
-                                          disabled={acceptingProposalId === proposal.id}
-                                          className="flex-1 bg-blue-600 hover:bg-blue-700 h-8 text-xs"
-                                          size="sm"
-                                        >
-                                          {acceptingProposalId === proposal.id ? "Aceitando..." : "Aceitar"}
-                                        </Button>
-                                        <Button
-                                          onClick={async () => {
-                                            try {
-                                              const supabase = createSupabaseBrowserClient()
-                                              await supabase
-                                                .from("need_proposals")
-                                                .update({ status: "declined_by_requester" })
-                                                .eq("id", proposal.id)
-
-                                              await fetchProposals()
-                                              onStatusUpdate?.()
-                                            } catch (error) {
-                                              console.error("Erro ao recusar proposta:", error)
-                                              alert("Erro ao recusar proposta. Tente novamente.")
-                                            }
-                                          }}
-                                          variant="outline"
-                                          className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-8 text-xs"
-                                          size="sm"
-                                        >
-                                          Recusar
-                                        </Button>
-                                      </div>
-                                    )}
-                                </div>
-                              )
-                            })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Details Tab Content (Existing Content) */}
-                <TabsContent value="details" className="p-0 mt-4">
-                  <div className="px-6 pb-2">
-                    <div className="space-y-3">
-                      <div className="pt-1">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                          {currentNeed.description || "Nenhuma descrição fornecida."}
-                        </p>
-                      </div>
-
-                      <div className="space-y-2 pt-2">
-                        {email && !isRequester && currentNeed.status === "aberto" && !hasShownInterest && (
-                          <Button
-                            className="w-full bg-blue-500 text-white hover:bg-blue-600 h-9"
-                            size="sm"
-                            onClick={async () => {
-                              if (!email) return
-
-                              setIsSendingInterest(true)
-                              try {
-                                // Create chat thread and send automatic message
-                                const thread = await startChat({
-                                  needId: currentNeed.id,
-                                  requesterEmail: currentNeed.requesterEmail,
-                                  professionalEmail: email,
-                                  customText: "Olá! Tenho interesse em realizar este serviço.",
-                                })
-
-                                if (thread) {
-                                  // Create a simple interest_only proposal to track interest
-                                  await addNeedProposal({
-                                    needId: currentNeed.id,
-                                    professionalEmail: email,
-                                    type: "interest_only" as ProposalType,
-                                  })
-
-                                  await fetchProposals()
-                                  onStatusUpdate?.()
-                                }
-                              } catch (error) {
-                                console.error("Erro ao demonstrar interesse:", error)
-                                alert("Erro ao demonstrar interesse. Tente novamente.")
-                              } finally {
-                                setIsSendingInterest(false)
-                              }
-                            }}
-                            disabled={isSendingInterest}
-                          >
-                            {isSendingInterest ? "Enviando..." : "Tenho Interesse"}
-                          </Button>
-                        )}
-
-                        {email && !isRequester && hasShownInterest && currentNeed.status === "aberto" && (
-                          <Button
-                            onClick={() => setShowSendBidDialog(true)}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            size="sm"
-                          >
-                            💰 Enviar Lance
-                          </Button>
-                        )}
-
-                        {email && (
-                          <Button
-                            variant="outline"
-                            className="w-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 border-blue-200 dark:border-blue-800 h-9"
-                            size="sm"
-                            onClick={() => setSelectedNeedForChatManagement(currentNeed)}
-                          >
-                            <MessageSquare className="h-4 w-4 mr-2" /> Abrir Chat
-                          </Button>
-                        )}
-                      </div>
-
-                      {canRespondToVisit && (
-                        <div className="p-3 border-t dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
-                          {!showVisitResponse ? (
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
-                                <AlertCircle className="h-4 w-4" />
-                                <span className="font-semibold text-sm">Responder após visita</span>
-                              </div>
-                              <p className="text-xs text-gray-700 dark:text-gray-300">
-                                Após avaliar o serviço no local, você pode aceitar ou recusar a execução.
-                              </p>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => {
-                                    setVisitResponseType("accept")
-                                    setShowVisitResponse(true)
-                                  }}
-                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9 text-sm"
-                                  size="sm"
-                                >
-                                  <ThumbsUp className="h-4 w-4 mr-1" />
-                                  Aceitar Serviço
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    setVisitResponseType("decline")
-                                    setShowVisitResponse(true)
-                                  }}
-                                  variant="outline"
-                                  className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-9 text-sm"
-                                  size="sm"
-                                >
-                                  <ThumbsDown className="h-4 w-4 mr-1" />
-                                  Recusar Serviço
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                {visitResponseType === "accept"
-                                  ? "Confirmar que vai executar o serviço?"
-                                  : "Confirmar que não vai executar o serviço?"}
-                              </p>
-
-                              {visitResponseType === "accept" && (
-                                <div className="space-y-1">
-                                  <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Valor do lance (mínimo R$ 50,00):
-                                  </label>
-                                  <input
-                                    type="number"
-                                    min="50"
-                                    step="0.01"
-                                    placeholder="Ex: 150.00"
-                                    value={visitBidAmount}
-                                    onChange={(e) => setVisitBidAmount(e.target.value)}
-                                    className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
-                                  />
-                                  {visitBidAmount && Number(visitBidAmount) >= 50 && (
-                                    <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded space-y-1 text-xs">
-                                      <div className="flex justify-between">
-                                        <span>Valor do seu lance:</span>
-                                        <span className="font-bold text-green-600 dark:text-green-400 text-base">
-                                          {formatCurrency(Number(visitBidAmount))}
+                                      <div className="flex justify-between font-bold pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                                        <span className="text-gray-700 dark:text-gray-300">Você pagará:</span>
+                                        <span className="text-blue-600 dark:text-blue-400">
+                                          {formatCurrency(proposal.bid_amount * 1.15)}
                                         </span>
                                       </div>
-                                      <div className="text-[10px] text-gray-500 dark:text-gray-400 italic pt-1">
-                                        Sem comissões para assinantes
-                                      </div>
                                     </div>
-                                  )}
+                                  </div>
+                                )}
+
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  Deseja aceitar esta proposta e iniciar o serviço?
+                                </p>
+
+                                <div className="flex gap-2">
+                                  <Button
+                                    onClick={() => handleAcceptProposal(proposal.id)}
+                                    disabled={acceptingProposalId === proposal.id}
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white h-10 text-sm"
+                                    size="sm"
+                                  >
+                                    {acceptingProposalId === proposal.id ? "Aceitando..." : "Aceitar Proposta"}
+                                  </Button>
+                                  <Button
+                                    onClick={async () => {
+                                      try {
+                                        const supabase = createSupabaseBrowserClient()
+                                        await supabase
+                                          .from("need_proposals")
+                                          .update({ status: "declined_by_requester" })
+                                          .eq("id", proposal.id)
+
+                                        await fetchProposals()
+                                        onStatusUpdate?.()
+                                      } catch (error) {
+                                        console.error("Erro ao recusar proposta:", error)
+                                        alert("Erro ao recusar proposta. Tente novamente.")
+                                      }
+                                    }}
+                                    variant="outline"
+                                    className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-10 text-sm"
+                                    size="sm"
+                                  >
+                                    Recusar Proposta
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div
+                              key={proposal.id}
+                              className="border dark:border-gray-700 rounded p-2.5 bg-white dark:bg-gray-800 space-y-1.5 shadow-sm"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={professionalPhoto || "/placeholder.svg"} />
+                                    <AvatarFallback>
+                                      <User className="h-4 w-4" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium text-xs truncate">{firstName}</span>
+                                    {professionalRating > 0 ? (
+                                      <div className="flex items-center gap-1 text-xs">
+                                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                          {professionalRating.toFixed(1)}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground dark:text-gray-500">
+                                        Sem avaliações
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge
+                                  variant={
+                                    proposal.status === "accepted_by_requester"
+                                      ? "secondary"
+                                      : proposal.status === "accepted_by_professional"
+                                        ? "default"
+                                        : proposal.status === "declined_by_professional" ||
+                                            proposal.status === "declined_by_requester"
+                                          ? "destructive"
+                                          : proposal.status === "cancelled"
+                                            ? "outline"
+                                            : "secondary"
+                                  }
+                                  className="text-xs"
+                                >
+                                  {proposal.status === "accepted_by_requester" && proposal.type === "visit_proposal"
+                                    ? "Aguardando visita"
+                                    : proposal.status === "accepted_by_professional"
+                                      ? "Aceita pelo profissional"
+                                      : proposal.status === "declined_by_professional" ||
+                                          proposal.status === "declined_by_requester"
+                                        ? "Recusada"
+                                        : proposal.status === "cancelled"
+                                          ? "Cancelada"
+                                          : proposal.status === "accepted_by_requester"
+                                            ? "Aceita"
+                                            : "Pendente"}
+                                </Badge>
+                              </div>
+
+                              {proposal.bid_amount && (
+                                <div className="space-y-1.5 text-xs bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                  <div className="flex justify-between text-gray-600 dark:text-gray-400">
+                                    <span>Profissional recebe:</span>
+                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                      {formatCurrency(proposal.bid_amount)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-gray-500 dark:text-gray-400 text-[10px]">
+                                    <span>Taxa (15%):</span>
+                                    <span>{formatCurrency(proposal.bid_amount * 0.15)}</span>
+                                  </div>
+                                  <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-600 pt-1">
+                                    <span className="text-gray-700 dark:text-gray-300">Você paga:</span>
+                                    <span className="text-blue-600 dark:text-blue-400">
+                                      {formatCurrency(proposal.bid_amount * 1.15)}
+                                    </span>
+                                  </div>
                                 </div>
                               )}
 
-                              <Textarea
-                                placeholder={
-                                  visitResponseType === "accept"
-                                    ? "Mensagem opcional: ex. 'Serviço avaliado, posso executar conforme combinado.'"
-                                    : "Motivo da recusa (opcional)"
-                                }
-                                value={visitResponseMessage}
-                                onChange={(e) => setVisitResponseMessage(e.target.value)}
-                                rows={2}
-                                className="text-xs dark:bg-gray-800 dark:border-gray-600"
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => handleProfessionalVisitResponse(visitResponseType === "accept")}
-                                  disabled={
-                                    isRespondingToVisit ||
-                                    (visitResponseType === "accept" && (!visitBidAmount || Number(visitBidAmount) < 50))
-                                  }
-                                  className={
-                                    visitResponseType === "accept"
-                                      ? "flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                                      : "flex-1 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
-                                  }
-                                  size="sm"
-                                >
-                                  {isRespondingToVisit ? "Enviando..." : "Confirmar"}
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    setShowVisitResponse(false)
-                                    setVisitResponseMessage("")
-                                    setVisitResponseType(null)
-                                    setVisitBidAmount("")
-                                  }}
-                                  variant="outline"
-                                  className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                                  size="sm"
-                                >
-                                  Voltar
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                              {proposal.message && (
+                                <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded text-xs italic">
+                                  {proposal.message}
+                                </div>
+                              )}
 
-                      {canMarkAsCompletedRevised && ( // Use the revised logic for canMarkAsCompleted
-                        <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                          {!showConfirmation ? (
-                            <Button
-                              onClick={() => setShowConfirmation(true)}
-                              className="w-full bg-green-600 hover:bg-green-700 text-white h-9"
-                              size="sm"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Marcar como Concluído
-                            </Button>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                Confirmar conclusão do serviço?
-                              </p>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={handleMarkAsCompleted}
-                                  disabled={isUpdatingStatus}
-                                  className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                                  size="sm"
-                                >
-                                  {isUpdatingStatus ? "Confirmando..." : "Sim"}
-                                </Button>
-                                <Button
-                                  onClick={() => setShowConfirmation(false)}
-                                  variant="outline"
-                                  className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                                  size="sm"
-                                >
-                                  Cancelar
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                              {proposal.status !== "accepted_by_requester" &&
+                                proposal.status !== "declined_by_professional" &&
+                                proposal.status !== "declined_by_requester" &&
+                                currentNeed.status === "aberto" && (
+                                  <div className="flex gap-1.5 pt-1">
+                                    <Button
+                                      onClick={() => handleAcceptProposal(proposal.id)}
+                                      disabled={acceptingProposalId === proposal.id}
+                                      className="flex-1 bg-blue-600 hover:bg-blue-700 h-8 text-xs"
+                                      size="sm"
+                                    >
+                                      {acceptingProposalId === proposal.id ? "Aceitando..." : "Aceitar"}
+                                    </Button>
+                                    <Button
+                                      onClick={async () => {
+                                        try {
+                                          const supabase = createSupabaseBrowserClient()
+                                          await supabase
+                                            .from("need_proposals")
+                                            .update({ status: "declined_by_requester" })
+                                            .eq("id", proposal.id)
 
-                      {canRate && acceptedProposal && (
-                        <div className="p-3 border-t dark:border-gray-700 bg-blue-50 dark:bg-gray-900/50">
-                          <Button
-                            onClick={handleRateClick}
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-9"
-                            size="sm"
-                          >
-                            <Star className="h-4 w-4 mr-2 fill-current" />
-                            Avaliar Profissional
-                          </Button>
-                        </div>
-                      )}
-
-                      {canProfessionalCancel && (
-                        <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
-                          {!showProfessionalCancelConfirmation ? (
-                            <Button
-                              onClick={() => setShowProfessionalCancelConfirmation(true)}
-                              variant="outline"
-                              className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 h-9"
-                              size="sm"
-                            >
-                              <Ban className="h-4 w-4 mr-2" />
-                              Cancelar Serviço
-                            </Button>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                Informe o motivo do cancelamento:
-                              </p>
-                              <Textarea
-                                placeholder="Motivo do cancelamento"
-                                value={professionalCancelReason}
-                                onChange={(e) => setProfessionalCancelReason(e.target.value)}
-                                rows={2}
-                                className="text-xs"
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={handleProfessionalCancelService}
-                                  disabled={isCancelingByProfessional}
-                                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-8 text-xs"
-                                  size="sm"
-                                >
-                                  {isCancelingByProfessional ? "Cancelando..." : "Confirmar"}
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    setShowProfessionalCancelConfirmation(false)
-                                    setProfessionalCancelReason("")
-                                  }}
-                                  variant="outline"
-                                  className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                                  size="sm"
-                                >
-                                  Voltar
-                                </Button>
-                              </div>
+                                          await fetchProposals()
+                                          onStatusUpdate?.()
+                                        } catch (error) {
+                                          console.error("Erro ao recusar proposta:", error)
+                                          alert("Erro ao recusar proposta. Tente novamente.")
+                                        }
+                                      }}
+                                      variant="outline"
+                                      className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-8 text-xs"
+                                      size="sm"
+                                    >
+                                      Recusar
+                                    </Button>
+                                  </div>
+                                )}
                             </div>
-                          )}
-                        </div>
-                      )}
-
-                      {canCancelService && (
-                        <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                          {!showCancelConfirmation ? (
-                            <Button
-                              onClick={() => setShowCancelConfirmation(true)}
-                              variant="destructive"
-                              className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white border-0 h-9 shadow-sm"
-                              size="sm"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Cancelar Serviço
-                            </Button>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                Confirmar cancelamento do serviço?
-                              </p>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={handleCancelService}
-                                  disabled={isUpdatingStatus}
-                                  className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white h-8 text-xs"
-                                  size="sm"
-                                >
-                                  {isUpdatingStatus ? "Cancelando..." : "Sim"}
-                                </Button>
-                                <Button
-                                  onClick={() => setShowCancelConfirmation(false)}
-                                  variant="outline"
-                                  className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-                                  size="sm"
-                                >
-                                  Cancelar
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                          )
+                        })}
                     </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  )}
+                </div>
+              )}
+
+              {canRespondToVisit && (
+                <div className="p-3 border-t dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20">
+                  {!showVisitResponse ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="font-semibold text-sm">Responder após visita</span>
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300">
+                        Após avaliar o serviço no local, você pode aceitar ou recusar a execução.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            setVisitResponseType("accept")
+                            setShowVisitResponse(true)
+                          }}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white h-9 text-sm"
+                          size="sm"
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-1" />
+                          Aceitar Serviço
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setVisitResponseType("decline")
+                            setShowVisitResponse(true)
+                          }}
+                          variant="outline"
+                          className="flex-1 border-red-500 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 h-9 text-sm"
+                          size="sm"
+                        >
+                          <ThumbsDown className="h-4 w-4 mr-1" />
+                          Recusar Serviço
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {visitResponseType === "accept"
+                          ? "Confirmar que vai executar o serviço?"
+                          : "Confirmar que não vai executar o serviço?"}
+                      </p>
+
+                      {visitResponseType === "accept" && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            Valor do lance (mínimo R$ 50,00):
+                          </label>
+                          <input
+                            type="number"
+                            min="50"
+                            step="0.01"
+                            placeholder="Ex: 150.00"
+                            value={visitBidAmount}
+                            onChange={(e) => setVisitBidAmount(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                          />
+                          {visitBidAmount && Number(visitBidAmount) >= 50 && (
+                            <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded space-y-1 text-xs">
+                              <div className="flex justify-between">
+                                <span>Seu lance:</span>
+                                <span>{formatCurrency(Number(visitBidAmount))}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                                <span>Taxa (15%):</span>
+                                <span>{formatCurrency(Number(visitBidAmount) * 0.15)}</span>
+                              </div>
+                              <div className="flex justify-between font-semibold border-t border-blue-200 dark:border-blue-800 pt-1">
+                                <span>Cliente pagará:</span>
+                                <span className="text-blue-600 dark:text-blue-400">
+                                  {formatCurrency(Number(visitBidAmount) * 1.15)}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <Textarea
+                        placeholder={
+                          visitResponseType === "accept"
+                            ? "Mensagem opcional: ex. 'Serviço avaliado, posso executar conforme combinado.'"
+                            : "Motivo da recusa (opcional)"
+                        }
+                        value={visitResponseMessage}
+                        onChange={(e) => setVisitResponseMessage(e.target.value)}
+                        rows={2}
+                        className="text-xs dark:bg-gray-800 dark:border-gray-600"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleProfessionalVisitResponse(visitResponseType === "accept")}
+                          disabled={
+                            isRespondingToVisit ||
+                            (visitResponseType === "accept" && (!visitBidAmount || Number(visitBidAmount) < 50))
+                          }
+                          className={
+                            visitResponseType === "accept"
+                              ? "flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                              : "flex-1 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
+                          }
+                          size="sm"
+                        >
+                          {isRespondingToVisit ? "Enviando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowVisitResponse(false)
+                            setVisitResponseMessage("")
+                            setVisitResponseType(null)
+                            setVisitBidAmount("")
+                          }}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canMarkAsCompletedRevised && ( // Use the revised logic for canMarkAsCompleted
+                <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  {!showConfirmation ? (
+                    <Button
+                      onClick={() => setShowConfirmation(true)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white h-9"
+                      size="sm"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Marcar como Concluído
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar conclusão do serviço?</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleMarkAsCompleted}
+                          disabled={isUpdatingStatus}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isUpdatingStatus ? "Confirmando..." : "Sim"}
+                        </Button>
+                        <Button
+                          onClick={() => setShowConfirmation(false)}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canRate && acceptedProposal && (
+                <div className="p-3 border-t dark:border-gray-700 bg-blue-50 dark:bg-gray-900/50">
+                  <Button
+                    onClick={handleRateClick}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-9"
+                    size="sm"
+                  >
+                    <Star className="h-4 w-4 mr-2 fill-current" />
+                    Avaliar Profissional
+                  </Button>
+                </div>
+              )}
+
+              {canProfessionalCancel && (
+                <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
+                  {!showProfessionalCancelConfirmation ? (
+                    <Button
+                      onClick={() => setShowProfessionalCancelConfirmation(true)}
+                      variant="outline"
+                      className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 h-9"
+                      size="sm"
+                    >
+                      <Ban className="h-4 w-4 mr-2" />
+                      Cancelar Serviço
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Informe o motivo do cancelamento:</p>
+                      <Textarea
+                        placeholder="Motivo do cancelamento"
+                        value={professionalCancelReason}
+                        onChange={(e) => setProfessionalCancelReason(e.target.value)}
+                        rows={2}
+                        className="text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleProfessionalCancelService}
+                          disabled={isCancelingByProfessional}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isCancelingByProfessional ? "Cancelando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowProfessionalCancelConfirmation(false)
+                            setProfessionalCancelReason("")
+                          }}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canCancelService && (
+                <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  {!showCancelConfirmation ? (
+                    <Button
+                      onClick={() => setShowCancelConfirmation(true)}
+                      variant="destructive"
+                      className="w-full bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white border-0 h-9 shadow-sm"
+                      size="sm"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancelar Serviço
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar cancelamento do serviço?</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleCancelService}
+                          disabled={isUpdatingStatus}
+                          className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isUpdatingStatus ? "Cancelando..." : "Sim"}
+                        </Button>
+                        <Button
+                          onClick={() => setShowCancelConfirmation(false)}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -1473,6 +1389,24 @@ export function NeedDetailsDialog({ need, onClose, open, onStatusUpdate, userEma
           onSuccess={handleRatingSuccess}
         />
       )}
+
+      {selectedProposalForPayment && (
+        <PaymentDialog
+          open={showPaymentDialog}
+          onClose={() => {
+            setShowPaymentDialog(false)
+            setSelectedProposalForPayment(null)
+            onClose()
+          }}
+          proposalId={selectedProposalForPayment.id}
+          needId={currentNeed.id}
+          bidAmount={Number(selectedProposalForPayment.bid_amount)}
+          professionalName={selectedProposalForPayment.professional_email}
+          needTitle={currentNeed.title}
+        />
+      )}
     </>
   )
 }
+
+export { NeedDetailsDialog }

@@ -35,9 +35,9 @@ O Supabase usa um servidor SMTP padrão apenas para demonstração, que tem:
 ## Passos para Configurar no Supabase:
 
 ### 1. Acesse o Supabase Dashboard
-\`\`\`
+```
 https://supabase.com/dashboard/project/[SEU_PROJECT_ID]
-\`\`\`
+```
 
 ### 2. Vá para Authentication → Email Templates
 
@@ -46,34 +46,34 @@ https://supabase.com/dashboard/project/[SEU_PROJECT_ID]
 ### 4. Preencha as configurações:
 
 **Para Resend:**
-\`\`\`
+```
 SMTP Host: smtp.resend.com
 SMTP Port: 587
 SMTP Username: resend
 SMTP Password: [SUA_API_KEY_DO_RESEND]
 Sender Email: noreply@seudominio.com (ou use o domínio do Resend)
 Sender Name: FreeJob Brasil
-\`\`\`
+```
 
 **Para Gmail:**
-\`\`\`
+```
 SMTP Host: smtp.gmail.com
 SMTP Port: 587
 SMTP Username: seuemail@gmail.com
 SMTP Password: [SUA_APP_PASSWORD]
 Sender Email: seuemail@gmail.com
 Sender Name: FreeJob Brasil
-\`\`\`
+```
 
 **Para SendGrid:**
-\`\`\`
+```
 SMTP Host: smtp.sendgrid.net
 SMTP Port: 587
 SMTP Username: apikey
 SMTP Password: [SUA_API_KEY_DO_SENDGRID]
 Sender Email: noreply@seudominio.com
 Sender Name: FreeJob Brasil
-\`\`\`
+```
 
 ### 5. Clique em "Save" para salvar as configurações
 
@@ -101,7 +101,7 @@ Para personalizar o email que os usuários recebem:
 4. Use a variável `{{ .ConfirmationURL }}` para o link de reset
 
 Exemplo:
-\`\`\`html
+```html
 <h2>Recuperação de Senha - FreeJob Brasil</h2>
 <p>Olá!</p>
 <p>Você solicitou a recuperação de senha da sua conta.</p>
@@ -111,7 +111,7 @@ Exemplo:
 </a>
 <p>Se você não solicitou esta recuperação, ignore este email.</p>
 <p>Este link expira em 1 hora.</p>
-\`\`\`
+```
 
 ---
 

@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import "@/lib/buffer-polyfill"
 import { Toaster } from "@/components/ui/toaster"
 import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
@@ -10,30 +11,6 @@ import { auth } from "@/auth"
 import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
-
-const btoaPolyfillScript = `
-(function() {
-  if (typeof window === "undefined") return;
-  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-  window.btoa = function(str) {
-    var utf8Str = unescape(encodeURIComponent(String(str)));
-    var output = "";
-    for (var i = 0; i < utf8Str.length; i += 3) {
-      var chr1 = utf8Str.charCodeAt(i);
-      var chr2 = utf8Str.charCodeAt(i + 1);
-      var chr3 = utf8Str.charCodeAt(i + 2);
-      var enc1 = chr1 >> 2;
-      var enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
-      var enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
-      var enc4 = chr3 & 63;
-      if (isNaN(chr2)) { enc3 = enc4 = 64; }
-      else if (isNaN(chr3)) { enc4 = 64; }
-      output += chars.charAt(enc1) + chars.charAt(enc2) + chars.charAt(enc3) + chars.charAt(enc4);
-    }
-    return output;
-  };
-})();
-`
 
 export const metadata: Metadata = {
   title: "Freejob",
@@ -56,7 +33,38 @@ export default async function RootLayout({
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: btoaPolyfillScript }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined') {
+                  var originalBtoa = window.btoa;
+                  window.btoa = function(str) {
+                    try {
+                      return originalBtoa(str);
+                    } catch (e) {
+                      // Converte UTF-8 para Base64 usando TextEncoder se disponível
+                      if (typeof TextEncoder !== 'undefined') {
+                        var bytes = new TextEncoder().encode(str);
+                        var binary = '';
+                        for (var i = 0; i < bytes.length; i++) {
+                          binary += String.fromCharCode(bytes[i]);
+                        }
+                        return originalBtoa(binary);
+                      }
+                      // Fallback para método antigo
+                      return originalBtoa(
+                        encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                          return String.fromCharCode(parseInt(p1, 16));
+                        })
+                      );
+                    }
+                  };
+                }
+              })();
+            `,
+          }}
+        />
 
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#3b82f6" />

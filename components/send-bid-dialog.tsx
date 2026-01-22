@@ -64,6 +64,8 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
   const amount = Number(bidAmount) || 0
   const isValidAmount = amount >= MINIMUM_BID
+  const platformFee = amount * 0.15
+  const clientTotal = amount + platformFee
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -89,17 +91,27 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
           {isValidAmount && (
             <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-3">
-              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor do Lance</div>
+              <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Resumo de Valores</div>
 
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between pb-2">
+                <div className="flex justify-between pb-2 border-b border-blue-200 dark:border-blue-800">
                   <span className="text-gray-600 dark:text-gray-400">Você receberá:</span>
-                  <span className="font-bold text-green-600 dark:text-green-400 text-lg">{formatCurrency(amount)}</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(amount)}</span>
+                </div>
+
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                  <span>Taxa da plataforma (15%):</span>
+                  <span>{formatCurrency(platformFee)}</span>
+                </div>
+
+                <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-800">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">Solicitante pagará:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(clientTotal)}</span>
                 </div>
               </div>
 
               <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 italic">
-                * Sem taxas ou comissões para assinantes
+                * A taxa é paga pelo solicitante para garantir segurança na transação
               </div>
             </div>
           )}

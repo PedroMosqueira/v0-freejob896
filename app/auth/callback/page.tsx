@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
+import { createBrowserClient } from "@supabase/ssr"
 
 export default function CallbackPage() {
   const router = useRouter()
@@ -14,7 +14,10 @@ export default function CallbackPage() {
       try {
         console.log("[v0] Processing Supabase callback on client side")
 
-        const supabase = createClient()
+        const supabase = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        )
 
         // Get tokens from hash fragment
         const hashParams = new URLSearchParams(window.location.hash.substring(1))

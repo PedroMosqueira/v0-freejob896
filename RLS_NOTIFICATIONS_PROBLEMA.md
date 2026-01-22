@@ -8,9 +8,9 @@ A tabela `notifications` está com **RLS DESABILITADO** por questões técnicas.
 
 Todas as tentativas de criar políticas RLS falharam com erro de `btoa`:
 
-\`\`\`
+```
 TypeError: Failed to execute 'btoa' on 'Window': The string to be encoded contains characters outside of the Latin1 range.
-\`\`\`
+```
 
 ### Tentativas Realizadas:
 
@@ -28,9 +28,9 @@ O Supabase usa `btoa` para codificar o JWT em Base64, mas quando a política RLS
 Mesmo sem RLS, o sistema está protegido:
 
 ✅ **Filtro no Código**: Todas as queries filtram por `user_id = userEmail`
-\`\`\`typescript
+```typescript
 .eq("user_id", userEmail)  // Em lib/notifications-store.ts
-\`\`\`
+```
 
 ⚠️ **Risco**: Se houver um bug no código ou alguém acessar o banco diretamente, pode ver notificações de outros usuários.
 
@@ -38,7 +38,7 @@ Mesmo sem RLS, o sistema está protegido:
 
 ### Opção 1: Criar uma Função PostgreSQL (RECOMENDADO)
 
-\`\`\`sql
+```sql
 -- Criar função que retorna o email do usuário autenticado
 CREATE OR REPLACE FUNCTION auth.user_email()
 RETURNS TEXT AS $$
@@ -49,13 +49,13 @@ $$ LANGUAGE SQL SECURITY DEFINER;
 CREATE POLICY "notifications_select_policy"
 ON notifications FOR SELECT
 USING (user_id = auth.user_email());
-\`\`\`
+```
 
 ### Opção 2: Adicionar Coluna user_uid
 
 Trocar `user_id` (email) por `user_uid` (UUID) nas notificações:
 
-\`\`\`sql
+```sql
 -- Adicionar coluna
 ALTER TABLE notifications ADD COLUMN user_uid UUID;
 
@@ -69,7 +69,7 @@ WHERE n.user_id = u.email;
 CREATE POLICY "notifications_select_policy"
 ON notifications FOR SELECT
 USING (user_uid = auth.uid());
-\`\`\`
+```
 
 ### Opção 3: Manter RLS Desabilitado
 

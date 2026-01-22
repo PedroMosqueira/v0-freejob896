@@ -1,31 +1,5 @@
 "use server"
 
-if (typeof globalThis.atob === "undefined") {
-  const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-
-  globalThis.atob = (base64: string): string => {
-    const str = base64.replace(/[^A-Za-z0-9+/=]/g, "")
-    let output = ""
-
-    for (let i = 0; i < str.length; i += 4) {
-      const enc1 = base64Chars.indexOf(str.charAt(i))
-      const enc2 = base64Chars.indexOf(str.charAt(i + 1))
-      const enc3 = base64Chars.indexOf(str.charAt(i + 2))
-      const enc4 = base64Chars.indexOf(str.charAt(i + 3))
-
-      const chr1 = (enc1 << 2) | (enc2 >> 4)
-      const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2)
-      const chr3 = ((enc3 & 3) << 6) | enc4
-
-      output += String.fromCharCode(chr1)
-      if (enc3 !== 64) output += String.fromCharCode(chr2)
-      if (enc4 !== 64) output += String.fromCharCode(chr3)
-    }
-
-    return output
-  }
-}
-
 if (typeof globalThis.btoa === "undefined") {
   const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
@@ -131,32 +105,29 @@ if (typeof globalThis.Buffer === "undefined") {
   globalThis.Buffer = BufferPolyfill as any
 }
 
-import { createClient } from "@supabase/supabase-js"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+export async function createClient() {
+  const cookieStore = await cookies()
 
-let serverInstance: ReturnType<typeof createClient> | null = null
-
-function getServerClient() {
-  if (!serverInstance) {
-    serverInstance = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+  return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
       },
-    })
-  }
-  return serverInstance
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // The "setAll" method was called from a Server Component.
+          // This can be ignored if you have middleware refreshing user sessions.
+        }
+      },
+    },
+  })
 }
 
-export function createSupabaseServerClient() {
-  return getServerClient()
+export async function createSupabaseServerClient() {
+  return createClient()
 }
-
-export function createServerClient() {
-  return getServerClient()
-}
-
-// Alias para compatibilidade
-export { createSupabaseServerClient as createClient }

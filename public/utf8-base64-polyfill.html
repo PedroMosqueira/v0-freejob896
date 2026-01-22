@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<script>
+// Polyfill global para btoa() com suporte UTF-8
+// Executado antes de qualquer código da aplicação
+(function() {
+  'use strict';
+  
+  if (typeof window === 'undefined') return;
+  
+  console.log('[v0] Instalando polyfill UTF-8 para btoa()');
+  
+  var originalBtoa = window.btoa;
+  var originalAtob = window.atob;
+  
+  // Sobrescreve btoa para suportar UTF-8
+  window.btoa = function(str) {
+    try {
+      // Tenta usar btoa nativo
+      return originalBtoa(str);
+    } catch (e) {
+      console.warn('[v0] btoa() falhou com string UTF-8, usando fallback');
+      // Fallback para UTF-8: encode → escape → btoa
+      try {
+        return originalBtoa(unescape(encodeURIComponent(str)));
+      } catch (e2) {
+        console.error('[v0] Fallback btoa() também falhou:', e2);
+        return '';
+      }
+    }
+  };
+  
+  // Sobrescreve atob para suportar UTF-8
+  window.atob = function(str) {
+    try {
+      return decodeURIComponent(escape(originalAtob(str)));
+    } catch (e) {
+      return originalAtob(str);
+    }
+  };
+  
+  console.log('[v0] Polyfill UTF-8 instalado com sucesso');
+})();
+</script>

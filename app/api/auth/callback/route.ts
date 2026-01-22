@@ -1,16 +1,5 @@
-if (typeof btoa === "function") {
-  const originalBtoa = btoa
-  globalThis.btoa = (str: string): string => {
-    try {
-      return originalBtoa(str)
-    } catch (e) {
-      // Converter UTF-8 para Latin1
-      return originalBtoa(unescape(encodeURIComponent(str)))
-    }
-  }
-}
-
-import { createClient } from "@/lib/supabase/client"
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -59,7 +48,25 @@ export async function GET(request: NextRequest) {
 
   try {
     console.log("🔧 [CALLBACK] Creating Supabase client...")
-    const supabase = createClient()
+    const cookieStore = cookies()
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: "", ...options })
+          },
+        },
+      },
+    )
 
     let data: any
     let exchangeError: any
@@ -112,7 +119,23 @@ export async function GET(request: NextRequest) {
     console.log("[v0] [CALLBACK] Creating user in custom users table...")
     console.log("[v0] User data to insert:", { id: data.user.id, email: data.user.email })
 
-    const serviceSupabase = createClient()
+    const serviceSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: "", ...options })
+          },
+        },
+      },
+    )
 
     const { data: existingUser, error: checkError } = await serviceSupabase
       .from("users")
@@ -156,14 +179,35 @@ export async function GET(request: NextRequest) {
       console.log("ℹ️ [CALLBACK] User already exists in custom table:", data.user.email)
     }
 
-    console.log("🔐 [CALLBACK] Session stored in localStorage automatically")
+    console.log("🔐 [CALLBACK] Setting session cookies for automatic login...")
 
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       new URL(
         "/?verified=true&message=Email verificado com sucesso! Você foi logado automaticamente.",
         requestUrl.origin,
       ),
     )
+
+    if (data.session) {
+      const maxAge = 100 * 365 * 24 * 60 * 60
+      response.cookies.set("sb-access-token", data.session.access_token, {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: maxAge,
+      })
+      response.cookies.set("sb-refresh-token", data.session.refresh_token, {
+        path: "/",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: maxAge,
+      })
+      console.log("✅ [CALLBACK] Session cookies set successfully")
+    }
+
+    return response
   } catch (error) {
     console.error("💥 [CALLBACK] Unexpected error:", error)
     return NextResponse.redirect(

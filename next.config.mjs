@@ -9,6 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Nenhuma configuração experimental ou complexa aqui
 };
 
 export default nextConfig;

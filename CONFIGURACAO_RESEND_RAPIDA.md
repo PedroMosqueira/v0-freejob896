@@ -15,14 +15,14 @@
 - Ative **Enable Custom SMTP**
 - Cole estas configurações:
 
-\`\`\`
+```
 Host: smtp.resend.com
 Port: 465
 Username: resend
 Password: [COLE_SUA_API_KEY_AQUI]
 Sender email: onboarding@resend.dev  (use esse temporariamente)
 Sender name: Seu Site
-\`\`\`
+```
 
 - **Salve** e teste!
 
