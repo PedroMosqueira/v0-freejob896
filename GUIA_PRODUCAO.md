@@ -51,14 +51,14 @@ O Supabase usa um provedor de email de demonstração que **não é confiável p
 5. Ative **Enable Custom SMTP**
 6. Preencha os campos:
 
-```
+\`\`\`
 Host: smtp.resend.com
 Port: 465
 Username: resend
 Password: [SUA_API_KEY_DO_RESEND]  (a que você copiou)
 Sender email: noreply@seudominio.com  (use seu domínio verificado)
 Sender name: Seu Site
-```
+\`\`\`
 
 7. Clique em **Save**
 8. Teste enviando um email de confirmação

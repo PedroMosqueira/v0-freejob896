@@ -87,48 +87,50 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     return { error: "As senhas não conferem" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
-
   try {
     console.log("[v0] Starting registration for:", email.toString())
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.toString(),
-      password: password.toString(),
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+    // Use REST API directly to avoid session requirement
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/signup`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+        body: JSON.stringify({
+          email: email.toString(),
+          password: password.toString(),
+          options: {
+            data: {},
+            redirect_to:
+              process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+              `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+          },
+        }),
       },
-    })
+    )
 
+    const data = await response.json()
+
+    console.log("[v0] SignUp response status:", response.status)
     console.log("[v0] SignUp response:", {
-      success: !!data?.user,
-      userId: data?.user?.id,
-      error: error?.message,
+      success: response.ok,
+      hasUser: !!data?.user,
+      error: data?.error || data?.message,
     })
 
-    if (error) {
-      console.error("[v0] Registration error:", error)
+    if (!response.ok) {
+      console.error("[v0] Registration error:", data)
 
-      if (error.message.includes("already registered") || error.message.includes("User already registered")) {
+      const errorMsg = data?.message || data?.error_description || data?.error || "Erro ao registrar"
+
+      if (
+        errorMsg.includes("already registered") ||
+        errorMsg.includes("User already registered") ||
+        errorMsg.includes("already exists")
+      ) {
         return {
           error: "Este email já possui uma conta. Use a opção 'Verificar Status' para mais detalhes.",
           showStatusCheck: true,
@@ -136,7 +138,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         }
       }
 
-      if (error.message.includes("rate limit") || error.message.includes("too many")) {
+      if (errorMsg.includes("rate limit") || errorMsg.includes("too many")) {
         return {
           error: "Muitas tentativas de cadastro. Use a opção 'Verificar Status' para mais detalhes.",
           rateLimited: true,
@@ -145,7 +147,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         }
       }
 
-      return { error: error.message }
+      return { error: errorMsg }
     }
 
     console.log("✅ Registration successful, email sent to:", email.toString())
