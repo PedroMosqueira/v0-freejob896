@@ -1,7 +1,5 @@
-import { calculateTransactionFee } from "@/lib/transaction-manager"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Shield } from "lucide-react"
+import { Gift } from "lucide-react"
 
 interface TransactionBreakdownProps {
   serviceAmount: number
@@ -9,29 +7,17 @@ interface TransactionBreakdownProps {
 }
 
 export function TransactionBreakdown({ serviceAmount, userRole }: TransactionBreakdownProps) {
-  const fee = calculateTransactionFee(serviceAmount)
-
   return (
-    <Card className="p-4 bg-muted/50">
+    <Card className="p-4 bg-green-50 dark:bg-green-950">
       <div className="space-y-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Valor do serviço</span>
-          <span className="font-medium">R$ {fee.serviceAmount.toFixed(2)}</span>
-        </div>
-
-        <div className="flex justify-between items-center text-amber-600">
-          <span className="text-sm flex items-center gap-1">
-            <Shield className="h-3 w-3" />
-            Taxa de segurança ({fee.platformFeePercent}%)
-          </span>
-          <span className="font-medium">+ R$ {fee.platformFee.toFixed(2)}</span>
-        </div>
-
-        <Separator />
-
         <div className="flex justify-between items-center text-lg font-bold">
-          <span>Total a pagar</span>
-          <span>R$ {fee.totalAmount.toFixed(2)}</span>
+          <span>Valor do servico</span>
+          <span>R$ {serviceAmount.toFixed(2)}</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 rounded p-2">
+          <Gift className="h-4 w-4" />
+          <span className="text-sm font-medium">Plataforma gratuita no primeiro ano!</span>
         </div>
       </div>
     </Card>

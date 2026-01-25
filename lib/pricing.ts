@@ -1,7 +1,7 @@
 /**
- * Platform fee percentage (15%)
+ * Platform fee percentage (0% - Gratuito no primeiro ano!)
  */
-export const PLATFORM_FEE_PERCENTAGE = 0.15
+export const PLATFORM_FEE_PERCENTAGE = 0
 
 /**
  * Minimum bid amount in BRL
@@ -10,18 +10,17 @@ export const MINIMUM_BID_AMOUNT = 50.0
 export const MINIMUM_BID = MINIMUM_BID_AMOUNT // Alias for compatibility
 
 /**
- * Calculate platform fee from bid amount
+ * Calculate platform fee from bid amount (0% no primeiro ano)
  */
 export function calculatePlatformFee(bidAmount: number): number {
-  return Number((bidAmount * PLATFORM_FEE_PERCENTAGE).toFixed(2))
+  return 0 // Gratuito no primeiro ano
 }
 
 /**
- * Calculate total amount (bid + platform fee)
+ * Calculate total amount (sem taxa no primeiro ano)
  */
 export function calculateTotalAmount(bidAmount: number): number {
-  const platformFee = calculatePlatformFee(bidAmount)
-  return Number((bidAmount + platformFee).toFixed(2))
+  return Number(bidAmount.toFixed(2)) // Sem taxa adicional
 }
 export const calculateTotal = calculateTotalAmount // Alias for compatibility
 

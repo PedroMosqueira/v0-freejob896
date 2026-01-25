@@ -237,42 +237,34 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
     return { error: "Email é obrigatório" }
   }
 
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options })
-        },
-      },
-    },
-  )
-
   try {
     console.log("🔄 Resending verification email to:", email.toString())
 
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email: email.toString(),
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+    // Use REST API diretamente para reenviar email sem necessidade de sessão
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/resend`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+        body: JSON.stringify({
+          type: "signup",
+          email: email.toString(),
+          redirect_to:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
+            `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+        }),
       },
-    })
+    )
 
-    if (error) {
-      console.error("Resend error:", error)
+    const data = await response.json()
 
-      if (error.message.includes("rate limit") || error.message.includes("too many")) {
+    if (!response.ok) {
+      console.error("Resend error:", data)
+
+      if (data.error_code === "rate_limit_exceeded" || data.message?.includes("rate limit") || data.message?.includes("too many")) {
         return {
           error: "Limite de reenvios atingido. Use a opção 'Verificar Status' para mais detalhes.",
           rateLimited: true,
@@ -280,11 +272,11 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
         }
       }
 
-      if (error.message.includes("already confirmed")) {
+      if (data.message?.includes("already confirmed")) {
         return { success: "Email já confirmado. Você pode fazer login." }
       }
 
-      return { error: error.message }
+      return { error: data.message || "Erro ao reenviar email" }
     }
 
     console.log("✅ Verification email resent to:", email.toString())
