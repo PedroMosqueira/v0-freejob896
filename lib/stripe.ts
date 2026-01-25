@@ -9,13 +9,14 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   typescript: true,
 })
 
-// Calcular valores do pagamento
+// Calcular valores do pagamento (0% de taxa - Gratuito no primeiro ano!)
 export function calculatePaymentAmounts(bidAmount: number) {
-  const platformFee = bidAmount * 0.15 // 15% de taxa
-  const professionalBonus = bidAmount * 0.05 // 5% de bônus
-  const totalAmount = bidAmount + platformFee // Cliente paga lance + 15%
-  const professionalReceives = bidAmount + professionalBonus // Profissional recebe lance + 5%
-  const platformNet = platformFee - professionalBonus // Lucro líquido da plataforma = 10%
+  // Plataforma gratuita no primeiro ano - sem taxas!
+  const platformFee = 0
+  const professionalBonus = 0
+  const totalAmount = bidAmount // Cliente paga apenas o lance
+  const professionalReceives = bidAmount // Profissional recebe o lance inteiro
+  const platformNet = 0 // Sem lucro no primeiro ano
 
   return {
     bidAmount,

@@ -454,23 +454,15 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                             {msg.metadata?.status !== "cancelled" && msg.metadata?.bidAmount && (
                               <>
                                 <div className="space-y-2 mb-3">
-                                  <div className="flex items-center justify-between text-sm pb-2 border-b border-gray-200 dark:border-gray-600">
-                                    <span className="text-gray-600 dark:text-gray-400">Profissional recebe:</span>
-                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                  <div className="flex items-center justify-between text-base font-bold">
+                                    <span className="text-gray-700 dark:text-gray-300">Valor do servico:</span>
+                                    <span className="text-green-600 dark:text-green-400">
                                       {formatCurrency(msg.metadata.bidAmount)}
                                     </span>
                                   </div>
 
-                                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                    <span>Taxa da plataforma (15%):</span>
-                                    <span>{formatCurrency(msg.metadata.bidAmount * 0.15)}</span>
-                                  </div>
-
-                                  <div className="flex items-center justify-between text-base font-bold pt-2 border-t border-gray-200 dark:border-gray-600">
-                                    <span className="text-gray-700 dark:text-gray-300">Solicitante paga:</span>
-                                    <span className="text-blue-600 dark:text-blue-400">
-                                      {formatCurrency(msg.metadata.bidAmount * 1.15)}
-                                    </span>
+                                  <div className="bg-green-100 dark:bg-green-900 rounded p-2 text-xs text-green-700 dark:text-green-300">
+                                    Plataforma gratuita no primeiro ano! Sem taxas.
                                   </div>
                                 </div>
 

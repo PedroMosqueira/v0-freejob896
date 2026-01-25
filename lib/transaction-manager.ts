@@ -12,28 +12,23 @@ export interface TransactionFee {
 }
 
 export const TRANSACTION_CONFIG = {
-  platformFeePercent: 20, // 20% de taxa sobre serviços
-  professionalCommissionPercent: 30, // 30% da taxa vai como comissão pro profissional
-  clientCashbackPercent: 20, // 20% da taxa volta como crédito pro cliente
+  platformFeePercent: 0, // 0% de taxa - Gratuito no primeiro ano!
+  professionalCommissionPercent: 0, // Sem comissoes no lancamento
+  clientCashbackPercent: 0, // Sem cashback no lancamento
   maxPlanDiscount: 0, // Desabilitado desconto em plano (planos desativados)
 }
 
-// Calcular breakdown da transação
+// Calcular breakdown da transação (sem taxas no primeiro ano)
 export function calculateTransactionFee(serviceAmount: number): TransactionFee {
-  const platformFee = serviceAmount * (TRANSACTION_CONFIG.platformFeePercent / 100)
-  const totalAmount = serviceAmount + platformFee
-  const professionalCommission = platformFee * (TRANSACTION_CONFIG.professionalCommissionPercent / 100)
-  const clientCashback = platformFee * (TRANSACTION_CONFIG.clientCashbackPercent / 100)
-
   return {
     serviceAmount,
-    platformFeePercent: TRANSACTION_CONFIG.platformFeePercent,
-    platformFee: Math.round(platformFee * 100) / 100,
-    totalAmount: Math.round(totalAmount * 100) / 100,
-    professionalCommissionPercent: TRANSACTION_CONFIG.professionalCommissionPercent,
-    professionalCommission: Math.round(professionalCommission * 100) / 100,
-    clientCashbackPercent: TRANSACTION_CONFIG.clientCashbackPercent,
-    clientCashback: Math.round(clientCashback * 100) / 100,
+    platformFeePercent: 0,
+    platformFee: 0,
+    totalAmount: serviceAmount, // Sem taxa adicional
+    professionalCommissionPercent: 0,
+    professionalCommission: 0,
+    clientCashbackPercent: 0,
+    clientCashback: 0,
   }
 }
 
