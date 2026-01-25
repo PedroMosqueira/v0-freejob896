@@ -25,6 +25,10 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
+    console.log("[v0] 🚀 Página inicial carregada - Deploy detectado - Timestamp:", new Date().toLocaleString('pt-BR'))
+  }, [])
+
+  useEffect(() => {
     const code = searchParams?.get("code")
 
     if (code) {
