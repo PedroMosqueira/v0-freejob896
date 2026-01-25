@@ -10,20 +10,35 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
     return { error: "Email é obrigatório" }
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_URL is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[v0] Error: SUPABASE_SERVICE_ROLE_KEY is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
   const cookieStore = cookies()
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
-      },
-      set(name: string, value: string, options: any) {
-        cookieStore.set({ name, value, ...options })
-      },
-      remove(name: string, options: any) {
-        cookieStore.set({ name, value: "", ...options })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: any) {
+          cookieStore.set({ name, value: "", ...options })
+        },
       },
     },
-  })
+  )
 
   try {
     console.log("🔍 Checking user status for:", email.toString())
@@ -65,6 +80,12 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
 
 export async function signUpWithEmail(prevState: any, formData: FormData) {
   console.log("[v0] signUpWithEmail called")
+  console.log("[v0] Environment check:", {
+    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
+    hasDevRedirectUrl: !!process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL,
+  })
 
   if (!formData) {
     console.log("[v0] Error: Form data is missing")
@@ -87,10 +108,21 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     return { error: "As senhas não conferem" }
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_URL is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
   const cookieStore = cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         get(name: string) {
@@ -167,10 +199,21 @@ export async function clearUnverifiedUser(prevState: any, formData: FormData) {
     return { error: "Email é obrigatório" }
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_URL is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error("[v0] Error: SUPABASE_SERVICE_ROLE_KEY is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
   const cookieStore = cookies()
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role to delete users
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY, // Use service role to delete users
     {
       cookies: {
         get(name: string) {
@@ -237,6 +280,17 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
     return { error: "Email é obrigatório" }
   }
 
+  // Validate environment variables
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_URL is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error("[v0] Error: NEXT_PUBLIC_SUPABASE_ANON_KEY is not set")
+    return { error: "Configuração de servidor incompleta. Tente novamente." }
+  }
+
   try {
     console.log("🔄 Resending verification email to:", email.toString())
 
@@ -247,7 +301,7 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({
           type: "signup",

@@ -16,9 +16,9 @@ Todos os links de afiliados estão centralizados no arquivo `lib/affiliate-confi
 ### 2. Obter sua Tag de Afiliado
 - Após aprovação, você receberá uma **Tag de Rastreamento** (ex: `freejob-20`)
 - Substitua em `affiliate-config.ts`:
-  ```ts
+  \`\`\`ts
   amazonTag: "SUA-TAG-AQUI"
-  ```
+  \`\`\`
 
 ### 3. Criar Links de Produtos
 Para cada produto que você quer promover:
@@ -56,13 +56,13 @@ Para cada produto que você quer promover:
 1. Ao encontrar um curso, clique em "Promover"
 2. Copie seu link de afiliado (formato: `https://go.hotmart.com/CODIGO`)
 3. Substitua em `AFFILIATE_CONFIG.courses`:
-   ```ts
+   \`\`\`ts
    courses: {
      eletricista: "https://go.hotmart.com/SEU-LINK",
      encanador: "https://go.hotmart.com/SEU-LINK",
      // ...
    }
-   ```
+   \`\`\`
 
 **Alternativa:** Você também pode usar **Eduzz** ou **Monetizze**
 
@@ -79,11 +79,11 @@ Para cada produto que você quer promover:
 1. Após aprovação, vá em "Anúncios" > "Visão Geral"
 2. Copie seu **Publisher ID** (formato: `ca-pub-XXXXXXXXXX`)
 3. Substitua em `affiliate-config.ts`:
-   ```ts
+   \`\`\`ts
    googleAdsense: {
      clientId: "ca-pub-SEU-ID-AQUI",
    }
-   ```
+   \`\`\`
 
 ### 3. Criar Unidades de Anúncio
 1. Vá em "Anúncios" > "Por unidade de anúncio"
@@ -92,22 +92,22 @@ Para cada produto que você quer promover:
    - Um para sidebar
 3. Copie os **Ad Slot IDs** de cada um
 4. Substitua em `affiliate-config.ts`:
-   ```ts
+   \`\`\`ts
    slots: {
      banner: "1234567890",    // ID do banner
      sidebar: "0987654321",   // ID da sidebar
    }
-   ```
+   \`\`\`
 
 ### 4. Adicionar Script no Site
 Adicione este código no `app/layout.tsx` dentro do `<head>`:
-```tsx
+\`\`\`tsx
 <script
   async
   src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-SEU-ID-AQUI"
   crossOrigin="anonymous"
 ></script>
-```
+\`\`\`
 
 ---
 
