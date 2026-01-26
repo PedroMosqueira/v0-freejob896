@@ -1,9 +1,18 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { stripe, calculatePaymentAmounts, toCents } from "@/lib/stripe"
+import { stripe, calculatePaymentAmounts, toCents, isStripeConfigured } from "@/lib/stripe"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
+    // Validar configuração do Stripe
+    if (!isStripeConfigured()) {
+      console.error("[v0] Stripe não está configurado - STRIPE_SECRET_KEY não definida")
+      return NextResponse.json(
+        { error: "Stripe não está configurado. Contate o administrador." },
+        { status: 503 }
+      )
+    }
+
     const { proposalId, needId } = await request.json()
 
     if (!proposalId || !needId) {

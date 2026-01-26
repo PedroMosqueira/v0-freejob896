@@ -24,6 +24,9 @@ export default function Home() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  console.log("[v0] ✅ TESTE - Home component renderizado com sucesso! Alterações estão sendo refletidas no domínio.")
+  console.log("[v0] Usuário autenticado:", authenticatedEmail)
+
   useEffect(() => {
     console.log("[v0] Página de login aberta - Home component montado")
     const code = searchParams?.get("code")
@@ -76,11 +79,15 @@ export default function Home() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    console.log("[v0] handleLogin executado - Tentando fazer login")
     setIsSubmittingLogin(true)
     const trimmedEmail = loginEmail.trim()
     const trimmedPassword = loginPassword.trim()
 
+    console.log("[v0] Email validado:", trimmedEmail)
+
     if (!trimmedEmail || !trimmedEmail.includes("@") || !trimmedPassword) {
+      console.log("[v0] Validação falhou - Email ou senha vazios/inválidos")
       toast({
         title: "Erro de autenticação",
         description: "Por favor, insira um email e senha válidos.",
@@ -91,14 +98,19 @@ export default function Home() {
     }
 
     try {
+      console.log("[v0] Chamando função login com email:", trimmedEmail)
       const success = await login(trimmedEmail, trimmedPassword)
+      console.log("[v0] Resultado do login:", success)
+      
       if (!success) {
+        console.log("[v0] Login falhou - Email ou senha incorretos")
         toast({
           title: "Falha na autenticação",
           description: "Email ou senha incorretos. Tente novamente.",
           variant: "destructive",
         })
       } else {
+        console.log("[v0] Login bem-sucedido!")
         toast({
           title: "Login bem-sucedido!",
           description: "Você está logado.",
@@ -108,7 +120,8 @@ export default function Home() {
         setLoginPassword("")
       }
     } catch (error) {
-      console.error("Authentication error:", error)
+      console.error("[v0] Authentication error:", error)
+      console.log("[v0] Erro detalhado:", JSON.stringify(error))
       toast({
         title: "Erro inesperado",
         description: "Ocorreu um erro durante a autenticação. Tente novamente.",
