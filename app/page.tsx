@@ -25,6 +25,7 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
+    console.log("[v0] Página de login aberta - Home component montado")
     const code = searchParams?.get("code")
 
     if (code) {
