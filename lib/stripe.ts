@@ -1,13 +1,18 @@
 import Stripe from "stripe"
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY não está definido nas variáveis de ambiente")
-}
+// Usar valor dummy durante build se a chave não estiver definida
+// Em produção, a chave DEVE estar definida nas variáveis de ambiente
+const stripeKey = process.env.STRIPE_SECRET_KEY || "sk_test_dummy_for_build"
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+export const stripe = new Stripe(stripeKey, {
   apiVersion: "2024-12-18.acacia",
   typescript: true,
 })
+
+// Função para validar se o Stripe está configurado corretamente
+export function isStripeConfigured(): boolean {
+  return process.env.STRIPE_SECRET_KEY !== undefined && process.env.STRIPE_SECRET_KEY !== ""
+}
 
 // Calcular valores do pagamento (0% de taxa - Gratuito no primeiro ano!)
 export function calculatePaymentAmounts(bidAmount: number) {
