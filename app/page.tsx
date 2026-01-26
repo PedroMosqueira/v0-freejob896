@@ -24,6 +24,9 @@ export default function Home() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  console.log("[v0] ✅ TESTE - Home component renderizado com sucesso! Alterações estão sendo refletidas no domínio.")
+  console.log("[v0] Usuário autenticado:", authenticatedEmail)
+
   useEffect(() => {
     console.log("[v0] Página de login aberta - Home component montado")
     const code = searchParams?.get("code")
