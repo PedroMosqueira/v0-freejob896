@@ -89,10 +89,6 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [clearState, clearAction] = useFormState(clearUnverifiedUser, null)
   const [statusState, statusAction] = useFormState(checkUserStatus, null)
 
-  console.log("[v0] RegisterForm renderizado - signUpState:", signUpState)
-  console.log("[v0] RegisterForm renderizado - resendState:", resendState)
-  console.log("[v0] RegisterForm renderizado - statusState:", statusState)
-
   const checkPasswordStrength = (password: string) => {
     let score = 0
     if (!password) return { score: 0, text: "Nenhuma senha" }

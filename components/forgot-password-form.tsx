@@ -26,8 +26,6 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
 
     const trimmedEmail = email.trim()
 
-    console.log("[v0] Attempting to send reset email for:", trimmedEmail)
-
     if (!trimmedEmail || !trimmedEmail.includes("@")) {
       setError("Por favor, insira um email válido.")
       setIsSubmitting(false)
@@ -41,21 +39,15 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
         body: JSON.stringify({ email: trimmedEmail }),
       })
 
-      console.log("[v0] Response status:", response.status)
-
       const data = await response.json()
-      console.log("[v0] Response data:", JSON.stringify(data, null, 2))
 
       if (data.success) {
-        console.log("[v0] ✅ SUCCESS!")
         setSuccess(true)
       } else {
         const errorMsg = data.message || "Erro ao solicitar recuperação de senha."
-        console.error("[v0] Error from API:", errorMsg)
         setError(errorMsg)
       }
     } catch (err) {
-      console.error("[v0] Fetch error:", err)
       setError("Erro ao processar solicitação. Tente novamente.")
     } finally {
       setIsSubmitting(false)
