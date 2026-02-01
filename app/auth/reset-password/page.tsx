@@ -34,14 +34,7 @@ export default function ResetPasswordPage() {
         error: sessionError,
       } = await supabase.auth.getSession()
 
-      console.log("[v0] Reset Password - Session check:", {
-        hasSession: !!session,
-        email: session?.user?.email,
-        error: sessionError?.message,
-      })
-
       if (sessionError || !session) {
-        console.error("[v0] No valid session found:", sessionError)
         setError("Link de recuperação inválido ou expirado. Por favor, solicite um novo link.")
         setIsLoading(false)
 
@@ -108,20 +101,17 @@ export default function ResetPasswordPage() {
       })
 
       if (updateError) {
-        console.error("[v0] Error updating password:", updateError)
         setError(updateError.message || "Erro ao redefinir senha.")
         setIsSubmitting(false)
         return
       }
 
-      console.log("[v0] Password updated successfully")
       setSuccess(true)
 
       setTimeout(() => {
         router.push("/?message=Senha redefinida com sucesso! Faça login com sua nova senha.")
       }, 3000)
     } catch (err) {
-      console.error("[v0] Exception updating password:", err)
       setError("Erro ao processar solicitação. Tente novamente.")
       setIsSubmitting(false)
     }

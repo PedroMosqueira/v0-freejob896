@@ -79,34 +79,13 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
 }
 
 export async function signUpWithEmail(prevState: any, formData: FormData) {
-  console.log("[v0] signUpWithEmail called")
-  console.log("[v0] Environment check:", {
-    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-    hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    hasSiteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
-    hasDevRedirectUrl: !!process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL,
-  })
-
   if (!formData) {
-    console.log("[v0] Error: Form data is missing")
     return { error: "Form data is missing" }
   }
 
   const email = formData.get("email")
   const password = formData.get("password")
   const confirmPassword = formData.get("confirmPassword")
-
-  console.log("[v0] Form data received:", { email: email?.toString(), hasPassword: !!password })
-
-  if (!email || !password || !confirmPassword) {
-    console.log("[v0] Error: Missing required fields")
-    return { error: "Todos os campos são obrigatórios" }
-  }
-
-  if (password !== confirmPassword) {
-    console.log("[v0] Error: Passwords don't match")
-    return { error: "As senhas não conferem" }
-  }
 
   // Validate environment variables
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -139,8 +118,6 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("[v0] Starting registration for:", email.toString())
-
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
@@ -151,14 +128,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       },
     })
 
-    console.log("[v0] SignUp response:", {
-      success: !!data?.user,
-      userId: data?.user?.id,
-      error: error?.message,
-    })
-
     if (error) {
-      console.error("[v0] Registration error:", error)
 
       if (error.message.includes("already registered") || error.message.includes("User already registered")) {
         return {
@@ -180,14 +150,11 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       return { error: error.message }
     }
 
-    console.log("✅ Registration successful, email sent to:", email.toString())
-
     return {
       success: "Verifique seu email! Enviamos um link de confirmação. O link expira em 1 hora.",
       email: email.toString(),
     }
   } catch (error) {
-    console.error("Unexpected registration error:", error)
     return { error: "Ocorreu um erro inesperado. Tente novamente." }
   }
 }

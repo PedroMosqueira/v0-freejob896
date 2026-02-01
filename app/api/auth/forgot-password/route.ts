@@ -5,8 +5,6 @@ const DEPLOY_VERSION = "v14.0-SIMPLIFIED"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v14] 🚀 FORGOT PASSWORD API - " + DEPLOY_VERSION)
-
     let body
     try {
       body = await request.json()
@@ -18,11 +16,8 @@ export async function POST(request: NextRequest) {
     const { email } = body
 
     if (!email || !email.includes("@")) {
-      console.log("[v14] ⚠️ Invalid email format:", email)
       return NextResponse.json({ success: false, message: "Email inválido." }, { status: 400 })
     }
-
-    console.log("[v14] 📧 Password reset requested for:", email)
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
       console.error("[v14] ❌ Missing Supabase environment variables")
@@ -35,14 +30,9 @@ export async function POST(request: NextRequest) {
         persistSession: false,
       },
     })
-    console.log("[v14] ✅ Supabase client created successfully")
 
     const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://freejob-brasil.vercel.app"
     const redirectUrl = `${baseUrl}/auth/callback`
-
-    console.log("[v14] 📤 Calling resetPasswordForEmail")
-    console.log("[v14] Email:", email)
-    console.log("[v14] RedirectTo:", redirectUrl)
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
@@ -50,8 +40,6 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("[v14] ❌ Supabase email error:", error)
-      console.error("[v14] Error code:", error.code)
-      console.error("[v14] Error message:", error.message)
 
       return NextResponse.json(
         {
@@ -63,9 +51,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[v14] ✅ Email sent successfully!")
-    console.log("[v14] Response data:", data)
-
     return NextResponse.json({
       success: true,
       message:
@@ -74,7 +59,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[v14] ❌ Unexpected error:")
     console.error("[v14] Error:", error)
-    console.error("[v14] Error message:", error instanceof Error ? error.message : String(error))
 
     return NextResponse.json(
       {
