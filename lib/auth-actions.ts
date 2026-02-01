@@ -129,6 +129,11 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     })
 
     if (error) {
+      console.error("[v0] SignUp error:", {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+      })
 
       if (error.message.includes("already registered") || error.message.includes("User already registered")) {
         return {
@@ -150,11 +155,17 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       return { error: error.message }
     }
 
+    // Verificação adicional: se o usuário foi criado mas o email pode não ter sido enviado
+    if (data?.user && data?.user?.email_confirmed_at === null) {
+      console.log("[v0] User created, awaiting email verification")
+    }
+
     return {
       success: "Verifique seu email! Enviamos um link de confirmação. O link expira em 1 hora.",
       email: email.toString(),
     }
   } catch (error) {
+    console.error("[v0] Unexpected signup error:", error)
     return { error: "Ocorreu um erro inesperado. Tente novamente." }
   }
 }

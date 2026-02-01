@@ -240,6 +240,12 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
                 <div>
                   <strong>4. Se ainda não chegou:</strong> use o botão "Reenviar" abaixo
                 </div>
+                <div className="mt-3 pt-2 border-t border-blue-200">
+                  <strong>🆘 Problema persistente?</strong>
+                  <p className="mt-1">
+                    Visite a <a href="/admin/email-diagnostics" className="underline font-semibold">página de diagnóstico</a> para testar a configuração de email.
+                  </p>
+                </div>
               </div>
             </div>
 
