@@ -25,7 +25,9 @@ export default function Home() {
   const router = useRouter()
 
   console.log("[v0] ✅ TESTE - Home component renderizado com sucesso! Alterações estão sendo refletidas no domínio.")
+  console.log("[v0] ✅ Mudanças de v0 estão sendo aplicadas no domínio raiz do projeto!")
   console.log("[v0] Usuário autenticado:", authenticatedEmail)
+  console.log("[v0] URL atual:", typeof window !== "undefined" ? window.location.href : "SSR")
 
   useEffect(() => {
     console.log("[v0] Página de login aberta - Home component montado")
