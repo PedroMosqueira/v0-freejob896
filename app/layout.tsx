@@ -38,6 +38,9 @@ export default async function RootLayout({
             __html: `
               (function() {
                 if (typeof window !== 'undefined') {
+                  var currentDate = new Date().toLocaleString('pt-BR');
+                  console.log('[v0] 🚀 Página carregada em: ' + currentDate);
+                  
                   var originalBtoa = window.btoa;
                   window.btoa = function(str) {
                     try {
