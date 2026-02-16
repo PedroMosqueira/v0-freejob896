@@ -346,12 +346,41 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
                     </div>
                   )}
                   
+                  {signUpState.isPendingConfirmation && (
+                    <div className="mt-3 bg-yellow-100 p-2 rounded text-xs text-yellow-800 space-y-2">
+                      <p>
+                        <strong>⏳ Email aguardando confirmação</strong>
+                      </p>
+                      <p>O email <strong>{signUpState.email}</strong> já foi registrado, mas ainda está aguardando confirmação.</p>
+                      <p>Se não recebeu o email de confirmação:</p>
+                      <ul className="list-disc ml-4 space-y-1">
+                        <li>Verifique a pasta de SPAM</li>
+                        <li>Clique em "Reenviar Email de Confirmação" abaixo</li>
+                        <li>Se o problema persistir, use "Limpar Registro" para começar novamente</li>
+                      </ul>
+                    </div>
+                  )}
+                  
                   {signUpState.showStatusCheck && (
                     <div className="mt-3 space-y-2">
-                      <form action={statusAction}>
-                        <input type="hidden" name="email" value={signUpState.email} />
-                        <StatusButton />
-                      </form>
+                      {signUpState.showResendOption && (
+                        <form action={resendAction}>
+                          <input type="hidden" name="email" value={signUpState.email} />
+                          <ResendButton email={signUpState.email} />
+                        </form>
+                      )}
+                      {signUpState.isDuplicateEmail && (
+                        <form action={statusAction}>
+                          <input type="hidden" name="email" value={signUpState.email} />
+                          <StatusButton />
+                        </form>
+                      )}
+                      {signUpState.isPendingConfirmation && (
+                        <form action={clearAction}>
+                          <input type="hidden" name="email" value={signUpState.email} />
+                          <ClearButton />
+                        </form>
+                      )}
                       {signUpState.isDuplicateEmail ? (
                         <Button 
                           type="button"
@@ -361,12 +390,12 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
                         >
                           Tentar com outro email
                         </Button>
-                      ) : (
+                      ) : !signUpState.showResendOption && !signUpState.isPendingConfirmation ? (
                         <form action={clearAction}>
                           <input type="hidden" name="email" value={signUpState.email} />
                           <ClearButton />
                         </form>
-                      )}
+                      ) : null}
                     </div>
                   )}
                   

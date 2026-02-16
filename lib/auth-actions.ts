@@ -1,6 +1,8 @@
 "use server"
 
 console.log("[v0] ✅ Alterações de verificação de email DUPLICADO estão em vigor - lib/auth-actions.ts carregado!")
+console.log("[v0] ✅ Sistema de EMAIL PENDENTE implementado!")
+console.log("[v0] ✅ Reenvio de email de confirmação melhorado!")
 
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -123,8 +125,64 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("[v0] 📝 Starting signup for email:", email.toString())
+    console.log("[v0] ========== SIGNUP INICIADO ==========")
+    console.log("[v0] Timestamp:", new Date().toISOString())
+    console.log("[v0] Email:", email.toString())
+    console.log("[v0] Password length:", (password.toString()).length, "caracteres")
     
+    // First, check if there's already a pending/unconfirmed user with this email
+    console.log("[v0] Verificando usuários existentes...")
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers()
+    
+    if (listError) {
+      console.error("[v0] ❌ ERRO ao listar usuários:", {
+        message: listError.message,
+        code: listError.code,
+        status: listError.status,
+      })
+      return { error: "Erro ao verificar usuários existentes" }
+    }
+    
+    console.log("[v0] ✓ Total de usuários no banco:", users.users.length)
+    
+    if (users.users) {
+      const existingUser = users.users.find((user) => user.email === email.toString())
+      if (existingUser) {
+        console.log("[v0] ✓ Usuário existente encontrado")
+        console.log("[v0]   - Email confirmado:", !!existingUser.email_confirmed_at)
+        console.log("[v0]   - Data de criação:", existingUser.created_at)
+        console.log("[v0]   - Último login:", existingUser.last_sign_in_at || "Nunca")
+        console.log("[v0]   - ID do usuário:", existingUser.id)
+
+        // Se o usuário existe mas não confirmou o email
+        if (!existingUser.email_confirmed_at) {
+          console.log("[v0] ⚠️ STATUS: Email PENDENTE DE CONFIRMAÇÃO")
+          console.log("[v0] AÇÃO: Sugerindo reenvio do email de confirmação")
+          return {
+            error: "Este email ainda está aguardando confirmação. O link de confirmação foi enviado. Se não recebeu o email, clique em 'Reenviar Email de Confirmação'.",
+            showResendOption: true,
+            email: email.toString(),
+            isPendingConfirmation: true,
+          }
+        }
+
+        // Se o usuário existe e confirmou
+        if (existingUser.email_confirmed_at) {
+          console.log("[v0] 🔴 STATUS: Email já confirmado e ATIVO")
+          console.log("[v0] Data de confirmação:", existingUser.email_confirmed_at)
+          return {
+            error: "Este email já possui uma conta confirmada. Use 'Fazer Login' ou 'Recuperar Senha' se esqueceu a senha.",
+            showStatusCheck: true,
+            email: email.toString(),
+            isDuplicateEmail: true,
+          }
+        }
+      } else {
+        console.log("[v0] ✓ NOVO EMAIL: Nenhum usuário existente com este email")
+      }
+    }
+    
+    console.log("[v0] Iniciando supabase.auth.signUp()...")
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
@@ -136,12 +194,12 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     })
 
     if (error) {
-      console.error("[v0] ❌ SignUp error details:", {
-        message: error.message,
-        code: error.code,
-        status: error.status,
-        fullError: JSON.stringify(error),
-      })
+      console.error("[v0] ❌ ========== ERRO NO SIGNUP ==========")
+      console.error("[v0] Mensagem de erro:", error.message)
+      console.error("[v0] Código de erro:", error.code)
+      console.error("[v0] Status HTTP:", error.status)
+      console.error("[v0] Nome do erro:", error.name)
+      console.error("[v0] Objeto JSON:", JSON.stringify(error, null, 2))
 
       // Check for duplicate email - more comprehensive
       if (
@@ -151,7 +209,8 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         error.message.toLowerCase().includes("duplicate") ||
         error.status === 422
       ) {
-        console.log("[v0] 🔴 Email duplicado detectado:", email.toString())
+        console.log("[v0] 🔴 TIPO DE ERRO DETECTADO: EMAIL DUPLICADO")
+        console.log("[v0] Status 422 = Unprocessable Entity (conflito de dados)")
         return {
           error: "Este email já possui uma conta cadastrada. Escolha outro email ou use 'Verificar Status' para recuperar sua conta.",
           showStatusCheck: true,
@@ -160,8 +219,13 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         }
       }
 
-      if (error.message.includes("rate limit") || error.message.includes("too many")) {
-        console.log("[v0] ⏱️ Rate limit atingido para:", email.toString())
+      if (error.message.includes("rate limit") || error.message.includes("too many") || error.status === 429) {
+        console.log("[v0] ⏱️ TIPO DE ERRO DETECTADO: RATE LIMIT")
+        console.log("[v0] Status 429 = Too Many Requests (limite atingido)")
+        console.log("[v0] Possíveis causas:")
+        console.log("[v0]   1. Muitas tentativas de signup do mesmo email")
+        console.log("[v0]   2. Limite diário do Resend atingido (100/dia plano grátis)")
+        console.log("[v0]   3. Limite de API do Supabase atingido")
         return {
           error: "Muitas tentativas de cadastro. Aguarde alguns minutos antes de tentar novamente. Use 'Verificar Status' para mais detalhes.",
           rateLimited: true,
@@ -170,15 +234,34 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         }
       }
 
+      if (error.message.includes("SMTP") || error.message.includes("smtp")) {
+        console.log("[v0] ⚙️ TIPO DE ERRO DETECTADO: PROBLEMA SMTP/EMAIL")
+        console.log("[v0] Possíveis causas:")
+        console.log("[v0]   1. Serviço de email (Resend) fora do ar")
+        console.log("[v0]   2. Configuração SMTP incorreta no Supabase")
+        console.log("[v0]   3. Email não verificado no Resend")
+      }
+
+      if (error.status === 500) {
+        console.log("[v0] ⚠️ TIPO DE ERRO DETECTADO: ERRO DO SERVIDOR (500)")
+        console.log("[v0] Possível que Supabase ou Resend esteja com problemas")
+      }
+
       console.log("[v0] ⚠️ Outro erro durante signup:", error.message)
       return { error: error.message }
     }
     
-    console.log("[v0] ✅ Signup successful for:", email.toString())
+    console.log("[v0] ✅ ========== SIGNUP BEM-SUCEDIDO! ==========")
+    console.log("[v0] ID do usuário criado:", data.user?.id)
+    console.log("[v0] Email do usuário:", data.user?.email)
+    console.log("[v0] Email confirmado no momento:", !!data.user?.email_confirmed_at)
+    console.log("[v0] Status esperado: PENDENTE (aguardando confirmação por email)")
 
     // Verificação adicional: se o usuário foi criado mas o email pode não ter sido enviado
     if (data?.user && data?.user?.email_confirmed_at === null) {
-      console.log("[v0] User created, awaiting email verification")
+      console.log("[v0] ⏳ Usuário criado com sucesso, aguardando verificação de email")
+      console.log("[v0] PRÓXIMO PASSO: Email será enviado em breve")
+      console.log("[v0] Mensagem a mostrar ao usuário: Link de confirmação expires em 1 hora")
     }
 
     return {
@@ -186,7 +269,11 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       email: email.toString(),
     }
   } catch (error) {
-    console.error("[v0] Unexpected signup error:", error)
+    console.error("[v0] ❌ ========== ERRO NÃO TRATADO NO SIGNUP ==========")
+    console.error("[v0] Tipo de erro:", error instanceof Error ? error.constructor.name : typeof error)
+    console.error("[v0] Mensagem:", error instanceof Error ? error.message : String(error))
+    console.error("[v0] Stack trace:", error instanceof Error ? error.stack : "N/A")
+    console.error("[v0] Objeto completo:", JSON.stringify(error, null, 2))
     return { error: "Ocorreu um erro inesperado. Tente novamente." }
   }
 }
@@ -291,16 +378,20 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
   }
 
   try {
-    console.log("🔄 Resending verification email to:", email.toString())
+    console.log("[v0] ========== RESEND EMAIL INICIADO ==========")
+    console.log("[v0] Timestamp:", new Date().toISOString())
+    console.log("[v0] Email para reenvio:", email.toString())
+    console.log("[v0] URL base do Supabase:", process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + "...")
 
     // Use REST API diretamente para reenviar email sem necessidade de sessão
+    console.log("[v0] Fazendo chamada REST API: /auth/v1/resend")
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/resend`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
         },
         body: JSON.stringify({
           type: "signup",
@@ -312,31 +403,63 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
       },
     )
 
+    console.log("[v0] ✓ Response recebido do servidor")
+    console.log("[v0] Status HTTP:", response.status)
+    console.log("[v0] Headers:", Object.fromEntries(response.headers.entries()))
+
     const data = await response.json()
+    console.log("[v0] Body da resposta:", JSON.stringify(data, null, 2))
 
     if (!response.ok) {
-      console.error("Resend error:", data)
+      console.error("[v0] ❌ ========== ERRO NO RESEND ==========")
+      console.error("[v0] Status HTTP de erro:", response.status)
+      console.error("[v0] Mensagem de erro:", data.message || data.error)
+      console.error("[v0] Código de erro:", data.error_code)
+      console.error("[v0] Resposta completa:", JSON.stringify(data, null, 2))
 
-      if (data.error_code === "rate_limit_exceeded" || data.message?.includes("rate limit") || data.message?.includes("too many")) {
+      if (data.error_code === "rate_limit_exceeded" || data.message?.includes("rate limit") || data.message?.includes("too many") || response.status === 429) {
+        console.log("[v0] 🟡 TIPO: RATE LIMIT")
+        console.log("[v0] Possíveis causas:")
+        console.log("[v0]   1. Muitos reenvios do mesmo email")
+        console.log("[v0]   2. Limite de Resend atingido (100/dia)")
+        console.log("[v0]   3. Limite de IP atingido")
         return {
-          error: "Limite de reenvios atingido. Use a opção 'Verificar Status' para mais detalhes.",
+          error: "Limite de reenvios atingido. Aguarde alguns minutos antes de tentar novamente.",
           rateLimited: true,
           email: email.toString(),
         }
       }
 
       if (data.message?.includes("already confirmed")) {
-        return { success: "Email já confirmado. Você pode fazer login." }
+        console.log("[v0] ✓ Email já foi confirmado")
+        return { success: "Email já confirmado. Você pode fazer login agora." }
       }
 
+      if (data.message?.includes("not found") || data.message?.includes("User not found")) {
+        console.log("[v0] 🔴 Usuário não encontrado")
+        console.log("[v0] Possível causa: Email foi deletado ou nunca foi registrado")
+        return { 
+          error: "Usuário não encontrado. Verifique o email ou registre-se novamente.",
+          email: email.toString()
+        }
+      }
+
+      console.log("[v0] ⚠️ Outro erro:", data.message || data.error)
       return { error: data.message || "Erro ao reenviar email" }
     }
 
-    console.log("✅ Verification email resent to:", email.toString())
+    console.log("[v0] ✅ ========== RESEND BEM-SUCEDIDO! ==========")
+    console.log("[v0] Email reenviado para:", email.toString())
+    console.log("[v0] Próximo passo: Usuário deve verificar email de confirmação")
 
-    return { success: "Email de verificação reenviado com sucesso!" }
+    return { 
+      success: "Email de verificação reenviado com sucesso! Verifique sua caixa de entrada e pasta de spam." 
+    }
   } catch (error) {
-    console.error("Unexpected resend error:", error)
+    console.error("[v0] ❌ ========== ERRO NÃO TRATADO NO RESEND ==========")
+    console.error("[v0] Tipo de erro:", error instanceof Error ? error.constructor.name : typeof error)
+    console.error("[v0] Mensagem:", error instanceof Error ? error.message : String(error))
+    console.error("[v0] Stack trace:", error instanceof Error ? error.stack : "N/A")
     return { error: "Erro inesperado ao reenviar email. Tente novamente." }
   }
 }
