@@ -1,5 +1,7 @@
 "use client"
 
+console.log("[v0] ✅ Verificação de EMAIL DUPLICADO ATIVA - register-form.tsx carregado!")
+
 import { useFormState, useFormStatus } from "react-dom"
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
