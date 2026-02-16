@@ -1,6 +1,8 @@
 "use server"
 
 console.log("[v0] ✅ Alterações de verificação de email DUPLICADO estão em vigor - lib/auth-actions.ts carregado!")
+console.log("[v0] ✅ Sistema de EMAIL PENDENTE implementado!")
+console.log("[v0] ✅ Reenvio de email de confirmação melhorado!")
 
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
@@ -124,6 +126,41 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
 
   try {
     console.log("[v0] 📝 Starting signup for email:", email.toString())
+    
+    // First, check if there's already a pending/unconfirmed user with this email
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers()
+    if (!listError && users.users) {
+      const existingUser = users.users.find((user) => user.email === email.toString())
+      if (existingUser) {
+        console.log("[v0] 🔍 Found existing user:", {
+          email: existingUser.email,
+          confirmed: existingUser.email_confirmed_at ? true : false,
+          lastSignInAt: existingUser.last_sign_in_at,
+        })
+
+        // Se o usuário existe mas não confirmou o email
+        if (!existingUser.email_confirmed_at) {
+          console.log("[v0] ⚠️ Email pending confirmation, suggesting resend")
+          return {
+            error: "Este email ainda está aguardando confirmação. O link de confirmação foi enviado. Se não recebeu o email, clique em 'Reenviar Email de Confirmação'.",
+            showResendOption: true,
+            email: email.toString(),
+            isPendingConfirmation: true,
+          }
+        }
+
+        // Se o usuário existe e confirmou
+        if (existingUser.email_confirmed_at) {
+          console.log("[v0] 🔴 Email already confirmed")
+          return {
+            error: "Este email já possui uma conta confirmada. Use 'Fazer Login' ou 'Recuperar Senha' se esqueceu a senha.",
+            showStatusCheck: true,
+            email: email.toString(),
+            isDuplicateEmail: true,
+          }
+        }
+      }
+    }
     
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
@@ -291,7 +328,7 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
   }
 
   try {
-    console.log("🔄 Resending verification email to:", email.toString())
+    console.log("[v0] 🔄 Resending verification email to:", email.toString())
 
     // Use REST API diretamente para reenviar email sem necessidade de sessão
     const response = await fetch(
@@ -315,28 +352,44 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
     const data = await response.json()
 
     if (!response.ok) {
-      console.error("Resend error:", data)
+      console.error("[v0] ❌ Resend error:", {
+        status: response.status,
+        message: data.message || data.error,
+        fullResponse: JSON.stringify(data),
+      })
 
       if (data.error_code === "rate_limit_exceeded" || data.message?.includes("rate limit") || data.message?.includes("too many")) {
+        console.log("[v0] ⏱️ Rate limit reached for resend")
         return {
-          error: "Limite de reenvios atingido. Use a opção 'Verificar Status' para mais detalhes.",
+          error: "Limite de reenvios atingido. Aguarde alguns minutos antes de tentar novamente.",
           rateLimited: true,
           email: email.toString(),
         }
       }
 
       if (data.message?.includes("already confirmed")) {
-        return { success: "Email já confirmado. Você pode fazer login." }
+        console.log("[v0] ✅ Email already confirmed")
+        return { success: "Email já confirmado. Você pode fazer login agora." }
+      }
+
+      if (data.message?.includes("not found") || data.message?.includes("User not found")) {
+        console.log("[v0] ⚠️ User not found for resend:", email.toString())
+        return { 
+          error: "Usuário não encontrado. Verifique o email ou registre-se novamente.",
+          email: email.toString()
+        }
       }
 
       return { error: data.message || "Erro ao reenviar email" }
     }
 
-    console.log("✅ Verification email resent to:", email.toString())
+    console.log("[v0] ✅ Verification email resent to:", email.toString())
 
-    return { success: "Email de verificação reenviado com sucesso!" }
+    return { 
+      success: "Email de verificação reenviado com sucesso! Verifique sua caixa de entrada e pasta de spam." 
+    }
   } catch (error) {
-    console.error("Unexpected resend error:", error)
+    console.error("[v0] ❌ Unexpected resend error:", error)
     return { error: "Erro inesperado ao reenviar email. Tente novamente." }
   }
 }
