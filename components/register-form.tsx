@@ -325,50 +325,20 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-sm text-red-800">
-                    <strong>Erro ao cadastrar:</strong> {signUpState.error}
-                  </p>
-                  
-                  {signUpState.isDuplicateEmail && (
-                    <div className="mt-3 bg-red-100 p-2 rounded text-xs text-red-700 space-y-2">
-                      <p>
-                        <strong>🔴 Email já cadastrado</strong>
-                      </p>
-                      <p>O email <strong>{signUpState.email}</strong> já possui uma conta ativa.</p>
-                      <p>Você pode:</p>
-                      <ul className="list-disc ml-4 space-y-1">
-                        <li>Usar outro email para criar uma nova conta</li>
-                        <li>Verificar o status da sua conta existente</li>
-                        <li>Recuperar a senha se esquecer</li>
-                      </ul>
-                    </div>
-                  )}
-                  
+                  <p className="text-sm text-red-800">{signUpState.error}</p>
                   {signUpState.showStatusCheck && (
                     <div className="mt-3 space-y-2">
                       <form action={statusAction}>
                         <input type="hidden" name="email" value={signUpState.email} />
                         <StatusButton />
                       </form>
-                      {signUpState.isDuplicateEmail ? (
-                        <Button 
-                          type="button"
-                          onClick={() => window.location.reload()} 
-                          variant="outline" 
-                          className="w-full"
-                        >
-                          Tentar com outro email
-                        </Button>
-                      ) : (
-                        <form action={clearAction}>
-                          <input type="hidden" name="email" value={signUpState.email} />
-                          <ClearButton />
-                        </form>
-                      )}
+                      <form action={clearAction}>
+                        <input type="hidden" name="email" value={signUpState.email} />
+                        <ClearButton />
+                      </form>
                     </div>
                   )}
-                  
-                  {signUpState.rateLimited && !signUpState.isDuplicateEmail && (
+                  {signUpState.rateLimited && (
                     <p className="text-xs text-red-600 mt-2">
                       💡 <strong>Dica:</strong> Use "Verificar Status" para entender o problema, ou tente com um email
                       diferente.
