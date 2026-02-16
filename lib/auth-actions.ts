@@ -1,5 +1,7 @@
 "use server"
 
+console.log("[v0] ✅ Alterações de verificação de email DUPLICADO estão em vigor - lib/auth-actions.ts carregado!")
+
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 

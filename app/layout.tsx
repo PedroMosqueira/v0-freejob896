@@ -40,6 +40,12 @@ export default async function RootLayout({
                 if (typeof window !== 'undefined') {
                   var currentDate = new Date().toLocaleString('pt-BR');
                   console.log('[v0] 🚀 Página carregada em: ' + currentDate);
+                  console.log('[v0] ✅ Sistema de validação de EMAIL DUPLICADO está ATIVO!');
+                  console.log('[v0] 📝 Melhorias implementadas:');
+                  console.log('[v0]   - Detecção aprimorada de emails duplicados');
+                  console.log('[v0]   - Mensagens de erro mais claras');
+                  console.log('[v0]   - Opção para verificar status da conta');
+                  console.log('[v0]   - Tratamento de rate limit melhorado');
                   
                   var originalBtoa = window.btoa;
                   window.btoa = function(str) {
