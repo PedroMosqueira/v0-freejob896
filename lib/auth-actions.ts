@@ -41,15 +41,18 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("🔍 Checking user status for:", email.toString())
+    console.log("[v0] 🔍 Checking user status for:", email.toString())
 
     // Check Supabase Auth
     const { data: users, error: listError } = await supabase.auth.admin.listUsers()
     if (listError) {
+      console.error("[v0] Error listing users:", listError)
       return { error: "Erro ao verificar status do usuário" }
     }
 
+    console.log("[v0] Found users in auth:", users.users.length)
     const authUser = users.users.find((user) => user.email === email.toString())
+    console.log("[v0] Auth user found:", !!authUser)
 
     // Check custom users table
     const { data: customUser } = await supabase
@@ -118,6 +121,8 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   )
 
   try {
+    console.log("[v0] 📝 Starting signup for email:", email.toString())
+    
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
@@ -129,31 +134,45 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     })
 
     if (error) {
-      console.error("[v0] SignUp error:", {
+      console.error("[v0] ❌ SignUp error details:", {
         message: error.message,
         code: error.code,
         status: error.status,
+        fullError: JSON.stringify(error),
       })
 
-      if (error.message.includes("already registered") || error.message.includes("User already registered")) {
+      // Check for duplicate email - more comprehensive
+      if (
+        error.message.includes("already registered") ||
+        error.message.includes("User already registered") ||
+        error.message.toLowerCase().includes("unique") ||
+        error.message.toLowerCase().includes("duplicate") ||
+        error.status === 422
+      ) {
+        console.log("[v0] 🔴 Email duplicado detectado:", email.toString())
         return {
-          error: "Este email já possui uma conta. Use a opção 'Verificar Status' para mais detalhes.",
+          error: "Este email já possui uma conta cadastrada. Escolha outro email ou use 'Verificar Status' para recuperar sua conta.",
           showStatusCheck: true,
           email: email.toString(),
+          isDuplicateEmail: true,
         }
       }
 
       if (error.message.includes("rate limit") || error.message.includes("too many")) {
+        console.log("[v0] ⏱️ Rate limit atingido para:", email.toString())
         return {
-          error: "Muitas tentativas de cadastro. Use a opção 'Verificar Status' para mais detalhes.",
+          error: "Muitas tentativas de cadastro. Aguarde alguns minutos antes de tentar novamente. Use 'Verificar Status' para mais detalhes.",
           rateLimited: true,
           showStatusCheck: true,
           email: email.toString(),
         }
       }
 
+      console.log("[v0] ⚠️ Outro erro durante signup:", error.message)
       return { error: error.message }
     }
+    
+    console.log("[v0] ✅ Signup successful for:", email.toString())
 
     // Verificação adicional: se o usuário foi criado mas o email pode não ter sido enviado
     if (data?.user && data?.user?.email_confirmed_at === null) {
