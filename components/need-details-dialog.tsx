@@ -88,7 +88,9 @@ interface NeedDetailsDialogProps {
 }
 
 export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
+  console.log("[v0] 220493 - NeedDetailsDialog component initializing")
   const { email } = useAuth()
+  console.log("[v0] 220493 - Email extracted from useAuth:", email)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
@@ -535,12 +537,17 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
   }
 
+  if (!currentNeed) {
+    return null
+  }
+
+  // Derived variables that depend on email and currentNeed
   const acceptedProposal = proposals.find(
     (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
   )
 
   const professionalAcceptedVisitProposal = proposals.find(
-    (p) => p.type === "visit_proposal" && p.status === "accepted_by_professional" && p.professional_email !== email, // Make sure it's not the professional viewing
+    (p) => p.type === "visit_proposal" && p.status === "accepted_by_professional" && p.professional_email !== email,
   )
 
   const professionalAcceptedProposal = proposals.find(
@@ -558,10 +565,28 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const hasShownInterest = proposals.some((p) => p.professional_email === email && p.type === "interest_only")
 
+  const canMarkAsCompleted =
+    email === currentNeed.requesterEmail &&
+    currentNeed.status === "aceito" &&
+    !!acceptedProposal &&
+    !professionalAcceptedVisitProposal &&
+    !hasMarkedAsCompleted
+
+  const canMarkAsCompletedRevised =
+    email === currentNeed.requesterEmail &&
+    currentNeed.status === "aceito" &&
+    !!acceptedProposal &&
+    acceptedProposal.status === "accepted_by_requester" &&
+    !hasMarkedAsCompleted
+
+  const canCancelService =
+    email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
+  const isRequester = email === currentNeed.requesterEmail
+  const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
+
   const handleRateClick = () => {
     console.log("[v0] handleRateClick - acceptedProposal:", acceptedProposal)
     console.log("[v0] handleRateClick - professional_email:", acceptedProposal?.professional_email)
-    console.log("[v0] handleRateClick - all proposal fields:", JSON.stringify(acceptedProposal, null, 2)) // Added detailed log
 
     if (!acceptedProposal) {
       console.error("[v0] No accepted proposal found")
@@ -571,7 +596,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
     if (!acceptedProposal.professional_email) {
       console.error("[v0] Accepted proposal missing professional email", acceptedProposal)
-      console.error("[v0] Available keys:", Object.keys(acceptedProposal)) // Log available keys
       alert("Erro: Não foi possível encontrar o profissional para avaliar.")
       return
     }
@@ -586,30 +610,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     setProfessionalToRate(null)
     onStatusUpdate?.()
   }
-
-  // Show button when status is "aceito" and there's an accepted proposal
-  const canMarkAsCompleted =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    !professionalAcceptedVisitProposal && // Hide button if waiting for requester approval
-    !hasMarkedAsCompleted
-
-  const canMarkAsCompletedRevised =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    acceptedProposal.status === "accepted_by_requester" && // Ensure requester has approved the bid
-    !hasMarkedAsCompleted
-
-  if (!currentNeed) {
-    return null
-  }
-
-  const canCancelService =
-    email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
-  const isRequester = email === currentNeed.requesterEmail
-  const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
 
   return (
     <>
