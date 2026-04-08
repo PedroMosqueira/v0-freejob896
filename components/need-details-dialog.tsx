@@ -88,6 +88,7 @@ interface NeedDetailsDialogProps {
 }
 
 export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
+  const { email } = useAuth()
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
@@ -616,11 +617,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   )
   console.log("[v0] Current acceptedProposal:", acceptedProposal) // Added debug log
   if (!currentNeed) {
-    console.log("[v0] NeedDetailsDialog - currentNeed is null, returning early")
     return null
   }
-
-  console.log("[v0] NeedDetailsDialog - Rendering dialog for need:", currentNeed.id)
 
   return (
     <>
