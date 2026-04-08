@@ -78,8 +78,6 @@ const getUserProfile = async (email: string) => {
   return null
 }
 
-console.log("[v0] professionalRespondToVisit imported:", typeof professionalRespondToVisit)
-
 interface NeedDetailsDialogProps {
   need: Need
   isOpen: boolean
@@ -88,9 +86,7 @@ interface NeedDetailsDialogProps {
 }
 
 export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
-  console.log("[v0] 220493 - NeedDetailsDialog component initializing")
   const { email } = useAuth()
-  console.log("[v0] 220493 - Email extracted from useAuth:", email)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
