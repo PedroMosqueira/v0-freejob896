@@ -66,7 +66,7 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
   const isValidAmount = amount >= MINIMUM_BID
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Enviar Lance</DialogTitle>

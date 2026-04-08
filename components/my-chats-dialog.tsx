@@ -326,7 +326,7 @@ export default function MyChatsDialog({ isOpen, onClose, currentUserEmail }: MyC
   if (selectedChatThread && selectedNeedForChat) {
     if (!selectedNeedForChat.title) {
       return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogTitle className="sr-only">Carregando Detalhes do Serviço</DialogTitle>
             <p className="text-center">Carregando detalhes do serviço...</p>
@@ -347,7 +347,7 @@ export default function MyChatsDialog({ isOpen, onClose, currentUserEmail }: MyC
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] flex flex-col h-[80vh] bg-background border-0 shadow-none p-0">
         <DialogTitle className="sr-only">Minhas Conversas</DialogTitle>
         <div className="border-b px-4 py-4 bg-background flex items-center gap-3">

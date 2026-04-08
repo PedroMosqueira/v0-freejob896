@@ -13,7 +13,7 @@ interface ImageViewerDialogProps {
 
 export default function ImageViewerDialog({ isOpen, onClose, imageUrl, alt }: ImageViewerDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl w-full p-0 bg-black/90">
         <DialogTitle className="sr-only">Visualizar Imagem</DialogTitle>
         

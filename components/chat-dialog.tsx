@@ -365,7 +365,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="sm:max-w-[425px] flex flex-col h-[80vh]">
           <DialogTitle className="sr-only">Chat com {otherUserFirstName}</DialogTitle>
           <div className="flex items-start gap-3 pb-4 border-b">

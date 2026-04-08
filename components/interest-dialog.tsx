@@ -152,7 +152,7 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Tenho Interesse em: {need.title}</DialogTitle>

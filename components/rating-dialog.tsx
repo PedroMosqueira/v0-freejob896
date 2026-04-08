@@ -73,7 +73,7 @@ export default function RatingDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md dark:bg-gray-900 dark:border-gray-700">
         <DialogHeader>
           <DialogTitle className="dark:text-gray-100">Avaliar Profissional</DialogTitle>

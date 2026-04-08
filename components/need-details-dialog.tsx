@@ -610,7 +610,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="w-[95vw] sm:max-w-[380px] md:max-w-[420px] lg:max-w-[450px] flex flex-col max-h-[90vh] md:max-h-[85vh] lg:max-h-[80vh] p-0 gap-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 dark:[&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
           {currentNeed.images && currentNeed.images.length > 0 && (
             <div className="relative w-full h-[380px] sm:h-[380px] md:h-[420px] lg:h-[450px] bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">
