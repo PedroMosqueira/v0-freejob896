@@ -130,58 +130,6 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     console.log("[v0] Email:", email.toString())
     console.log("[v0] Password length:", (password.toString()).length, "caracteres")
     
-    // First, check if there's already a pending/unconfirmed user with this email
-    console.log("[v0] Verificando usuários existentes...")
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers()
-    
-    if (listError) {
-      console.error("[v0] ❌ ERRO ao listar usuários:", {
-        message: listError.message,
-        code: listError.code,
-        status: listError.status,
-      })
-      return { error: "Erro ao verificar usuários existentes" }
-    }
-    
-    console.log("[v0] ✓ Total de usuários no banco:", users.users.length)
-    
-    if (users.users) {
-      const existingUser = users.users.find((user) => user.email === email.toString())
-      if (existingUser) {
-        console.log("[v0] ✓ Usuário existente encontrado")
-        console.log("[v0]   - Email confirmado:", !!existingUser.email_confirmed_at)
-        console.log("[v0]   - Data de criação:", existingUser.created_at)
-        console.log("[v0]   - Último login:", existingUser.last_sign_in_at || "Nunca")
-        console.log("[v0]   - ID do usuário:", existingUser.id)
-
-        // Se o usuário existe mas não confirmou o email
-        if (!existingUser.email_confirmed_at) {
-          console.log("[v0] ⚠️ STATUS: Email PENDENTE DE CONFIRMAÇÃO")
-          console.log("[v0] AÇÃO: Sugerindo reenvio do email de confirmação")
-          return {
-            error: "Este email ainda está aguardando confirmação. O link de confirmação foi enviado. Se não recebeu o email, clique em 'Reenviar Email de Confirmação'.",
-            showResendOption: true,
-            email: email.toString(),
-            isPendingConfirmation: true,
-          }
-        }
-
-        // Se o usuário existe e confirmou
-        if (existingUser.email_confirmed_at) {
-          console.log("[v0] 🔴 STATUS: Email já confirmado e ATIVO")
-          console.log("[v0] Data de confirmação:", existingUser.email_confirmed_at)
-          return {
-            error: "Este email já possui uma conta confirmada. Use 'Fazer Login' ou 'Recuperar Senha' se esqueceu a senha.",
-            showStatusCheck: true,
-            email: email.toString(),
-            isDuplicateEmail: true,
-          }
-        }
-      } else {
-        console.log("[v0] ✓ NOVO EMAIL: Nenhum usuário existente com este email")
-      }
-    }
-    
     console.log("[v0] Iniciando supabase.auth.signUp()...")
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
