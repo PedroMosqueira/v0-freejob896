@@ -123,7 +123,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     profileImageUrl: string | null
   } | null>(null)
   const [hasExpressedInterest, setHasExpressedInterest] = useState(false)
-  const [currentNeed, setCurrentNeed] = useState<Need>(need)
+  const [currentNeed, setCurrentNeed] = useState<Need | null>(need || null)
   const [professionalProfiles, setProfessionalProfiles] = useState<
     Record<string, { fullName: string; photoUrl?: string; rating?: number }>
   >({}) // Added rating here
@@ -141,6 +141,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   }
 
   useEffect(() => {
+    if (!currentNeed) return
     if (isOpen) {
       setCurrentImageIndex(0)
       fetchProposals()
@@ -150,10 +151,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     if (isOpen && currentNeed.status === "concluido" && email === currentNeed.requesterEmail) {
       checkCanRate()
     }
-  }, [isOpen, currentNeed.id, email, currentNeed.status, currentNeed.requesterEmail])
+  }, [isOpen, currentNeed?.id, email, currentNeed?.status, currentNeed?.requesterEmail])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !currentNeed) return
 
     const supabase = createSupabaseBrowserClient()
 
@@ -198,9 +199,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isOpen, currentNeed.id, onStatusUpdate])
+  }, [isOpen, currentNeed?.id, onStatusUpdate])
 
   const fetchProposals = async () => {
+    if (!currentNeed) {
+      console.warn("[v0] fetchProposals called but currentNeed is null")
+      return
+    }
     setIsLoadingProposals(true)
     try {
       const supabase = createSupabaseBrowserClient()
@@ -252,6 +257,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   }
 
   const fetchRequesterProfile = async () => {
+    if (!currentNeed) {
+      console.warn("[v0] fetchRequesterProfile called but currentNeed is null")
+      return
+    }
     try {
       const supabase = createSupabaseBrowserClient()
       const { data, error } = await supabase
@@ -606,7 +615,12 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     acceptedProposal,
   )
   console.log("[v0] Current acceptedProposal:", acceptedProposal) // Added debug log
-  console.log("[v0] Current proposals array:", proposals) // Added debug log
+  if (!currentNeed) {
+    console.log("[v0] NeedDetailsDialog - currentNeed is null, returning early")
+    return null
+  }
+
+  console.log("[v0] NeedDetailsDialog - Rendering dialog for need:", currentNeed.id)
 
   return (
     <>
