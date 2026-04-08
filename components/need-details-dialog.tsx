@@ -602,23 +602,14 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     acceptedProposal.status === "accepted_by_requester" && // Ensure requester has approved the bid
     !hasMarkedAsCompleted
 
+  if (!currentNeed) {
+    return null
+  }
+
   const canCancelService =
     email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
   const isRequester = email === currentNeed.requesterEmail
   const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
-
-  console.log(
-    "[v0] canMarkAsCompleted:",
-    canMarkAsCompleted,
-    "status:",
-    currentNeed.status,
-    "acceptedProposal:",
-    acceptedProposal,
-  )
-  console.log("[v0] Current acceptedProposal:", acceptedProposal) // Added debug log
-  if (!currentNeed) {
-    return null
-  }
 
   return (
     <>
