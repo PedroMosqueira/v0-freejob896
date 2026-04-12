@@ -78,8 +78,6 @@ const getUserProfile = async (email: string) => {
   return null
 }
 
-console.log("[v0] professionalRespondToVisit imported:", typeof professionalRespondToVisit)
-
 interface NeedDetailsDialogProps {
   need: Need
   isOpen: boolean
@@ -88,6 +86,7 @@ interface NeedDetailsDialogProps {
 }
 
 export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
+  const { email } = useAuth()
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
@@ -123,7 +122,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     profileImageUrl: string | null
   } | null>(null)
   const [hasExpressedInterest, setHasExpressedInterest] = useState(false)
-  const [currentNeed, setCurrentNeed] = useState<Need>(need)
+  const [currentNeed, setCurrentNeed] = useState<Need | null>(need || null)
   const [professionalProfiles, setProfessionalProfiles] = useState<
     Record<string, { fullName: string; photoUrl?: string; rating?: number }>
   >({}) // Added rating here
@@ -141,6 +140,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   }
 
   useEffect(() => {
+    if (!currentNeed) return
     if (isOpen) {
       setCurrentImageIndex(0)
       fetchProposals()
@@ -150,10 +150,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     if (isOpen && currentNeed.status === "concluido" && email === currentNeed.requesterEmail) {
       checkCanRate()
     }
-  }, [isOpen, currentNeed.id, email, currentNeed.status, currentNeed.requesterEmail])
+  }, [isOpen, currentNeed?.id, email, currentNeed?.status, currentNeed?.requesterEmail])
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen || !currentNeed) return
 
     const supabase = createSupabaseBrowserClient()
 
@@ -198,9 +198,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isOpen, currentNeed.id, onStatusUpdate])
+  }, [isOpen, currentNeed?.id, onStatusUpdate])
 
   const fetchProposals = async () => {
+    if (!currentNeed) {
+      console.warn("[v0] fetchProposals called but currentNeed is null")
+      return
+    }
     setIsLoadingProposals(true)
     try {
       const supabase = createSupabaseBrowserClient()
@@ -252,6 +256,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   }
 
   const fetchRequesterProfile = async () => {
+    if (!currentNeed) {
+      console.warn("[v0] fetchRequesterProfile called but currentNeed is null")
+      return
+    }
     try {
       const supabase = createSupabaseBrowserClient()
       const { data, error } = await supabase
@@ -525,12 +533,17 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
   }
 
+  if (!currentNeed) {
+    return null
+  }
+
+  // Derived variables that depend on email and currentNeed
   const acceptedProposal = proposals.find(
     (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
   )
 
   const professionalAcceptedVisitProposal = proposals.find(
-    (p) => p.type === "visit_proposal" && p.status === "accepted_by_professional" && p.professional_email !== email, // Make sure it's not the professional viewing
+    (p) => p.type === "visit_proposal" && p.status === "accepted_by_professional" && p.professional_email !== email,
   )
 
   const professionalAcceptedProposal = proposals.find(
@@ -548,10 +561,28 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const hasShownInterest = proposals.some((p) => p.professional_email === email && p.type === "interest_only")
 
+  const canMarkAsCompleted =
+    email === currentNeed.requesterEmail &&
+    currentNeed.status === "aceito" &&
+    !!acceptedProposal &&
+    !professionalAcceptedVisitProposal &&
+    !hasMarkedAsCompleted
+
+  const canMarkAsCompletedRevised =
+    email === currentNeed.requesterEmail &&
+    currentNeed.status === "aceito" &&
+    !!acceptedProposal &&
+    acceptedProposal.status === "accepted_by_requester" &&
+    !hasMarkedAsCompleted
+
+  const canCancelService =
+    email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
+  const isRequester = email === currentNeed.requesterEmail
+  const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
+
   const handleRateClick = () => {
     console.log("[v0] handleRateClick - acceptedProposal:", acceptedProposal)
     console.log("[v0] handleRateClick - professional_email:", acceptedProposal?.professional_email)
-    console.log("[v0] handleRateClick - all proposal fields:", JSON.stringify(acceptedProposal, null, 2)) // Added detailed log
 
     if (!acceptedProposal) {
       console.error("[v0] No accepted proposal found")
@@ -561,7 +592,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
     if (!acceptedProposal.professional_email) {
       console.error("[v0] Accepted proposal missing professional email", acceptedProposal)
-      console.error("[v0] Available keys:", Object.keys(acceptedProposal)) // Log available keys
       alert("Erro: Não foi possível encontrar o profissional para avaliar.")
       return
     }
@@ -577,40 +607,9 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     onStatusUpdate?.()
   }
 
-  // Show button when status is "aceito" and there's an accepted proposal
-  const canMarkAsCompleted =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    !professionalAcceptedVisitProposal && // Hide button if waiting for requester approval
-    !hasMarkedAsCompleted
-
-  const canMarkAsCompletedRevised =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    acceptedProposal.status === "accepted_by_requester" && // Ensure requester has approved the bid
-    !hasMarkedAsCompleted
-
-  const canCancelService =
-    email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
-  const isRequester = email === currentNeed.requesterEmail
-  const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
-
-  console.log(
-    "[v0] canMarkAsCompleted:",
-    canMarkAsCompleted,
-    "status:",
-    currentNeed.status,
-    "acceptedProposal:",
-    acceptedProposal,
-  )
-  console.log("[v0] Current acceptedProposal:", acceptedProposal) // Added debug log
-  console.log("[v0] Current proposals array:", proposals) // Added debug log
-
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="w-[95vw] sm:max-w-[380px] md:max-w-[420px] lg:max-w-[450px] flex flex-col max-h-[90vh] md:max-h-[85vh] lg:max-h-[80vh] p-0 gap-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 dark:[&::-webkit-scrollbar-thumb]:hover:bg-gray-500">
           {currentNeed.images && currentNeed.images.length > 0 && (
             <div className="relative w-full h-[380px] sm:h-[380px] md:h-[420px] lg:h-[450px] bg-gray-100 dark:bg-gray-800 flex-shrink-0 overflow-hidden">

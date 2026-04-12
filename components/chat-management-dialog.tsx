@@ -148,7 +148,7 @@ function ChatManagementDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[600px] flex flex-col h-[80vh] bg-background border-0 shadow-none p-0">
         <DialogTitle className="sr-only">Gerenciar Conversas do Serviço</DialogTitle>
 
