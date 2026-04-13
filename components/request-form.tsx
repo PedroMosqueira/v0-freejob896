@@ -74,6 +74,16 @@ export default function RequestForm() {
   const [cep, setCep] = useState("")
   const [isLoadingCep, setIsLoadingCep] = useState(false)
 
+  // Validation errors state
+  const [errors, setErrors] = useState<{
+    title?: string
+    description?: string
+    category?: string
+    city?: string
+    state?: string
+    images?: string
+  }>({})
+
   const searchCities = async (query: string) => {
     if (query.length < 2 || !state) {
       setCitySuggestions([])
@@ -202,43 +212,76 @@ export default function RequestForm() {
     try {
       if (neighborhood) {
         const searchQueryWithNeighborhood = `${neighborhood}, ${city}, ${state}, Brasil`
-        console.log("[v0] Tentando geocoding com bairro:", searchQueryWithNeighborhood)
 
         const response = await fetch(`/api/geocode?q=${encodeURIComponent(searchQueryWithNeighborhood)}`)
         const data = await response.json()
 
         if (data && data.length > 0) {
-          console.log("[v0] ✅ Coordenadas encontradas com bairro")
           return {
             lat: Number.parseFloat(data[0].lat),
             lon: Number.parseFloat(data[0].lon),
           }
         }
-
-        console.log("[v0] ⚠️ Bairro não encontrado, tentando apenas com cidade...")
       }
 
       // Fallback: tentar apenas com cidade
       const searchQueryCity = `${city}, ${state}, Brasil`
-      console.log("[v0] Tentando geocoding com cidade:", searchQueryCity)
 
       const response = await fetch(`/api/geocode?q=${encodeURIComponent(searchQueryCity)}`)
       const data = await response.json()
 
       if (data && data.length > 0) {
-        console.log("[v0] ✅ Coordenadas encontradas usando cidade")
         return {
           lat: Number.parseFloat(data[0].lat),
           lon: Number.parseFloat(data[0].lon),
         }
       }
 
-      console.log("[v0] ❌ Não foi possível encontrar coordenadas")
       return null
     } catch (error) {
-      console.error("[v0] Geocoding error:", error)
+      console.error("Geocoding error:", error)
       return null
     }
+  }
+
+  // Validação de formulário
+  const validateForm = (): boolean => {
+    const newErrors: typeof errors = {}
+
+    if (!title.trim()) {
+      newErrors.title = "Título é obrigatório"
+    } else if (title.trim().length < 5) {
+      newErrors.title = "Título deve ter pelo menos 5 caracteres"
+    } else if (title.trim().length > 100) {
+      newErrors.title = "Título deve ter no máximo 100 caracteres"
+    }
+
+    if (description && description.trim().length < 10) {
+      newErrors.description = "Descrição deve ter pelo menos 10 caracteres"
+    } else if (description && description.trim().length > 1000) {
+      newErrors.description = "Descrição deve ter no máximo 1000 caracteres"
+    }
+
+    if (!category) {
+      newErrors.category = "Categoria é obrigatória"
+    }
+
+    if (!city) {
+      newErrors.city = "Cidade é obrigatória"
+    }
+
+    if (!state) {
+      newErrors.state = "Estado é obrigatório"
+    }
+
+    if (imagePreviews.length === 0) {
+      newErrors.images = "Adicione pelo menos uma foto"
+    } else if (imagePreviews.length > 10) {
+      newErrors.images = "Máximo de 10 fotos permitido"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,10 +296,11 @@ export default function RequestForm() {
       return
     }
 
-    if (!title || !category || !city || !state || imagePreviews.length === 0) {
+    // Validar formulário
+    if (!validateForm()) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha Título, Categoria, Cidade, Estado e adicione pelo menos uma foto.",
+        title: "Formulário inválido",
+        description: "Por favor, corrija os erros abaixo antes de enviar.",
         variant: "destructive",
       })
       return
@@ -269,14 +313,11 @@ export default function RequestForm() {
       let finalLongitude = longitude
 
       if (!finalLatitude || !finalLongitude) {
-        console.log("[v0] Coordenadas não disponíveis, tentando geocodificar...")
         const coords = await geocodeAddress(city, neighborhood, state)
         if (coords) {
           finalLatitude = coords.lat
           finalLongitude = coords.lon
-          console.log("[v0] ✅ Coordenadas obtidas via geocoding:", coords)
         } else {
-          console.log("[v0] ⚠️ Não foi possível obter coordenadas para este endereço")
           toast({
             title: "Aviso",
             description:
@@ -284,8 +325,6 @@ export default function RequestForm() {
             variant: "default",
           })
         }
-      } else {
-        console.log("[v0] ✅ Usando coordenadas já disponíveis:", { lat: finalLatitude, lon: finalLongitude })
       }
 
       const newNeed: NewNeedInput = {
@@ -319,6 +358,7 @@ export default function RequestForm() {
       setLatitude(undefined)
       setLongitude(undefined)
       setCep("")
+      setErrors({})
     } catch (error) {
       console.error("Failed to add need:", error)
       toast({
@@ -351,33 +391,26 @@ export default function RequestForm() {
 
   const searchNeighborhoods = async (query: string) => {
     if (query.length < 2 || !city || !state) {
-      console.log("[v0] Neighborhood search skipped:", { queryLength: query.length, city, state })
       setNeighborhoodSuggestions([])
       return
     }
 
-    console.log("[v0] Searching neighborhoods:", { query, city, state })
-
     try {
       const url = `/api/neighborhoods?city=${encodeURIComponent(city)}&state=${state}&q=${encodeURIComponent(query)}`
-      console.log("[v0] Fetching:", url)
 
       const response = await fetch(url)
       const data = await response.json()
-
-      console.log("[v0] Neighborhood results:", data)
 
       if (data && Array.isArray(data)) {
         setNeighborhoodSuggestions(data)
       }
     } catch (error) {
-      console.error("[v0] Neighborhood search error:", error)
+      console.error("Neighborhood search error:", error)
       setNeighborhoodSuggestions([])
     }
   }
 
   const handleNeighborhoodChange = (value: string) => {
-    console.log("[v0] Neighborhood changed:", value)
     setNeighborhood(value)
     setShowNeighborhoodSuggestions(true)
 
@@ -472,43 +505,79 @@ export default function RequestForm() {
           <form onSubmit={handleSubmit} className="grid gap-4 sm:gap-6">
             <div className="grid gap-2">
               <Label htmlFor="title" className="text-sm sm:text-base">
-                Um título para o serviço
+                Um título para o serviço *
               </Label>
-              <Input
-                id="title"
-                placeholder="Ex: Consertar vazamento na pia"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="text-sm sm:text-base"
-              />
+              <div className="space-y-1">
+                <Input
+                  id="title"
+                  placeholder="Ex: Consertar vazamento na pia"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value)
+                    if (errors.title) {
+                      setErrors({ ...errors, title: undefined })
+                    }
+                  }}
+                  required
+                  className={`text-sm sm:text-base ${errors.title ? "border-red-500" : ""}`}
+                  maxLength={100}
+                />
+                <div className="flex justify-between items-center">
+                  <p className={`text-xs ${errors.title ? "text-red-500" : "text-muted-foreground"}`}>
+                    {errors.title ? errors.title : `${title.length}/100`}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="description" className="text-sm sm:text-base">
                 Detalhes (opcional)
               </Label>
-              <Textarea
-                id="description"
-                placeholder="Descreva o que precisa ser feito..."
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="text-sm sm:text-base resize-none"
-              />
+              <div className="space-y-1">
+                <Textarea
+                  id="description"
+                  placeholder="Descreva o que precisa ser feito..."
+                  rows={3}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value)
+                    if (errors.description) {
+                      setErrors({ ...errors, description: undefined })
+                    }
+                  }}
+                  className={`text-sm sm:text-base resize-none ${errors.description ? "border-red-500" : ""}`}
+                  maxLength={1000}
+                />
+                <div className="flex justify-between items-center">
+                  <p className={`text-xs ${errors.description ? "text-red-500" : "text-muted-foreground"}`}>
+                    {errors.description ? errors.description : `${description.length}/1000`}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="category" className="text-sm sm:text-base">
-                  Qual a categoria?
+                  Qual a categoria? *
                 </Label>
-                <CategoryCombobox
-                  value={category}
-                  onValueChange={setCategory}
-                  placeholder="Escolha uma categoria"
-                  className="text-sm sm:text-base"
-                />
+                <div className="space-y-1">
+                  <CategoryCombobox
+                    value={category}
+                    onValueChange={(value) => {
+                      setCategory(value)
+                      if (errors.category) {
+                        setErrors({ ...errors, category: undefined })
+                      }
+                    }}
+                    placeholder="Escolha uma categoria"
+                    className={`text-sm sm:text-base ${errors.category ? "border-red-500" : ""}`}
+                  />
+                  {errors.category && (
+                    <p className="text-xs text-red-500">{errors.category}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -670,29 +739,43 @@ export default function RequestForm() {
               <Label htmlFor="images" className="text-sm sm:text-base">
                 Fotos do serviço *
               </Label>
-              <ImageCaptureInput onCapture={handleImageCapture} multiple={true} disabled={isSubmitting} />
-              <p className="text-xs text-muted-foreground">Adicione pelo menos uma foto do serviço (obrigatório).</p>
-              {imagePreviews.length > 0 && (
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {imagePreviews.map((src, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={src || "/placeholder.svg"}
-                        alt={`Pré-visualização ${index + 1}`}
-                        className="w-full h-16 sm:h-20 object-cover rounded-md border"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                        aria-label="Remover imagem"
-                      >
-                        ×
-                      </button>
+              <div className="space-y-2">
+                <ImageCaptureInput onCapture={handleImageCapture} multiple={true} disabled={isSubmitting} />
+                <p className={`text-xs ${errors.images ? "text-red-500" : "text-muted-foreground"}`}>
+                  {errors.images ? errors.images : "Adicione pelo menos uma foto do serviço (máximo 10)."}
+                </p>
+                {imagePreviews.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {imagePreviews.length} foto{imagePreviews.length !== 1 ? "s" : ""} adicionada{imagePreviews.length !== 1 ? "s" : ""}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {imagePreviews.map((src, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={src || "/placeholder.svg"}
+                            alt={`Pré-visualização ${index + 1}`}
+                            className="w-full h-16 sm:h-20 object-cover rounded-md border"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleRemoveImage(index)
+                              if (errors.images) {
+                                setErrors({ ...errors, images: undefined })
+                              }
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            aria-label="Remover imagem"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <Button
