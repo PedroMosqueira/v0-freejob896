@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://freejob-brasil.vercel.app"
-    const redirectUrl = `${baseUrl}/auth/callback`
+    // Usar HTTPS obrigatoriamente com o domínio correto
+    const redirectUrl = "https://freejob.online/auth/callback"
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
