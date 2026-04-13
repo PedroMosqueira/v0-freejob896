@@ -40,7 +40,7 @@
 │ FreeJob Brasil                              │ ← Nome do seu site
 ├─────────────────────────────────────────────┤
 │ Sender email:                               │
-│ onboarding@resend.dev                       │ ← Copie exatamente
+│ noreply@freejob.online                      │ ← Seu domínio verificado!
 ├─────────────────────────────────────────────┤
 │ Host:                                       │
 │ smtp.resend.com                             │ ← Copie exatamente
@@ -65,7 +65,7 @@
 Antes de testar, confirme:
 
 - [ ] A caixa **"Enable Custom SMTP"** está MARCADA
-- [ ] Sender email é exatamente `onboarding@resend.dev`
+- [ ] Sender email é exatamente `noreply@freejob.online` (seu domínio verificado)
 - [ ] Host é exatamente `smtp.resend.com`
 - [ ] Port é o número `465` (não 25, não 587, não 2525)
 - [ ] Username é exatamente `resend` (tudo minúsculo)
