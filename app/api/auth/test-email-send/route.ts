@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Tentar enviar email de recuperação de senha como teste
-    const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://freejob-brasil.vercel.app"
-    const redirectUrl = `${baseUrl}/auth/callback`
+    const redirectUrl = "https://freejob.online/auth/callback"
 
     console.log("[v0] Testing email send to:", email)
     console.log("[v0] Redirect URL:", redirectUrl)

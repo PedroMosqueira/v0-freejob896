@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Teste 1: Enviar email de recuperação de senha
     if (testType === "resend" || testType === "all") {
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL || "https://freejob-brasil.vercel.app"
+      const baseUrl = "https://freejob.online"
       console.log("[v0] Base URL para redirecionamento:", baseUrl)
 
       console.log("[v0] Iniciando resetPasswordForEmail...")

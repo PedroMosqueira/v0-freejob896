@@ -125,9 +125,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       email: email.toString(),
       password: password.toString(),
       options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-          `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+        emailRedirectTo: "https://freejob.online/auth/callback",
       },
     })
 
@@ -315,9 +313,7 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
         body: JSON.stringify({
           type: "signup",
           email: email.toString(),
-          redirect_to:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
-            `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+          redirect_to: "https://freejob.online/auth/callback",
         }),
       },
     )
