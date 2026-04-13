@@ -81,13 +81,14 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
 }
 
 export async function signUpWithEmail(prevState: any, formData: FormData) {
-  if (!formData) {
-    return { error: "Form data is missing" }
-  }
-
   const email = formData.get("email")
   const password = formData.get("password")
   const confirmPassword = formData.get("confirmPassword")
+  const firstName = formData.get("firstName")
+  const lastName = formData.get("lastName")
+  const phone = formData.get("phone")
+  const city = formData.get("city")
+  const bio = formData.get("bio")
 
   // Validate environment variables
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -120,12 +121,6 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("[v0] ========== SIGNUP INICIADO ==========")
-    console.log("[v0] Timestamp:", new Date().toISOString())
-    console.log("[v0] Email:", email.toString())
-    console.log("[v0] Password length:", (password.toString()).length, "caracteres")
-    
-    console.log("[v0] Iniciando supabase.auth.signUp()...")
     const { data, error } = await supabase.auth.signUp({
       email: email.toString(),
       password: password.toString(),
@@ -137,14 +132,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
     })
 
     if (error) {
-      console.error("[v0] ❌ ========== ERRO NO SIGNUP ==========")
-      console.error("[v0] Mensagem de erro:", error.message)
-      console.error("[v0] Código de erro:", error.code)
-      console.error("[v0] Status HTTP:", error.status)
-      console.error("[v0] Nome do erro:", error.name)
-      console.error("[v0] Objeto JSON:", JSON.stringify(error, null, 2))
-
-      // Check for duplicate email - more comprehensive
+      // Check for duplicate email
       if (
         error.message.includes("already registered") ||
         error.message.includes("User already registered") ||
@@ -152,8 +140,6 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         error.message.toLowerCase().includes("duplicate") ||
         error.status === 422
       ) {
-        console.log("[v0] 🔴 TIPO DE ERRO DETECTADO: EMAIL DUPLICADO")
-        console.log("[v0] Status 422 = Unprocessable Entity (conflito de dados)")
         return {
           error: "Este email já possui uma conta cadastrada. Escolha outro email ou use 'Verificar Status' para recuperar sua conta.",
           showStatusCheck: true,
@@ -163,12 +149,6 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       }
 
       if (error.message.includes("rate limit") || error.message.includes("too many") || error.status === 429) {
-        console.log("[v0] ⏱️ TIPO DE ERRO DETECTADO: RATE LIMIT")
-        console.log("[v0] Status 429 = Too Many Requests (limite atingido)")
-        console.log("[v0] Possíveis causas:")
-        console.log("[v0]   1. Muitas tentativas de signup do mesmo email")
-        console.log("[v0]   2. Limite diário do Resend atingido (100/dia plano grátis)")
-        console.log("[v0]   3. Limite de API do Supabase atingido")
         return {
           error: "Muitas tentativas de cadastro. Aguarde alguns minutos antes de tentar novamente. Use 'Verificar Status' para mais detalhes.",
           rateLimited: true,
@@ -177,34 +157,34 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         }
       }
 
-      if (error.message.includes("SMTP") || error.message.includes("smtp")) {
-        console.log("[v0] ⚙️ TIPO DE ERRO DETECTADO: PROBLEMA SMTP/EMAIL")
-        console.log("[v0] Possíveis causas:")
-        console.log("[v0]   1. Serviço de email (Resend) fora do ar")
-        console.log("[v0]   2. Configuração SMTP incorreta no Supabase")
-        console.log("[v0]   3. Email não verificado no Resend")
-      }
-
-      if (error.status === 500) {
-        console.log("[v0] ⚠️ TIPO DE ERRO DETECTADO: ERRO DO SERVIDOR (500)")
-        console.log("[v0] Possível que Supabase ou Resend esteja com problemas")
-      }
-
-      console.log("[v0] ⚠️ Outro erro durante signup:", error.message)
       return { error: error.message }
     }
-    
-    console.log("[v0] ✅ ========== SIGNUP BEM-SUCEDIDO! ==========")
-    console.log("[v0] ID do usuário criado:", data.user?.id)
-    console.log("[v0] Email do usuário:", data.user?.email)
-    console.log("[v0] Email confirmado no momento:", !!data.user?.email_confirmed_at)
-    console.log("[v0] Status esperado: PENDENTE (aguardando confirmação por email)")
 
     // Verificação adicional: se o usuário foi criado mas o email pode não ter sido enviado
     if (data?.user && data?.user?.email_confirmed_at === null) {
-      console.log("[v0] ⏳ Usuário criado com sucesso, aguardando verificação de email")
-      console.log("[v0] PRÓXIMO PASSO: Email será enviado em breve")
-      console.log("[v0] Mensagem a mostrar ao usuário: Link de confirmação expires em 1 hora")
+      // Salvar dados pessoais na tabela users
+      try {
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({
+            first_name: firstName?.toString() || null,
+            last_name: lastName?.toString() || null,
+            full_name: `${firstName?.toString() || ""} ${lastName?.toString() || ""}`.trim() || null,
+            phone: phone?.toString() || null,
+            city: city?.toString() || null,
+            bio: bio?.toString() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.user.id)
+
+        if (updateError) {
+          console.error("Erro ao salvar dados pessoais:", updateError)
+          // Não falhar o signup por causa disso
+        }
+      } catch (profileError) {
+        console.error("Erro ao criar perfil:", profileError)
+        // Não falhar o signup por causa disso
+      }
     }
 
     return {
@@ -212,11 +192,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
       email: email.toString(),
     }
   } catch (error) {
-    console.error("[v0] ❌ ========== ERRO NÃO TRATADO NO SIGNUP ==========")
-    console.error("[v0] Tipo de erro:", error instanceof Error ? error.constructor.name : typeof error)
-    console.error("[v0] Mensagem:", error instanceof Error ? error.message : String(error))
-    console.error("[v0] Stack trace:", error instanceof Error ? error.stack : "N/A")
-    console.error("[v0] Objeto completo:", JSON.stringify(error, null, 2))
+    console.error("Erro durante signup:", error)
     return { error: "Ocorreu um erro inesperado. Tente novamente." }
   }
 }

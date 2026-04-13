@@ -1,7 +1,5 @@
 "use client"
 
-console.log("[v0] ✅ Verificação de EMAIL DUPLICADO ATIVA - register-form.tsx carregado!")
-
 import { useFormState, useFormStatus } from "react-dom"
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -11,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Loader2, AlertTriangle, Info } from "lucide-react"
 import { signUpWithEmail, resendVerificationEmail, clearUnverifiedUser, checkUserStatus } from "@/lib/auth-actions"
+import { Textarea } from "@/components/ui/textarea"
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void
@@ -86,6 +85,12 @@ function StatusButton() {
 
 export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [password, setPassword] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [city, setCity] = useState("")
+  const [bio, setBio] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [signUpState, signUpAction] = useFormState(signUpWithEmail, null)
   const [resendState, resendAction] = useFormState(resendVerificationEmail, null)
   const [clearState, clearAction] = useFormState(clearUnverifiedUser, null)
@@ -112,6 +117,37 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   }
 
   const passwordStrength = checkPasswordStrength(password)
+
+  const validatePersonalData = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (!firstName.trim()) {
+      newErrors.firstName = "Nome é obrigatório"
+    } else if (firstName.trim().length < 2) {
+      newErrors.firstName = "Nome deve ter pelo menos 2 caracteres"
+    }
+
+    if (!lastName.trim()) {
+      newErrors.lastName = "Sobrenome é obrigatório"
+    } else if (lastName.trim().length < 2) {
+      newErrors.lastName = "Sobrenome deve ter pelo menos 2 caracteres"
+    }
+
+    if (phone && !/^[\d\s\-\(\)]+$/.test(phone)) {
+      newErrors.phone = "Telefone inválido"
+    }
+
+    if (city && city.trim().length < 2) {
+      newErrors.city = "Cidade deve ter pelo menos 2 caracteres"
+    }
+
+    if (bio && bio.trim().length > 500) {
+      newErrors.bio = "Bio não pode ter mais de 500 caracteres"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   if (statusState?.success && statusState?.status) {
     const { status } = statusState
@@ -321,7 +357,142 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           <p className="text-sm text-muted-foreground mt-1">Preencha seus dados para começar a usar.</p>
         </div>
 
-        <form action={signUpAction} className="grid gap-4">
+        <form 
+          action={signUpAction} 
+          onSubmit={(e) => {
+            if (!validatePersonalData()) {
+              e.preventDefault()
+            }
+          }}
+          className="grid gap-4"
+        >
+          {/* Seção de dados pessoais */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-2">
+            <p className="text-xs text-blue-800">
+              <strong>ℹ️ Dados Pessoais:</strong> Preencha seus dados completos para melhorar sua experiência.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1">
+              <Label htmlFor="first-name" className="text-xs sm:text-sm">
+                Nome *
+              </Label>
+              <Input
+                id="first-name"
+                name="firstName"
+                placeholder="João"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value)
+                  if (errors.firstName) {
+                    setErrors({ ...errors, firstName: undefined })
+                  }
+                }}
+                className={`text-xs sm:text-sm ${errors.firstName ? "border-red-500" : ""}`}
+                required
+              />
+              {errors.firstName && (
+                <p className="text-xs text-red-500">{errors.firstName}</p>
+              )}
+            </div>
+
+            <div className="grid gap-1">
+              <Label htmlFor="last-name" className="text-xs sm:text-sm">
+                Sobrenome *
+              </Label>
+              <Input
+                id="last-name"
+                name="lastName"
+                placeholder="Silva"
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value)
+                  if (errors.lastName) {
+                    setErrors({ ...errors, lastName: undefined })
+                  }
+                }}
+                className={`text-xs sm:text-sm ${errors.lastName ? "border-red-500" : ""}`}
+                required
+              />
+              {errors.lastName && (
+                <p className="text-xs text-red-500">{errors.lastName}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="phone" className="text-xs sm:text-sm">
+              Telefone (opcional)
+            </Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              placeholder="(11) 99999-9999"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value)
+                if (errors.phone) {
+                  setErrors({ ...errors, phone: undefined })
+                }
+              }}
+              className={`text-xs sm:text-sm ${errors.phone ? "border-red-500" : ""}`}
+            />
+            {errors.phone && (
+              <p className="text-xs text-red-500">{errors.phone}</p>
+            )}
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="city" className="text-xs sm:text-sm">
+              Cidade (opcional)
+            </Label>
+            <Input
+              id="city"
+              name="city"
+              placeholder="São Paulo"
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value)
+                if (errors.city) {
+                  setErrors({ ...errors, city: undefined })
+                }
+              }}
+              className={`text-xs sm:text-sm ${errors.city ? "border-red-500" : ""}`}
+            />
+            {errors.city && (
+              <p className="text-xs text-red-500">{errors.city}</p>
+            )}
+          </div>
+
+          <div className="grid gap-1">
+            <Label htmlFor="bio" className="text-xs sm:text-sm">
+              Sobre você (opcional)
+            </Label>
+            <Textarea
+              id="bio"
+              name="bio"
+              placeholder="Conte um pouco sobre você..."
+              value={bio}
+              onChange={(e) => {
+                setBio(e.target.value)
+                if (errors.bio) {
+                  setErrors({ ...errors, bio: undefined })
+                }
+              }}
+              className={`text-xs sm:text-sm resize-none h-20 ${errors.bio ? "border-red-500" : ""}`}
+              maxLength={500}
+            />
+            <div className="flex justify-between">
+              <p className={`text-xs ${errors.bio ? "text-red-500" : "text-muted-foreground"}`}>
+                {errors.bio ? errors.bio : `${bio.length}/500`}
+              </p>
+            </div>
+          </div>
+
+          {/* Separador */}
+          <div className="border-t border-gray-200 my-2"></div>
           {signUpState?.error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <div className="flex items-start gap-2">
