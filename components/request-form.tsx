@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { addNeed, type NewNeedInput } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, MapPin } from "lucide-react"
+import { Loader2, MapPin, AlertCircle } from "lucide-react"
 import { CategoryCombobox } from "@/components/category-combobox"
 import { ImageCaptureInput } from "@/components/image-capture-input"
 
@@ -48,6 +48,8 @@ const stateNameToAbbr: Record<string, string> = {
 export default function RequestForm() {
   const { email } = useAuth()
   const { toast } = useToast()
+  const formRef = useRef<HTMLFormElement>(null)
+  const errorBannerRef = useRef<HTMLDivElement>(null)
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -298,11 +300,10 @@ export default function RequestForm() {
 
     // Validar formulário
     if (!validateForm()) {
-      toast({
-        title: "Formulário inválido",
-        description: "Por favor, corrija os erros abaixo antes de enviar.",
-        variant: "destructive",
-      })
+      // Scroll para o banner de erro
+      if (errorBannerRef.current) {
+        errorBannerRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      }
       return
     }
 
@@ -502,7 +503,32 @@ export default function RequestForm() {
           <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
-          <form onSubmit={handleSubmit} className="grid gap-4 sm:gap-6">
+          {/* Banner de erros de validação */}
+          {Object.keys(errors).length > 0 && (
+            <div
+              ref={errorBannerRef}
+              className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-sm"
+              role="alert"
+              aria-live="assertive"
+            >
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-red-800 mb-2">Formulário com erros</h3>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {Object.entries(errors).map(([field, error]) => (
+                      <li key={field} className="flex items-start gap-2">
+                        <span className="text-red-500 mt-1">•</span>
+                        <span>{error}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form ref={formRef} onSubmit={handleSubmit} className="grid gap-4 sm:gap-6">
             <div className="grid gap-2">
               <Label htmlFor="title" className="text-sm sm:text-base">
                 Um título para o serviço *
