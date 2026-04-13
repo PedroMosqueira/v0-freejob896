@@ -1,9 +1,5 @@
 "use server"
 
-console.log("[v0] ✅ Alterações de verificação de email DUPLICADO estão em vigor - lib/auth-actions.ts carregado!")
-console.log("[v0] ✅ Sistema de EMAIL PENDENTE implementado!")
-console.log("[v0] ✅ Reenvio de email de confirmação melhorado!")
-
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
@@ -45,7 +41,6 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
   )
 
   try {
-    console.log("[v0] 🔍 Checking user status for:", email.toString())
 
     // Check Supabase Auth
     const { data: users, error: listError } = await supabase.auth.admin.listUsers()
