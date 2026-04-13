@@ -12,8 +12,6 @@ export default function CallbackPage() {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        console.log("[v0] Processing Supabase callback on client side")
-
         const supabase = createBrowserClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,14 +23,7 @@ export default function CallbackPage() {
         const refreshToken = hashParams.get("refresh_token")
         const type = hashParams.get("type")
 
-        console.log("[v0] Hash params:", {
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          type,
-        })
-
         if (accessToken && type === "recovery") {
-          console.log("[v0] Recovery token found, establishing session...")
           setStatus("success")
           setMessage("Estabelecendo sessão segura...")
 
@@ -42,14 +33,13 @@ export default function CallbackPage() {
           })
 
           if (sessionError) {
-            console.error("[v0] Error setting session:", sessionError)
+            console.error("Error setting session:", sessionError)
             setStatus("error")
             setMessage("Erro ao processar link de recuperação")
             setTimeout(() => router.push("/?message=Link inválido. Solicite um novo."), 3000)
             return
           }
 
-          console.log("[v0] Session established successfully, redirecting to reset password")
           setMessage("Redirecionando para redefinição de senha...")
 
           setTimeout(() => {
@@ -61,18 +51,16 @@ export default function CallbackPage() {
           const code = queryParams.get("code")
 
           if (code) {
-            console.log("[v0] Processing OAuth code")
             setMessage("Verificando código de autenticação...")
             window.location.href = `/api/auth/callback?${queryParams.toString()}`
           } else {
-            console.log("[v0] No valid parameters found")
             setStatus("error")
             setMessage("Link inválido ou expirado")
             setTimeout(() => router.push("/"), 3000)
           }
         }
       } catch (error) {
-        console.error("[v0] Callback error:", error)
+        console.error("Callback error:", error)
         setStatus("error")
         setMessage("Erro ao processar link de recuperação")
         setTimeout(() => router.push("/"), 3000)
