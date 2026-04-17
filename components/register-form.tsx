@@ -122,12 +122,17 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
   const passwordStrength = checkPasswordStrength(password)
 
-  // Função para extrair nome e sobrenome do nome completo
+  // Função para extrair primeiro e último nome
   const extractNameParts = (full: string) => {
-    const parts = full.trim().split(/\s+/)
+    const parts = full.trim().split(/\s+/).filter(Boolean)
+    
     if (parts.length === 0) return { first: "", last: "" }
     if (parts.length === 1) return { first: parts[0], last: "" }
-    return { first: parts[0], last: parts.slice(1).join(" ") }
+    
+    const firstName = parts[0]
+    const lastName = parts[parts.length - 1]
+    
+    return { first: firstName, last: lastName }
   }
 
   // Atualizar firstName e lastName quando fullName muda
@@ -151,7 +156,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     } else {
       const { first, last } = extractNameParts(fullName)
       if (!first || !last) {
-        newErrors.fullName = "Digite seu nome completo (nome e sobrenome)"
+        newErrors.fullName = "Digite seu nome e sobrenome"
       }
     }
 
@@ -461,7 +466,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               )}
               {fullName && firstName && lastName && (
                 <p className="text-xs text-green-600 col-span-2">
-                  ✓ {firstName} | {lastName}
+                  ✓ Será exibido como: {firstName} {lastName}
                 </p>
               )}
             </div>

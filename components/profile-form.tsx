@@ -24,12 +24,17 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Função para extrair nome e sobrenome do nome completo
+  // Função para extrair primeiro e último nome
   const extractNameParts = (full: string) => {
-    const parts = full.trim().split(/\s+/)
+    const parts = full.trim().split(/\s+/).filter(Boolean)
+    
     if (parts.length === 0) return { first: "", last: "" }
     if (parts.length === 1) return { first: parts[0], last: "" }
-    return { first: parts[0], last: parts.slice(1).join(" ") }
+    
+    const firstName = parts[0]
+    const lastName = parts[parts.length - 1]
+    
+    return { first: firstName, last: lastName }
   }
 
   const handleFullNameChange = (value: string) => {
@@ -78,7 +83,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           )}
           {fullName && firstName && lastName && (
             <p className="text-xs text-green-600">
-              ✓ Será exibido como: <strong>{firstName}</strong> {lastName}
+              ✓ Será exibido como: <strong>{firstName} {lastName}</strong>
             </p>
           )}
         </div>
