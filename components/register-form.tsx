@@ -90,6 +90,9 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [phone, setPhone] = useState("")
   const [city, setCity] = useState("")
   const [bio, setBio] = useState("")
+  const [isProfessional, setIsProfessional] = useState(false)
+  const [cpf, setCpf] = useState("")
+  const [professionalPhone, setProfessionalPhone] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [signUpState, signUpAction] = useFormState(signUpWithEmail, null)
   const [resendState, resendAction] = useFormState(resendVerificationEmail, null)
@@ -145,8 +148,56 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       newErrors.bio = "Bio não pode ter mais de 500 caracteres"
     }
 
+    // Validações profissionais
+    if (isProfessional) {
+      if (!cpf.trim()) {
+        newErrors.cpf = "CPF é obrigatório para profissionais"
+      } else {
+        const cleanCpf = cpf.replace(/\D/g, "")
+        if (cleanCpf.length !== 11) {
+          newErrors.cpf = "CPF deve ter 11 dígitos"
+        } else if (!isValidCPF(cleanCpf)) {
+          newErrors.cpf = "CPF inválido"
+        }
+      }
+
+      if (!professionalPhone.trim()) {
+        newErrors.professionalPhone = "Telefone é obrigatório para profissionais"
+      } else if (!/^[\d\s\-\(\)]+$/.test(professionalPhone)) {
+        newErrors.professionalPhone = "Telefone inválido"
+      }
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  // Função para validar CPF
+  const isValidCPF = (cpf: string): boolean => {
+    if (cpf.length !== 11) return false
+    if (/^(\d)\1{10}$/.test(cpf)) return false
+
+    let sum = 0
+    let remainder
+
+    for (let i = 1; i <= 9; i++) {
+      sum += parseInt(cpf.substring(i - 1, i)) * (11 - i)
+    }
+
+    remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cpf.substring(9, 10))) return false
+
+    sum = 0
+    for (let i = 1; i <= 10; i++) {
+      sum += parseInt(cpf.substring(i - 1, i)) * (12 - i)
+    }
+
+    remainder = (sum * 10) % 11
+    if (remainder === 10 || remainder === 11) remainder = 0
+    if (remainder !== parseInt(cpf.substring(10, 11))) return false
+
+    return true
   }
 
   if (statusState?.success && statusState?.status) {
@@ -492,6 +543,88 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           </div>
 
           {/* Separador */}
+          <div className="border-t border-gray-200 my-3"></div>
+
+          {/* Checkbox de Profissional */}
+          <div className="flex items-center space-x-3 bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <input
+              type="checkbox"
+              id="isProfessional"
+              name="isProfessional"
+              checked={isProfessional}
+              onChange={(e) => {
+                setIsProfessional(e.target.checked)
+                if (errors.cpf) setErrors({ ...errors, cpf: undefined })
+                if (errors.professionalPhone) setErrors({ ...errors, professionalPhone: undefined })
+              }}
+              className="w-5 h-5 rounded cursor-pointer"
+            />
+            <Label htmlFor="isProfessional" className="text-sm cursor-pointer flex-1 font-medium">
+              Sou profissional que executa serviços
+            </Label>
+          </div>
+
+          {/* Campos condicionais de profissional */}
+          {isProfessional && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+              <p className="text-xs text-amber-800 font-medium">
+                ✓ Preencha os dados abaixo para começar a receber propostas de serviços
+              </p>
+
+              <div className="grid gap-1">
+                <Label htmlFor="cpf" className="text-xs sm:text-sm">
+                  CPF (sem pontos) *
+                </Label>
+                <Input
+                  id="cpf"
+                  name="cpf"
+                  placeholder="00000000000"
+                  value={cpf}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 11)
+                    setCpf(value)
+                    if (errors.cpf) {
+                      setErrors({ ...errors, cpf: undefined })
+                    }
+                  }}
+                  className={`text-xs sm:text-sm ${errors.cpf ? "border-red-500" : ""}`}
+                  maxLength={11}
+                />
+                {errors.cpf && (
+                  <p className="text-xs text-red-500">{errors.cpf}</p>
+                )}
+              </div>
+
+              <div className="grid gap-1">
+                <Label htmlFor="professionalPhone" className="text-xs sm:text-sm">
+                  Telefone para contato *
+                </Label>
+                <Input
+                  id="professionalPhone"
+                  name="professionalPhone"
+                  type="tel"
+                  placeholder="(11) 99999-9999"
+                  value={professionalPhone}
+                  onChange={(e) => {
+                    setProfessionalPhone(e.target.value)
+                    if (errors.professionalPhone) {
+                      setErrors({ ...errors, professionalPhone: undefined })
+                    }
+                  }}
+                  className={`text-xs sm:text-sm ${errors.professionalPhone ? "border-red-500" : ""}`}
+                />
+                {errors.professionalPhone && (
+                  <p className="text-xs text-red-500">{errors.professionalPhone}</p>
+                )}
+              </div>
+
+              <p className="text-xs text-amber-700">
+                📌 Você terá direito a <strong>3 propostas gratuitas</strong>. Após isso, será necessário um plano de assinatura.
+              </p>
+            </div>
+          )}
+
+          {/* Separador */}
           <div className="border-t border-gray-200 my-2"></div>
           {signUpState?.error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -636,6 +769,16 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               required
             />
           </div>
+
+          {/* Inputs hidden para dados pessoais */}
+          <input type="hidden" name="firstName" value={firstName} />
+          <input type="hidden" name="lastName" value={lastName} />
+          <input type="hidden" name="phone" value={phone} />
+          <input type="hidden" name="city" value={city} />
+          <input type="hidden" name="bio" value={bio} />
+          <input type="hidden" name="isProfessional" value={isProfessional ? "true" : "false"} />
+          <input type="hidden" name="cpf" value={cpf} />
+          <input type="hidden" name="professionalPhone" value={professionalPhone} />
 
           <SubmitButton />
 
