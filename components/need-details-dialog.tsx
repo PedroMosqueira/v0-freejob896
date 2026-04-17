@@ -47,6 +47,7 @@ import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
 import SendBidDialog from "@/components/send-bid-dialog"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
+import { ProfessionalDataModal } from "@/components/professional-data-modal"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -98,18 +99,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
-  const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
-  const [canRateProfessional, setCanRateProfessional] = useState(false)
-  const [isCheckingRating, setIsCheckingRating] = useState(false)
-  const [showVisitResponse, setShowVisitResponse] = useState(false)
-  const [visitResponseMessage, setVisitResponseMessage] = useState("")
-  const [visitBidAmount, setVisitBidAmount] = useState("")
-  const [isRespondingToVisit, setIsRespondingToVisit] = useState(false)
-  const [visitResponseType, setVisitResponseType] = useState<"accept" | "decline" | null>(null)
-  const [selectedNeedForChatManagement, setSelectedNeedForChatManagement] = useState<Need | null>(null)
-  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
-  const [showInterestDialog, setShowInterestDialog] = useState(false)
-  const [showSendBidDialog, setShowSendBidDialog] = useState(false)
+  const [showProfessionalDataModal, setShowProfessionalDataModal] = useState(false)
   const [isSendingInterest, setIsSendingInterest] = useState(false)
   const [selectedProfessionalChat, setSelectedProfessionalChat] = useState<{
     email: string
@@ -735,9 +725,28 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                     onClick={async () => {
                       if (!email) return
 
+                      // Verificar se o usuário tem dados profissionais completos
+                      const supabase = createSupabaseBrowserClient()
+                      const { data: userData, error } = await supabase
+                        .from("users")
+                        .select("is_professional, cpf, professional_phone")
+                        .eq("email", email)
+                        .single()
+
+                      if (error || !userData) {
+                        alert("Erro ao verificar seus dados.")
+                        return
+                      }
+
+                      // Se não é profissional ou não tem CPF e telefone, abrir modal
+                      if (!userData.is_professional || !userData.cpf || !userData.professional_phone) {
+                        setShowProfessionalDataModal(true)
+                        return
+                      }
+
+                      // Dados completos, prosseguir com interesse
                       setIsSendingInterest(true)
                       try {
-                        // Create chat thread and send automatic message
                         const thread = await startChat({
                           needId: currentNeed.id,
                           requesterEmail: currentNeed.requesterEmail,
@@ -746,7 +755,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                         })
 
                         if (thread) {
-                          // Create a simple interest_only proposal to track interest
                           await addNeedProposal({
                             needId: currentNeed.id,
                             professionalEmail: email,
@@ -1339,6 +1347,18 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
             setShowInterestDialog(false)
             fetchProposals()
             onStatusUpdate?.()
+          }}
+        />
+      )}
+
+      {showProfessionalDataModal && email && (
+        <ProfessionalDataModal
+          isOpen={showProfessionalDataModal}
+          onClose={() => setShowProfessionalDataModal(false)}
+          userEmail={email}
+          onComplete={() => {
+            setShowProfessionalDataModal(false)
+            // Agora pode clicar em tenho interesse
           }}
         />
       )}
