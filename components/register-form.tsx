@@ -85,6 +85,7 @@ function StatusButton() {
 
 export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [password, setPassword] = useState("")
+  const [fullName, setFullName] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [phone, setPhone] = useState("")
@@ -121,19 +122,37 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
   const passwordStrength = checkPasswordStrength(password)
 
+  // Função para extrair nome e sobrenome do nome completo
+  const extractNameParts = (full: string) => {
+    const parts = full.trim().split(/\s+/)
+    if (parts.length === 0) return { first: "", last: "" }
+    if (parts.length === 1) return { first: parts[0], last: "" }
+    return { first: parts[0], last: parts.slice(1).join(" ") }
+  }
+
+  // Atualizar firstName e lastName quando fullName muda
+  const handleFullNameChange = (value: string) => {
+    setFullName(value)
+    const { first, last } = extractNameParts(value)
+    setFirstName(first)
+    setLastName(last)
+    if (errors.fullName) {
+      setErrors({ ...errors, fullName: undefined })
+    }
+  }
+
   const validatePersonalData = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!firstName.trim()) {
-      newErrors.firstName = "Nome é obrigatório"
-    } else if (firstName.trim().length < 2) {
-      newErrors.firstName = "Nome deve ter pelo menos 2 caracteres"
-    }
-
-    if (!lastName.trim()) {
-      newErrors.lastName = "Sobrenome é obrigatório"
-    } else if (lastName.trim().length < 2) {
-      newErrors.lastName = "Sobrenome deve ter pelo menos 2 caracteres"
+    if (!fullName.trim()) {
+      newErrors.fullName = "Nome completo é obrigatório"
+    } else if (fullName.trim().length < 3) {
+      newErrors.fullName = "Nome completo deve ter pelo menos 3 caracteres"
+    } else {
+      const { first, last } = extractNameParts(fullName)
+      if (!first || !last) {
+        newErrors.fullName = "Digite seu nome completo (nome e sobrenome)"
+      }
     }
 
     if (phone && !/^[\d\s\-\(\)]+$/.test(phone)) {
@@ -426,48 +445,24 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1">
-              <Label htmlFor="first-name" className="text-xs sm:text-sm">
-                Nome *
+              <Label htmlFor="full-name" className="text-xs sm:text-sm">
+                Nome Completo *
               </Label>
               <Input
-                id="first-name"
-                name="firstName"
-                placeholder="João"
-                value={firstName}
-                onChange={(e) => {
-                  setFirstName(e.target.value)
-                  if (errors.firstName) {
-                    setErrors({ ...errors, firstName: undefined })
-                  }
-                }}
-                className={`text-xs sm:text-sm ${errors.firstName ? "border-red-500" : ""}`}
+                id="full-name"
+                placeholder="João Silva"
+                value={fullName}
+                onChange={(e) => handleFullNameChange(e.target.value)}
+                className={`text-xs sm:text-sm col-span-2 ${errors.fullName ? "border-red-500" : ""}`}
                 required
               />
-              {errors.firstName && (
-                <p className="text-xs text-red-500">{errors.firstName}</p>
+              {errors.fullName && (
+                <p className="text-xs text-red-500 col-span-2">{errors.fullName}</p>
               )}
-            </div>
-
-            <div className="grid gap-1">
-              <Label htmlFor="last-name" className="text-xs sm:text-sm">
-                Sobrenome *
-              </Label>
-              <Input
-                id="last-name"
-                name="lastName"
-                placeholder="Silva"
-                value={lastName}
-                onChange={(e) => {
-                  setLastName(e.target.value)
-                  if (errors.lastName) {
-                    setErrors({ ...errors, lastName: undefined })
-                  }
-                }}
-                className={`text-xs sm:text-sm ${errors.lastName ? "border-red-500" : ""}`}
-                required
-              />
-              {errors.lastName && (
-                <p className="text-xs text-red-500">{errors.lastName}</p>
+              {fullName && firstName && lastName && (
+                <p className="text-xs text-green-600 col-span-2">
+                  ✓ {firstName} | {lastName}
+                </p>
               )}
             </div>
           </div>

@@ -177,10 +177,6 @@ export async function updateUserProfile(
           .filter(Boolean)
       : []
 
-    console.log("[v0] Updating profile for:", session.user.email)
-    console.log("[v0] First name:", firstName, "Last name:", lastName)
-    console.log("[v0] Other data:", { phone, bio, city, isClient, isProfessional, skills })
-
     const supabase = await createSupabaseServerClient()
 
     const fullName = `${firstName || ""} ${lastName || ""}`.trim()
@@ -198,23 +194,19 @@ export async function updateUserProfile(
       updated_at: new Date().toISOString(),
     }
 
-    console.log("[v0] Update data being sent:", updateData)
-
     const { data, error } = await supabase.from("users").update(updateData).eq("email", session.user.email).select()
 
     if (error) {
-      console.error("[v0] Error updating profile:", error)
+      console.error("Erro ao atualizar perfil:", error)
       return { success: false, message: "Erro ao atualizar perfil" }
     }
-
-    console.log("[v0] Profile updated successfully, data returned:", data)
 
     revalidatePath("/profile")
     revalidatePath("/profile/[email]", "page")
 
     return { success: true, message: "Perfil atualizado com sucesso!" }
   } catch (error) {
-    console.error("[v0] Unexpected error updating profile:", error)
+    console.error("Erro inesperado ao atualizar perfil:", error)
     return { success: false, message: "Erro inesperado ao atualizar perfil" }
   }
 }
