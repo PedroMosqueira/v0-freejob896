@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { ProfileForm } from "@/components/profile-form"
+import { ProfessionalDataForm } from "@/components/professional-data-form"
 import { ProfileHeader } from "@/components/profile-header"
 import { ProfileStats } from "@/components/profile-stats"
 import { getUserProfile, type UserProfile } from "@/lib/user-profile"
@@ -87,6 +88,7 @@ export default function ProfilePage() {
         </div>
 
         <ProfileForm profile={profile} />
+        <ProfessionalDataForm profile={profile} onUpdate={() => setRefreshKey(k => k + 1)} />
       </div>
     </div>
   )
