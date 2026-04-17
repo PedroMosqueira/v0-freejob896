@@ -186,11 +186,14 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
 
         // Se é profissional, salvar dados profissionais também
         if (isProfessional && cpf) {
-          // Criar entrada na tabela de profissionais (se existir) ou adicionar os dados ao usuário
+          // Salvar CPF, telefone profissional e inicializar contador de propostas
           const { error: professionalError } = await supabase
             .from("users")
             .update({
-              phone: professionalPhone?.toString() || phone?.toString() || null,
+              cpf: cpf?.toString() || null,
+              professional_phone: professionalPhone?.toString() || null,
+              free_interests_count: 0, // Inicializa com 0 (tem direito a 3)
+              total_interests_count: 0,
             })
             .eq("id", data.user.id)
 
