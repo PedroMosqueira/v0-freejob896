@@ -100,6 +100,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [showProfessionalDataModal, setShowProfessionalDataModal] = useState(false)
+  const [showInterestDialog, setShowInterestDialog] = useState(false)
   const [isSendingInterest, setIsSendingInterest] = useState(false)
   const [canRateProfessional, setCanRateProfessional] = useState(false)
   const [isCheckingRating, setIsCheckingRating] = useState(false)
