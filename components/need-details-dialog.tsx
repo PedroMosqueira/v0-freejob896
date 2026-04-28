@@ -47,7 +47,6 @@ import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
 import SendBidDialog from "@/components/send-bid-dialog"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
-import { ProfessionalDataModal } from "@/components/professional-data-modal"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -99,25 +98,25 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
-  const [showProfessionalDataModal, setShowProfessionalDataModal] = useState(false)
-  const [showInterestDialog, setShowInterestDialog] = useState(false)
-  const [isSendingInterest, setIsSendingInterest] = useState(false)
+  const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
   const [canRateProfessional, setCanRateProfessional] = useState(false)
   const [isCheckingRating, setIsCheckingRating] = useState(false)
-  const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
-  const [isRespondingToVisit, setIsRespondingToVisit] = useState(false)
   const [showVisitResponse, setShowVisitResponse] = useState(false)
   const [visitResponseMessage, setVisitResponseMessage] = useState("")
-  const [visitResponseType, setVisitResponseType] = useState<"accept" | "decline" | null>(null)
   const [visitBidAmount, setVisitBidAmount] = useState("")
+  const [isRespondingToVisit, setIsRespondingToVisit] = useState(false)
+  const [visitResponseType, setVisitResponseType] = useState<"accept" | "decline" | null>(null)
+  const [selectedNeedForChatManagement, setSelectedNeedForChatManagement] = useState<Need | null>(null)
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
+  const [showInterestDialog, setShowInterestDialog] = useState(false)
+  const [showSendBidDialog, setShowSendBidDialog] = useState(false)
+  const [isSendingInterest, setIsSendingInterest] = useState(false)
   const [selectedProfessionalChat, setSelectedProfessionalChat] = useState<{
     email: string
     chatThreadId: string
   } | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
-  const [selectedNeedForChatManagement, setSelectedNeedForChatManagement] = useState<Need | null>(null)
   const [requesterProfile, setRequesterProfile] = useState<{
     name: string | null
     profileImageUrl: string | null
@@ -733,9 +732,40 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   <Button
                     className="w-full bg-blue-500 text-white hover:bg-blue-600 h-9"
                     size="sm"
-                    onClick={() => setShowProfessionalDataModal(true)}
+                    onClick={async () => {
+                      if (!email) return
+
+                      setIsSendingInterest(true)
+                      try {
+                        // Create chat thread and send automatic message
+                        const thread = await startChat({
+                          needId: currentNeed.id,
+                          requesterEmail: currentNeed.requesterEmail,
+                          professionalEmail: email,
+                          customText: "Olá! Tenho interesse em realizar este serviço.",
+                        })
+
+                        if (thread) {
+                          // Create a simple interest_only proposal to track interest
+                          await addNeedProposal({
+                            needId: currentNeed.id,
+                            professionalEmail: email,
+                            type: "interest_only" as ProposalType,
+                          })
+
+                          await fetchProposals()
+                          onStatusUpdate?.()
+                        }
+                      } catch (error) {
+                        console.error("Erro ao demonstrar interesse:", error)
+                        alert("Erro ao demonstrar interesse. Tente novamente.")
+                      } finally {
+                        setIsSendingInterest(false)
+                      }
+                    }}
+                    disabled={isSendingInterest}
                   >
-                    Tenho Interesse
+                    {isSendingInterest ? "Enviando..." : "Tenho Interesse"}
                   </Button>
                 )}
 
@@ -1313,18 +1343,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
         />
       )}
 
-      {showProfessionalDataModal && email && (
-        <ProfessionalDataModal
-          isOpen={showProfessionalDataModal}
-          onClose={() => setShowProfessionalDataModal(false)}
-          userEmail={email}
-          onComplete={() => {
-            setShowProfessionalDataModal(false)
-            // Agora pode clicar em tenho interesse
-          }}
-        />
-      )}
-
       {showSendBidDialog && email && (
         <SendBidDialog
           need={currentNeed}
@@ -1362,17 +1380,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           requesterEmail={email || ""}
           needId={currentNeed.id}
           onSuccess={handleRatingSuccess}
-        />
-      )}
-
-      {showProfessionalDataModal && email && (
-        <ProfessionalDataModal
-          isOpen={showProfessionalDataModal}
-          onClose={() => setShowProfessionalDataModal(false)}
-          userEmail={email}
-          onComplete={() => {
-            setShowProfessionalDataModal(false)
-          }}
         />
       )}
     </>
