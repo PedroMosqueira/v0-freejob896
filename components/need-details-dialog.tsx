@@ -101,6 +101,14 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [showRatingDialog, setShowRatingDialog] = useState(false)
   const [showProfessionalDataModal, setShowProfessionalDataModal] = useState(false)
   const [isSendingInterest, setIsSendingInterest] = useState(false)
+  const [canRateProfessional, setCanRateProfessional] = useState(false)
+  const [isCheckingRating, setIsCheckingRating] = useState(false)
+  const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
+  const [isRespondingToVisit, setIsRespondingToVisit] = useState(false)
+  const [showVisitResponse, setShowVisitResponse] = useState(false)
+  const [visitResponseMessage, setVisitResponseMessage] = useState("")
+  const [visitResponseType, setVisitResponseType] = useState<"accept" | "decline" | null>(null)
+  const [visitBidAmount, setVisitBidAmount] = useState("")
   const [selectedProfessionalChat, setSelectedProfessionalChat] = useState<{
     email: string
     chatThreadId: string
@@ -722,65 +730,9 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   <Button
                     className="w-full bg-blue-500 text-white hover:bg-blue-600 h-9"
                     size="sm"
-                    onClick={async () => {
-                      try {
-                        if (!email) return
-
-                        // Verificar se o usuário tem dados profissionais completos
-                        const supabase = createSupabaseBrowserClient()
-                        const { data: userData, error } = await supabase
-                          .from("users")
-                          .select("is_professional, cpf, professional_phone")
-                          .eq("email", email)
-                          .single()
-
-                        if (error) {
-                          console.error("[v0] Erro ao buscar dados do usuário:", error)
-                          alert("Erro ao verificar seus dados.")
-                          return
-                        }
-
-                        if (!userData) {
-                          console.error("[v0] Usuário não encontrado")
-                          alert("Usuário não encontrado.")
-                          return
-                        }
-
-                        // Se não é profissional ou não tem CPF e telefone, abrir modal
-                        if (!userData.is_professional || !userData.cpf || !userData.professional_phone) {
-                          setShowProfessionalDataModal(true)
-                          return
-                        }
-
-                        // Dados completos, prosseguir com interesse
-                        setIsSendingInterest(true)
-                        const thread = await startChat({
-                          needId: currentNeed.id,
-                          requesterEmail: currentNeed.requesterEmail,
-                          professionalEmail: email,
-                          customText: "Olá! Tenho interesse em realizar este serviço.",
-                        })
-
-                        if (thread) {
-                          await addNeedProposal({
-                            needId: currentNeed.id,
-                            professionalEmail: email,
-                            type: "interest_only" as ProposalType,
-                          })
-
-                          await fetchProposals()
-                          onStatusUpdate?.()
-                        }
-                      } catch (error) {
-                        console.error("[v0] Erro ao demonstrar interesse:", error)
-                        alert("Erro ao demonstrar interesse. Tente novamente.")
-                      } finally {
-                        setIsSendingInterest(false)
-                      }
-                    }}
-                    disabled={isSendingInterest}
+                    onClick={() => setShowProfessionalDataModal(true)}
                   >
-                    {isSendingInterest ? "Enviando..." : "Tenho Interesse"}
+                    Tenho Interesse
                   </Button>
                 )}
 
