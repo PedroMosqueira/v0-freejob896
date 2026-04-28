@@ -723,30 +723,37 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                     className="w-full bg-blue-500 text-white hover:bg-blue-600 h-9"
                     size="sm"
                     onClick={async () => {
-                      if (!email) return
-
-                      // Verificar se o usuário tem dados profissionais completos
-                      const supabase = createSupabaseBrowserClient()
-                      const { data: userData, error } = await supabase
-                        .from("users")
-                        .select("is_professional, cpf, professional_phone")
-                        .eq("email", email)
-                        .single()
-
-                      if (error || !userData) {
-                        alert("Erro ao verificar seus dados.")
-                        return
-                      }
-
-                      // Se não é profissional ou não tem CPF e telefone, abrir modal
-                      if (!userData.is_professional || !userData.cpf || !userData.professional_phone) {
-                        setShowProfessionalDataModal(true)
-                        return
-                      }
-
-                      // Dados completos, prosseguir com interesse
-                      setIsSendingInterest(true)
                       try {
+                        if (!email) return
+
+                        // Verificar se o usuário tem dados profissionais completos
+                        const supabase = createSupabaseBrowserClient()
+                        const { data: userData, error } = await supabase
+                          .from("users")
+                          .select("is_professional, cpf, professional_phone")
+                          .eq("email", email)
+                          .single()
+
+                        if (error) {
+                          console.error("[v0] Erro ao buscar dados do usuário:", error)
+                          alert("Erro ao verificar seus dados.")
+                          return
+                        }
+
+                        if (!userData) {
+                          console.error("[v0] Usuário não encontrado")
+                          alert("Usuário não encontrado.")
+                          return
+                        }
+
+                        // Se não é profissional ou não tem CPF e telefone, abrir modal
+                        if (!userData.is_professional || !userData.cpf || !userData.professional_phone) {
+                          setShowProfessionalDataModal(true)
+                          return
+                        }
+
+                        // Dados completos, prosseguir com interesse
+                        setIsSendingInterest(true)
                         const thread = await startChat({
                           needId: currentNeed.id,
                           requesterEmail: currentNeed.requesterEmail,
@@ -765,7 +772,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                           onStatusUpdate?.()
                         }
                       } catch (error) {
-                        console.error("Erro ao demonstrar interesse:", error)
+                        console.error("[v0] Erro ao demonstrar interesse:", error)
                         alert("Erro ao demonstrar interesse. Tente novamente.")
                       } finally {
                         setIsSendingInterest(false)
