@@ -1,28 +1,19 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { useAuth } from "@/hooks/use-auth"
 import RequestForm from "@/components/request-form"
 import SearchRequests from "@/components/search-requests"
-import RegisterForm from "@/components/register-form"
-import { useToast } from "@/hooks/use-toast"
+import PhoneAuthForm from "@/components/phone-auth-form"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
-import { useSearchParams, useRouter } from "next/navigation"
-import ForgotPasswordForm from "@/components/forgot-password-form"
+import { useSearchParams } from "next/navigation"
 
 export default function Home() {
-  const { email: authenticatedEmail, login, isLoading } = useAuth()
-  const { toast } = useToast()
+  const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
-  const router = useRouter()
 
   useEffect(() => {
     const code = searchParams?.get("code")
@@ -64,69 +55,9 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [authenticatedEmail])
 
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false)
-  const [isRegistering, setIsRegistering] = useState(false)
-  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [activeTab, setActiveTab] = useState("procurar")
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    console.log("[v0] handleLogin executado - Tentando fazer login")
-    setIsSubmittingLogin(true)
-    const trimmedEmail = loginEmail.trim()
-    const trimmedPassword = loginPassword.trim()
-
-    console.log("[v0] Email validado:", trimmedEmail)
-
-    if (!trimmedEmail || !trimmedEmail.includes("@") || !trimmedPassword) {
-      console.log("[v0] Validação falhou - Email ou senha vazios/inválidos")
-      toast({
-        title: "Erro de autenticação",
-        description: "Por favor, insira um email e senha válidos.",
-        variant: "destructive",
-      })
-      setIsSubmittingLogin(false)
-      return
-    }
-
-    try {
-      console.log("[v0] Chamando função login com email:", trimmedEmail)
-      const success = await login(trimmedEmail, trimmedPassword)
-      console.log("[v0] Resultado do login:", success)
-      
-      if (!success) {
-        console.log("[v0] Login falhou - Email ou senha incorretos")
-        toast({
-          title: "Falha na autenticação",
-          description: "Email ou senha incorretos. Tente novamente.",
-          variant: "destructive",
-        })
-      } else {
-        console.log("[v0] Login bem-sucedido!")
-        toast({
-          title: "Login bem-sucedido!",
-          description: "Você está logado.",
-          variant: "success",
-        })
-        setLoginEmail("")
-        setLoginPassword("")
-      }
-    } catch (error) {
-      console.error("[v0] Authentication error:", error)
-      console.log("[v0] Erro detalhado:", JSON.stringify(error))
-      toast({
-        title: "Erro inesperado",
-        description: "Ocorreu um erro durante a autenticação. Tente novamente.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmittingLogin(false)
-    }
-  }
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
@@ -209,85 +140,26 @@ export default function Home() {
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
             <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
-              {isForgotPassword ? (
-                <ForgotPasswordForm onBack={() => setIsForgotPassword(false)} />
-              ) : isRegistering ? (
-                <RegisterForm onSwitchToLogin={() => setIsRegistering(false)} />
-              ) : (
-                <div className="w-full max-w-sm">
-                  <div className="text-center mb-6">
-                    <div className="flex justify-center mb-4">
-                      <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
-                      <span className="text-[#4F7CFF]" translate="no">
-                        Freejob
-                      </span>
-                      <span className="block text-[#4F7CFF] text-sm sm:text-base font-medium">
-                        prático e do seu jeito
-                      </span>
-                    </h1>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                      Entre com seu email e senha para solicitar ou procurar serviço.
-                    </p>
+              <div className="w-full max-w-sm">
+                <div className="text-center mb-6">
+                  <div className="flex justify-center mb-4">
+                    <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
                   </div>
-
-                  <Card>
-                    <CardContent className="pt-6">
-                      <form onSubmit={handleLogin} className="grid gap-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="voce@email.com"
-                            value={loginEmail}
-                            onChange={(e) => setLoginEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="password">Senha</Label>
-                          <Input
-                            id="password"
-                            type="password"
-                            placeholder="Sua senha"
-                            value={loginPassword}
-                            onChange={(e) => setLoginPassword(e.target.value)}
-                            required
-                          />
-                          <Button
-                            type="button"
-                            variant="link"
-                            className="text-xs text-blue-600 p-0 h-auto justify-end"
-                            onClick={() => setIsForgotPassword(true)}
-                          >
-                            Esqueceu a senha?
-                          </Button>
-                        </div>
-                        <div className="grid gap-2">
-                          <Button
-                            type="submit"
-                            className="w-full bg-[#4F7CFF] hover:bg-[#4F7CFF]/90"
-                            disabled={isSubmittingLogin}
-                          >
-                            {isSubmittingLogin ? "Entrando..." : "Entrar"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="w-full border-blue-500 text-blue-700 dark:text-blue-400 bg-transparent hover:bg-blue-50 dark:hover:bg-blue-950/30"
-                            onClick={() => setIsRegistering(true)}
-                            disabled={isSubmittingLogin}
-                          >
-                            Criar conta
-                          </Button>
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
+                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+                    <span className="text-[#4F7CFF]" translate="no">
+                      Freejob
+                    </span>
+                    <span className="block text-[#4F7CFF] text-sm sm:text-base font-medium">
+                      prático e do seu jeito
+                    </span>
+                  </h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                    Solicite ou procure serviço com seu telefone
+                  </p>
                 </div>
-              )}
+
+                <PhoneAuthForm />
+              </div>
             </div>
           ) : (
             <>
