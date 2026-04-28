@@ -1362,6 +1362,17 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           onSuccess={handleRatingSuccess}
         />
       )}
+
+      {showProfessionalDataModal && email && (
+        <ProfessionalDataModal
+          isOpen={showProfessionalDataModal}
+          onClose={() => setShowProfessionalDataModal(false)}
+          userEmail={email}
+          onComplete={() => {
+            setShowProfessionalDataModal(false)
+          }}
+        />
+      )}
     </>
   )
 }
