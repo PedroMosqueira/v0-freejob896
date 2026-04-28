@@ -115,6 +115,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   } | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
   const [requesterProfile, setRequesterProfile] = useState<{
     name: string | null
     profileImageUrl: string | null
