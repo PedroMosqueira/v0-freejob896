@@ -66,12 +66,21 @@ export function PhoneAuthForm({ onSuccess }: PhoneAuthFormProps) {
       if (response.ok) {
         setUserExists(data.exists)
         // Enviar código de verificação via SMS
-        await fetch("/api/auth/send-otp", {
+        const otpResponse = await fetch("/api/auth/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone: cleanPhone }),
         })
-        setStep("verification")
+
+        const otpData = await otpResponse.json()
+
+        if (otpResponse.ok) {
+          console.log("[v0] Código enviado com sucesso")
+          setStep("verification")
+        } else {
+          console.error("[v0] Erro ao enviar OTP:", otpData)
+          setError(otpData.error || "Erro ao enviar código de verificação")
+        }
       } else {
         setError(data.error || "Erro ao verificar telefone")
       }
