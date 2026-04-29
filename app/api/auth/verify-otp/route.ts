@@ -12,15 +12,61 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verificar configuração do Twilio Verify
+    const accountSid = process.env.TWILIO_ACCOUNT_SID
+    const authToken = process.env.TWILIO_AUTH_TOKEN
+    const verifySid = process.env.TWILIO_VERIFY_SERVICE_SID
+
+    if (!accountSid || !authToken || !verifySid) {
+      console.error("[v0] Credenciais Twilio Verify não configuradas")
+      return NextResponse.json(
+        { error: "Serviço de verificação não configurado" },
+        { status: 500 },
+      )
+    }
+
+    // Formatar telefone para formato internacional
+    const formattedPhone = phone.startsWith("+") ? phone : `+55${phone}`
+
+    // Criar autenticação básica para Twilio
+    const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64")
+
+    // Verificar o código com Twilio Verify Service
+    const verifyResponse = await fetch(
+      `https://verify.twilio.com/v2/Services/${verifySid}/VerificationCheck`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          To: formattedPhone,
+          Code: code,
+        }).toString(),
+      },
+    )
+
+    const verifyData = await verifyResponse.json()
+
+    if (!verifyResponse.ok || !verifyData.valid) {
+      console.error("[v0] Código inválido ou expirado:", verifyData)
+      return NextResponse.json(
+        { error: "Código inválido ou expirado" },
+        { status: 400 },
+      )
+    }
+
+    // Código válido! Agora verificar/criar usuário no Supabase
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
 
-    // Buscar usuário pelo telefone e verificar o código
+    // Buscar usuário pelo telefone
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id, email, phone_verification_code, phone_verification_expires_at")
+      .select("id, email")
       .eq("phone", phone)
       .single()
 
@@ -42,56 +88,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verificar código OTP
-    if (!user.phone_verification_code || user.phone_verification_code !== code) {
-      return NextResponse.json(
-        { error: "Código inválido" },
-        { status: 400 },
-      )
-    }
-
-    // Verificar expiração
-    if (!user.phone_verification_expires_at) {
-      return NextResponse.json(
-        { error: "Código expirado" },
-        { status: 400 },
-      )
-    }
-
-    const expiresAt = new Date(user.phone_verification_expires_at)
-    if (new Date() > expiresAt) {
-      return NextResponse.json(
-        { error: "Código expirado" },
-        { status: 400 },
-      )
-    }
-
-    // Código válido! Fazer login - usar Supabase Auth
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: `phone_${phone}_verified`, // Senha dummy, pois autenticação é por telefone
-    })
-
-    if (signInError) {
-      // Se falhar, criar sessão customizada via cookie
-      console.log("[v0] Autenticação com telefone bem-sucedida para:", user.email)
-      
-      return NextResponse.json({
-        success: true,
-        userExists: true,
-        message: "Login realizado com sucesso",
-        email: user.email,
-      })
-    }
-
-    // Limpar código de verificação
-    await supabase
-      .from("users")
-      .update({
-        phone_verification_code: null,
-        phone_verification_expires_at: null,
-      })
-      .eq("id", user.id)
+    // Usuário existe - fazer login
+    console.log("[v0] Autenticação com telefone bem-sucedida para:", user.email)
 
     return NextResponse.json({
       success: true,
