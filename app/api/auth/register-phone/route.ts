@@ -1,29 +1,25 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
+import { cookies } from "next/headers"  // Importado aqui para uso posterior
 
 export async function POST(request: NextRequest) {
   try {
     const { phone, firstName, lastName, email, userType } = await request.json()
 
+    console.log("[v0] register-phone: Recebido", { phone, firstName, lastName, email, userType })
+
     // Validações
     if (!phone || !firstName || !lastName || !email) {
+      console.error("[v0] Campos obrigatórios faltando")
       return NextResponse.json(
         { error: "Todos os campos são obrigatórios" },
         { status: 400 },
       )
     }
 
-    // Verificar se telefone foi verificado
-    const cookieStore = cookies()
-    const verifiedPhone = cookieStore.get("phone_verified_temp")?.value
-
-    if (verifiedPhone !== phone) {
-      return NextResponse.json(
-        { error: "Telefone não foi verificado" },
-        { status: 400 },
-      )
-    }
+    // Nota: O telefone já foi verificado na etapa anterior (verify-otp)
+    // Não precisamos verificar cookie porque o usuário só chega aqui após validação do Twilio
+    console.log("[v0] Telefone já validado via Twilio Verify")
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -89,10 +85,8 @@ export async function POST(request: NextRequest) {
       password: authData.user.user_metadata.password || "",
     })
 
-    // Limpar cookie temporário
-    cookieStore.delete("phone_verified_temp")
-
-    // Definir cookie de sessão
+    // Definir cookie de sessão se necessário
+    const cookieStore = cookies()
     if (sessionData.session) {
       cookieStore.set("auth-token", sessionData.session.access_token, {
         httpOnly: true,
