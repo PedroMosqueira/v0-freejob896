@@ -98,8 +98,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Usuário existe - fazer login
+    // Usuário existe - marcar como verificado e fazer login
     console.log("[v0] Autenticação com telefone bem-sucedida para:", user.email)
+
+    // Marcar telefone como verificado
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        phone_verified: true,
+      })
+      .eq("phone", phone)
+
+    if (updateError) {
+      console.error("[v0] Erro ao marcar telefone como verificado:", updateError)
+      // Continuar mesmo se falhar (não é crítico)
+    } else {
+      console.log("[v0] Telefone marcado como verificado para:", phone)
+    }
 
     return NextResponse.json({
       success: true,

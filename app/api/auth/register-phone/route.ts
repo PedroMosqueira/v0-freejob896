@@ -26,10 +26,13 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
 
+    // Gerar senha aleatória (login é por telefone, mas precisa de senha para auth)
+    const tempPassword = Math.random().toString(36).slice(-12)
+
     // Criar usuário via Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
-      password: Math.random().toString(36).slice(-12), // Gerar senha aleatória (login é por telefone)
+      password: tempPassword,
       options: {
         data: {
           phone,
@@ -40,7 +43,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
-      console.error("Erro ao criar usuário:", authError)
+      console.error("[v0] Erro ao criar usuário:", authError)
       return NextResponse.json(
         { error: authError.message || "Erro ao registrar usuário" },
         { status: 400 },
@@ -48,11 +51,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authData.user) {
+      console.error("[v0] Usuário não foi criado")
       return NextResponse.json(
         { error: "Erro ao criar usuário" },
         { status: 500 },
       )
     }
+
+    console.log("[v0] Usuário criado no Auth com ID:", authData.user.id)
 
     // Criar perfil do usuário
     const isRequester = userType === "service" || userType === "both"
@@ -67,35 +73,23 @@ export async function POST(request: NextRequest) {
       full_name: `${firstName} ${lastName}`,
       is_client: isRequester,
       is_professional: isProfessional,
+      phone_verified: true, // IMPORTANTE: Marcar como verificado
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
 
     if (profileError) {
-      console.error("Erro ao criar perfil:", profileError)
+      console.error("[v0] Erro ao criar perfil:", profileError)
       return NextResponse.json(
         { error: "Erro ao criar perfil" },
         { status: 500 },
       )
     }
 
-    // Criar sessão autenticada
-    const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
-      email,
-      password: authData.user.user_metadata.password || "",
-    })
+    console.log("[v0] Perfil de usuário criado com sucesso")
 
-    // Definir cookie de sessão se necessário
-    const cookieStore = cookies()
-    if (sessionData.session) {
-      cookieStore.set("auth-token", sessionData.session.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-      })
-    }
-
+    // O usuário está automaticamente autenticado via signUp
+    // Apenas retornamos sucesso
     return NextResponse.json({
       success: true,
       message: "Usuário registrado com sucesso",
@@ -103,6 +97,7 @@ export async function POST(request: NextRequest) {
         id: authData.user.id,
         email,
         phone,
+        phoneVerified: true,
       },
     })
   } catch (error) {
