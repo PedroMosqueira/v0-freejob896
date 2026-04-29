@@ -108,12 +108,17 @@ export function PhoneAuthForm({ onSuccess }: PhoneAuthFormProps) {
 
       const data = await response.json()
 
+      console.log("[v0] Resposta verify-otp:", data)
+
       if (response.ok) {
-        if (userExists) {
+        // Usar a resposta de verify-otp para decidir o fluxo
+        if (data.userExists) {
+          console.log("[v0] Usuário existe, fazendo login")
           // Usuário existe, fazer login
           router.push("/dashboard")
           onSuccess?.()
         } else {
+          console.log("[v0] Novo usuário, ir para registro")
           // Novo usuário, ir para registro
           setStep("registration")
         }
@@ -121,6 +126,7 @@ export function PhoneAuthForm({ onSuccess }: PhoneAuthFormProps) {
         setError(data.error || "Código inválido")
       }
     } catch (err: any) {
+      console.error("[v0] Erro ao verificar:", err)
       setError(err.message || "Erro ao verificar código")
     } finally {
       setLoading(false)
