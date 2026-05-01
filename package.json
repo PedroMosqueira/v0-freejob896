@@ -24,6 +24,7 @@
     "@simplewebauthn/server": "latest",
     "@stripe/react-stripe-js": "5.4.1",
     "@stripe/stripe-js": "8.6.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@vercel/blob": "2.0.0",

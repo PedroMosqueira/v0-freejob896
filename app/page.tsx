@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import RequestForm from "@/components/request-form"
 import SearchRequests from "@/components/search-requests"
-import { PhoneAuthForm } from "@/components/phone-auth-form"
+import { AuthForm } from "@/components/auth-form"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
 import { useSearchParams } from "next/navigation"
@@ -15,16 +16,7 @@ export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
 
-  useEffect(() => {
-    const code = searchParams?.get("code")
-
-    if (code) {
-      const params = new URLSearchParams(window.location.search)
-      const callbackUrl = `/api/auth/callback?${params.toString()}`
-      window.location.href = callbackUrl
-      return
-    }
-  }, [searchParams])
+  // Callback é tratado automaticamente pela rota /auth/callback
 
   useEffect(() => {
     if (!authenticatedEmail) return
@@ -154,11 +146,11 @@ export default function Home() {
                     </span>
                   </h1>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                    Solicite ou procure serviço com seu telefone
+                    Solicite ou procure serviço com facilidade
                   </p>
                 </div>
 
-                <PhoneAuthForm />
+                <AuthForm />
               </div>
             </div>
           ) : (
