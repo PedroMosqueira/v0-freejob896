@@ -24,6 +24,7 @@
     "@simplewebauthn/server": "latest",
     "@stripe/react-stripe-js": "5.4.1",
     "@stripe/stripe-js": "8.6.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@vercel/blob": "2.0.0",
@@ -41,7 +42,8 @@
     "react-dom": "^18.2.0",
     "stripe": "20.1.0",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "twilio": "^6.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

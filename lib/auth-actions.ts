@@ -89,6 +89,9 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   const phone = formData.get("phone")
   const city = formData.get("city")
   const bio = formData.get("bio")
+  const isProfessional = formData.get("isProfessional") === "true"
+  const cpf = formData.get("cpf")
+  const professionalPhone = formData.get("professionalPhone")
 
   // Validate environment variables
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -171,6 +174,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
             phone: phone?.toString() || null,
             city: city?.toString() || null,
             bio: bio?.toString() || null,
+            is_professional: isProfessional,
             updated_at: new Date().toISOString(),
           })
           .eq("id", data.user.id)
@@ -178,6 +182,24 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
         if (updateError) {
           console.error("Erro ao salvar dados pessoais:", updateError)
           // Não falhar o signup por causa disso
+        }
+
+        // Se é profissional, salvar dados profissionais também
+        if (isProfessional && cpf) {
+          // Salvar CPF, telefone profissional e inicializar contador de propostas
+          const { error: professionalError } = await supabase
+            .from("users")
+            .update({
+              cpf: cpf?.toString() || null,
+              professional_phone: professionalPhone?.toString() || null,
+              free_interests_count: 0, // Inicializa com 0 (tem direito a 3)
+              total_interests_count: 0,
+            })
+            .eq("id", data.user.id)
+
+          if (professionalError) {
+            console.error("Erro ao salvar dados profissionais:", professionalError)
+          }
         }
       } catch (profileError) {
         console.error("Erro ao criar perfil:", profileError)

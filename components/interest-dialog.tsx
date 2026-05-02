@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button"
 import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency, MINIMUM_BID_AMOUNT } from "@/lib/pricing"
-import { Info } from "lucide-react"
+import { Info, AlertCircle } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
+import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
 
 interface InterestDialogProps {
   need: Need
@@ -33,8 +34,34 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
   const [acceptMessage, setAcceptMessage] = useState("")
   const [bidAmount, setBidAmount] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isProfessional, setIsProfessional] = useState(false)
+  const [canExpress, setCanExpress] = useState(true)
+  const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
+  const [isCheckingPermission, setIsCheckingPermission] = useState(true)
 
   const bidValue = Number.parseFloat(bidAmount) || 0
+
+  // Verificar permissão ao abrir o diálogo
+  useEffect(() => {
+    if (isOpen && currentUserEmail) {
+      checkPermission()
+    }
+  }, [isOpen, currentUserEmail])
+
+  const checkPermission = async () => {
+    setIsCheckingPermission(true)
+    try {
+      const result = await canUserExpressInterest(currentUserEmail)
+      setCanExpress(result.canExpressInterest)
+      setIsProfessional(result.isProfessional || false)
+      setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+    } catch (error) {
+      console.error("Erro ao verificar permissão:", error)
+      setCanExpress(false)
+    } finally {
+      setIsCheckingPermission(false)
+    }
+  }
 
   const handleProposeVisit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,6 +83,11 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
         whenISO: new Date(visitDate).toISOString(),
         message: visitMessage || undefined,
       })
+
+      // Incrementar contador de interesses
+      if (isProfessional) {
+        await incrementInterestCount(currentUserEmail)
+      }
 
       await createNotificationViaAPI(
         need.requesterEmail,
@@ -158,10 +190,38 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
           <DialogTitle>Tenho Interesse em: {need.title}</DialogTitle>
           <DialogDescription>Escolha como você gostaria de demonstrar interesse neste serviço.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="propor-visita" className="w-full">
+
+        {/* Alerta se profissional sem permissão */}
+        {isProfessional && !canExpress && (
+          <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-red-700 dark:text-red-300">
+              <p className="font-semibold mb-1">Propostas gratuitas esgotadas</p>
+              <p>Você usou suas 3 propostas gratuitas. Para continuar, será necessário um plano de assinatura.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Indicador de propostas gratuitas restantes */}
+        {isProfessional && canExpress && freeInterestsRemaining > 0 && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex gap-3">
+            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-700 dark:text-amber-300">
+              <p>
+                <strong>Propostas gratuitas:</strong> {freeInterestsRemaining} restant{freeInterestsRemaining === 1 ? "e" : "es"}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <Tabs defaultValue="propor-visita" className="w-full" disabled={isCheckingPermission || !canExpress}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="propor-visita">Propor Visita</TabsTrigger>
-            <TabsTrigger value="aceitar-direto">Aceitar Direto</TabsTrigger>
+            <TabsTrigger value="propor-visita" disabled={!canExpress}>
+              Propor Visita
+            </TabsTrigger>
+            <TabsTrigger value="aceitar-direto" disabled={!canExpress}>
+              Aceitar Direto
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="propor-visita" className="mt-4">
             <form onSubmit={handleProposeVisit} className="grid gap-4">

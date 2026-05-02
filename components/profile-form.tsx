@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { useFormState } from "react-dom"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 
@@ -17,8 +17,35 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile }: ProfileFormProps) {
   const [state, formAction] = useFormState(updateUserProfile, null)
+  const [fullName, setFullName] = useState(profile.fullName || "")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const { toast } = useToast()
   const router = useRouter()
+
+  // Função para extrair primeiro e último nome
+  const extractNameParts = (full: string) => {
+    const parts = full.trim().split(/\s+/).filter(Boolean)
+    
+    if (parts.length === 0) return { first: "", last: "" }
+    if (parts.length === 1) return { first: parts[0], last: "" }
+    
+    const firstName = parts[0]
+    const lastName = parts[parts.length - 1]
+    
+    return { first: firstName, last: lastName }
+  }
+
+  const handleFullNameChange = (value: string) => {
+    setFullName(value)
+    const { first, last } = extractNameParts(value)
+    setFirstName(first)
+    setLastName(last)
+    if (errors.fullName) {
+      setErrors({ ...errors, fullName: undefined })
+    }
+  }
 
   useEffect(() => {
     if (state?.success) {
@@ -41,17 +68,29 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       <h3 className="text-xl font-semibold mb-6 dark:text-gray-100">Informações do Perfil</h3>
 
       <form action={formAction} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">Nome</Label>
-            <Input id="firstName" name="firstName" defaultValue={profile.firstName || ""} placeholder="Seu nome" />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Sobrenome</Label>
-            <Input id="lastName" name="lastName" defaultValue={profile.lastName || ""} placeholder="Seu sobrenome" />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Nome Completo</Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            placeholder="João Silva"
+            value={fullName}
+            onChange={(e) => handleFullNameChange(e.target.value)}
+            className={`${errors.fullName ? "border-red-500" : ""}`}
+          />
+          {errors.fullName && (
+            <p className="text-sm text-red-500">{errors.fullName}</p>
+          )}
+          {fullName && firstName && lastName && (
+            <p className="text-xs text-green-600">
+              ✓ Será exibido como: <strong>{firstName} {lastName}</strong>
+            </p>
+          )}
         </div>
+
+        {/* Inputs hidden para firstName e lastName */}
+        <input type="hidden" name="firstName" value={firstName} />
+        <input type="hidden" name="lastName" value={lastName} />
 
         <div className="space-y-2">
           <Label htmlFor="city">Cidade</Label>
