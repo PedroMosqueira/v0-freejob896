@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
-import { auth } from "@/auth"
 import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -26,9 +25,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const session = await auth()
-  console.log("[v0] 🔵 Layout - Session:", session ? `User: ${session.user?.email}` : "No session")
-  const plainSession = session ? structuredClone(session) : null
+  console.log("[v0] 🔵 RootLayout carregado")
 
   return (
     <html lang="en" translate="no" suppressHydrationWarning>
@@ -92,7 +89,7 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} bg-background text-foreground`}>
         <ThemeProvider defaultTheme="system" storageKey="freejob-theme">
-          <AuthProvider session={plainSession}>
+          <AuthProvider>
             {children}
             <NotificationListener />
           </AuthProvider>
