@@ -1,24 +1,38 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
-import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { createClient } from "@supabase/supabase-js"
 import { notificationManager } from "@/lib/notifications"
 
 export function useNotifications() {
-  const { data: session } = useSession()
+  const [email, setEmail] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+  )
 
   useEffect(() => {
     setMounted(true)
+    
+    // Obter email da sessão atual
+    const getEmail = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session?.user?.email) {
+        setEmail(session.user.email)
+      }
+    }
+
+    getEmail()
   }, [])
 
   useEffect(() => {
-    if (!mounted || !session?.user?.email) {
+    if (!mounted || !email) {
       return
     }
-
-    const supabase = createSupabaseBrowserClient()
 
     const channel = supabase
       .channel("user-notifications")
@@ -28,7 +42,7 @@ export function useNotifications() {
           event: "INSERT",
           schema: "public",
           table: "notifications",
-          filter: `user_id=eq.${session.user.email}`,
+          filter: `user_id=eq.${email}`,
         },
         (payload) => {
           const notification = payload.new as {
@@ -57,5 +71,5 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [mounted, session])
+  }, [mounted, email])
 }
