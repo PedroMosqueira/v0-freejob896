@@ -6,39 +6,47 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code")
   const error = requestUrl.searchParams.get("error")
 
-  console.log("[v0] Auth callback")
-  console.log("[v0] URL completa:", request.url)
-  console.log("[v0] Code:", !!code)
-  console.log("[v0] Error:", error)
-  console.log("[v0] Search params:", requestUrl.search)
-  console.log("[v0] Hash:", requestUrl.hash)
+  console.log("[v0] ========== AUTH CALLBACK ==========")
+  console.log("[v0] Full URL:", request.url)
+  console.log("[v0] Code present:", !!code)
+  console.log("[v0] Code length:", code?.length || 0)
+  console.log("[v0] Error param:", error)
+  console.log("[v0] NEXT_PUBLIC_SUPABASE_URL:", !!process.env.NEXT_PUBLIC_SUPABASE_URL)
+  console.log("[v0] NEXT_PUBLIC_SUPABASE_ANON_KEY:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
   // Se houver erro (ex: usuário cancelou OAuth)
   if (error) {
-    console.error("[v0] Auth error:", error)
+    console.error("[v0] ❌ Auth error:", error)
     return NextResponse.redirect(new URL("/", requestUrl.origin))
   }
 
-  // Processar code de Magic Link
+  // Processar code de Magic Link ou OAuth
   if (code) {
-    console.log("[v0] Processando code do Magic Link...")
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-    )
+    console.log("[v0] 🔄 Tentando fazer exchange do code...")
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("[v0] ❌ Supabase credentials missing!")
+      return NextResponse.redirect(new URL("/?error=config_missing", requestUrl.origin))
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
     try {
+      console.log("[v0] 📡 Chamando exchangeCodeForSession...")
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
       if (exchangeError) {
-        console.error("[v0] Exchange error:", exchangeError)
+        console.error("[v0] ❌ Exchange error:", exchangeError.message, exchangeError.code)
         return NextResponse.redirect(new URL("/?error=exchange_failed", requestUrl.origin))
       }
 
-      console.log("[v0] Sessão criada para user:", data.user?.email)
+      console.log("[v0] ✅ Sessão criada para user:", data.user?.email)
 
       // Verificar/criar perfil do usuário no banco de dados
       if (data.user) {
+        console.log("[v0] 👤 Verificando se usuário existe no banco...")
         const { data: existingUser, error: selectError } = await supabase
           .from("users")
           .select("id")
@@ -46,11 +54,12 @@ export async function GET(request: NextRequest) {
           .single()
 
         if (selectError && selectError.code !== "PGRST116") {
-          console.error("[v0] Erro ao verificar usuário:", selectError)
+          console.error("[v0] ❌ Erro ao verificar usuário:", selectError)
         }
 
         // Se usuário não existe, criar perfil
         if (selectError && selectError.code === "PGRST116") {
+          console.log("[v0] 📝 Criando novo perfil para:", data.user.email)
           const { error: insertError } = await supabase.from("users").insert({
             id: data.user.id,
             email: data.user.email || "",
@@ -64,17 +73,18 @@ export async function GET(request: NextRequest) {
           })
 
           if (insertError) {
-            console.error("[v0] Erro ao criar perfil:", insertError)
+            console.error("[v0] ❌ Erro ao criar perfil:", insertError)
           } else {
-            console.log("[v0] Novo perfil criado para:", data.user.email)
+            console.log("[v0] ✅ Novo perfil criado para:", data.user.email)
           }
         }
       }
 
       // Redirecionar para dashboard
+      console.log("[v0] 🚀 Redirecionando para dashboard...")
       return NextResponse.redirect(new URL("/dashboard", requestUrl.origin))
     } catch (err) {
-      console.error("[v0] Callback error:", err)
+      console.error("[v0] ❌ Callback error:", err instanceof Error ? err.message : err)
       return NextResponse.redirect(new URL("/?error=auth_failed", requestUrl.origin))
     }
   }
@@ -83,6 +93,6 @@ export async function GET(request: NextRequest) {
   // O cliente (navegador) precisa processar isso via JavaScript
   // Esta rota é mais para Magic Link que usa query string com 'code'
   
-  console.log("[v0] Nenhum code ou error - retornando para home")
+  console.log("[v0] ❌ Nenhum code ou error - retornando para home")
   return NextResponse.redirect(new URL("/", requestUrl.origin))
 }
