@@ -1,13 +1,20 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
-
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("[v0] Supabase credentials missing")
+      return NextResponse.json(
+        { error: "Erro de configuração do servidor" },
+        { status: 500 },
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey)
     const { email, isProfessional, cpf, professionalPhone } = await request.json()
 
     if (!email) {
