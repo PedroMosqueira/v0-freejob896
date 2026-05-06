@@ -16,20 +16,10 @@ export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
 
-  // Debug - verificar se a página está atualizada
-  useEffect(() => {
-    console.log("[v0] ========== PAGE LOADED ==========")
-    console.log("[v0] Timestamp:", new Date().toISOString())
-    console.log("[v0] Authenticated email:", authenticatedEmail)
-    console.log("[v0] Is loading:", isLoading)
-    console.log("[v0] ========== END DEBUG ==========")
-  }, [authenticatedEmail, isLoading])
-
   // Processar OAuth callback com token no hash
   useEffect(() => {
     const hash = window.location.hash
     if (hash && hash.includes("access_token")) {
-      console.log("[v0] Detectado token OAuth no hash")
       // O Supabase auth listener automaticamente processa o hash
       // Apenas aguardamos o hook use-auth detectar a sessão
     }
