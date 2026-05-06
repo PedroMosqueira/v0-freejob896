@@ -16,6 +16,15 @@ export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
 
+  // Debug - verificar se a página está atualizada
+  useEffect(() => {
+    console.log("[v0] ========== PAGE LOADED ==========")
+    console.log("[v0] Timestamp:", new Date().toISOString())
+    console.log("[v0] Authenticated email:", authenticatedEmail)
+    console.log("[v0] Is loading:", isLoading)
+    console.log("[v0] ========== END DEBUG ==========")
+  }, [authenticatedEmail, isLoading])
+
   // Processar OAuth callback com token no hash
   useEffect(() => {
     const hash = window.location.hash
