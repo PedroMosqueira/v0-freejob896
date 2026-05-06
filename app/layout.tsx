@@ -11,6 +11,8 @@ import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Freejob",
   description: "Encontre ou ofereça serviços de forma fácil e rápida.",

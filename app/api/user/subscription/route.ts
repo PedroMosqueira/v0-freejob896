@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getUserSubscription } from "@/lib/subscription-manager"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient()
