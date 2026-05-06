@@ -1,12 +1,20 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 
+import { createClient } from "@supabase/supabase-js"
+import { NextRequest, NextResponse } from "next/server"
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
   const error = requestUrl.searchParams.get("error")
 
-  console.log("[v0] Auth callback - code:", !!code, "error:", error)
+  console.log("[v0] Auth callback")
+  console.log("[v0] URL completa:", request.url)
+  console.log("[v0] Code:", !!code)
+  console.log("[v0] Error:", error)
+  console.log("[v0] Search params:", requestUrl.search)
+  console.log("[v0] Hash:", requestUrl.hash)
 
   // Se houver erro (ex: usuário cancelou OAuth)
   if (error) {
@@ -14,7 +22,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", requestUrl.origin))
   }
 
+  // Processar code de Magic Link
   if (code) {
+    console.log("[v0] Processando code do Magic Link...")
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
@@ -58,7 +68,6 @@ export async function GET(request: NextRequest) {
 
           if (insertError) {
             console.error("[v0] Erro ao criar perfil:", insertError)
-            // Continuar mesmo se falhar (usuário foi criado no Auth)
           } else {
             console.log("[v0] Novo perfil criado para:", data.user.email)
           }
@@ -73,6 +82,10 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Se não há code nem error
+  // Para OAuth (Google, GitHub, etc), Supabase retorna tudo no hash
+  // O cliente (navegador) precisa processar isso via JavaScript
+  // Esta rota é mais para Magic Link que usa query string com 'code'
+  
+  console.log("[v0] Nenhum code ou error - retornando para home")
   return NextResponse.redirect(new URL("/", requestUrl.origin))
 }

@@ -16,7 +16,15 @@ export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
 
-  // Callback é tratado automaticamente pela rota /auth/callback
+  // Processar OAuth callback com token no hash
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.includes("access_token")) {
+      console.log("[v0] Detectado token OAuth no hash")
+      // O Supabase auth listener automaticamente processa o hash
+      // Apenas aguardamos o hook use-auth detectar a sessão
+    }
+  }, [])
 
   useEffect(() => {
     if (!authenticatedEmail) return

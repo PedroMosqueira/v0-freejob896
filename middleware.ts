@@ -6,25 +6,16 @@ export function middleware(request: NextRequest) {
   console.log("[v0] ========== MIDDLEWARE ==========")
   console.log("[v0] Path:", url.pathname)
   console.log("[v0] Search params:", url.searchParams.toString())
-  console.log("[v0] Has code:", url.searchParams.has("code"))
-  console.log("[v0] Has token:", url.searchParams.has("token"))
+
+  // Permitir que /auth/callback seja acessado diretamente pelo Supabase
+  if (url.pathname === "/auth/callback") {
+    console.log("[v0] ✅ Auth callback route - passing through")
+    return NextResponse.next()
+  }
 
   if (url.pathname.startsWith("/auth/reset-password")) {
     console.log("[v0] ✅ Reset password route - passing through")
     return NextResponse.next()
-  }
-
-  // Se está na raiz e tem parâmetros de auth do Supabase, redireciona para callback
-  if (url.pathname === "/" && (url.searchParams.has("code") || url.searchParams.has("token"))) {
-    const type = url.searchParams.get("type")
-    const code = url.searchParams.get("code") || url.searchParams.get("token")
-
-    console.log("[v0] 🚨🚨🚨 MIDDLEWARE REDIRECT - Type:", type, "Code present:", !!code)
-
-    // Redireciona para o callback mantendo todos os parâmetros
-    url.pathname = "/auth/callback"
-    console.log("[v0] Redirecting to:", url.toString())
-    return NextResponse.redirect(url)
   }
 
   console.log("[v0] Middleware passing through")

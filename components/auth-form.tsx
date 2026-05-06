@@ -25,11 +25,17 @@ export function AuthForm() {
     setError("")
 
     try {
+      console.log("[v0] Window origin:", window.location.origin)
+      // Usar https://freejob.online/auth/callback exatamente como está na página
+      const redirectUrl = "https://freejob.online/auth/callback"
+      console.log("[v0] Redirect URL:", redirectUrl)
       console.log("[v0] Iniciando login com Google")
+      
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: false,
         },
       })
 
