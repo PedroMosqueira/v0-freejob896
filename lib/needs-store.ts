@@ -1404,7 +1404,15 @@ export interface Bid {
 
 // Helper function to fetch user profile including rating
 const getUserProfile = async (email: string) => {
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("[v0] Supabase credentials missing in getUserProfile")
+    return null
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

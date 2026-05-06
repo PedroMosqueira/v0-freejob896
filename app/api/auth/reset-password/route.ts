@@ -24,7 +24,18 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Validating reset token...")
 
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("[v0] Supabase credentials missing")
+      return NextResponse.json(
+        { success: false, message: "Erro de configuração do servidor" },
+        { status: 500 },
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
