@@ -1,17 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@supabase/supabase-js"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { notificationManager } from "@/lib/notifications"
 
 export function useNotifications() {
   const [email, setEmail] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  )
+  const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
     setMounted(true)
