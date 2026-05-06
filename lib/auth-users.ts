@@ -8,11 +8,16 @@ interface User {
 }
 
 export async function getUserByEmail(email: string): Promise<User | undefined> {
-  const supabase = await createSupabaseServerClient()
-  const { data, error } = await supabase.from("users").select("id, email, password_hash").eq("email", email).single()
-  if (error && error.code !== "PGRST116") return undefined
-  if (!data) return undefined
-  return { id: data.id, email: data.email, passwordHash: data.password_hash }
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data, error } = await supabase.from("users").select("id, email, password_hash").eq("email", email).single()
+    if (error && error.code !== "PGRST116") return undefined
+    if (!data) return undefined
+    return { id: data.id, email: data.email, passwordHash: data.password_hash }
+  } catch (error) {
+    console.warn("[v0] getUserByEmail: Supabase not available during build", error instanceof Error ? error.message : error)
+    return undefined
+  }
 }
 
 export async function verifyPassword(user: User, passwordAttempt: string): Promise<boolean> {
@@ -24,20 +29,27 @@ export async function verifyPassword(user: User, passwordAttempt: string): Promi
     })
     return !error
   } catch (error) {
+    console.warn("[v0] verifyPassword: Supabase not available", error instanceof Error ? error.message : error)
     return false
   }
 }
 
 export async function addUser(email: string, passwordPlain: string): Promise<User> {
-  const supabase = await createSupabaseServerClient()
-  const passwordHash = await bcrypt.hash(passwordPlain, 10)
-  const { data, error } = await supabase
-    .from("users")
-    .insert([{ email, password_hash: passwordHash }])
-    .select("id, email, password_hash")
-    .single()
-  if (error) throw new Error(`Falha ao criar usuário: ${error.message}`)
-  return { id: data.id, email: data.email, passwordHash: data.password_hash }
+  try {
+    const supabase = await createSupabaseServerClient()
+    const passwordHash = await bcrypt.hash(passwordPlain, 10)
+    const { data, error } = await supabase
+      .from("users")
+      .insert([{ email, password_hash: passwordHash }])
+      .select("id, email, password_hash")
+      .single()
+    if (error) throw new Error(`Falha ao criar usuário: ${error.message}`)
+    return { id: data.id, email: data.email, passwordHash: data.password_hash }
+  } catch (error) {
+    console.warn("[v0] addUser: Supabase error", error instanceof Error ? error.message : error)
+    throw error
+  }
+}
 }
 
 export async function updateUserPassword(

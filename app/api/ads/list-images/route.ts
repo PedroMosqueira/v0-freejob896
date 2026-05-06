@@ -1,8 +1,16 @@
 import { list } from "@vercel/blob"
 import { NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
+    // Check if Blob token is configured
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.warn("[v0] BLOB_READ_WRITE_TOKEN not configured, returning empty list")
+      return NextResponse.json({ files: [] })
+    }
+
     // List only files in the ads folder
     const { blobs } = await list({ prefix: "ads/" })
 
