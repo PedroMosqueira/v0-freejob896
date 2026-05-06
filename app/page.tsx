@@ -16,6 +16,16 @@ export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
 
+  // Log para verificar se o código está atualizado
+  useEffect(() => {
+    console.log("[v0] ========== FREEJOB HOME PAGE CARREGADA ==========")
+    console.log("[v0] Timestamp:", new Date().toISOString())
+    console.log("[v0] Email autenticado:", authenticatedEmail || "nenhum")
+    console.log("[v0] Carregando:", isLoading)
+    console.log("[v0] Build com OAuth Supabase singleton implementado")
+    console.log("[v0] ========== FIM DO LOG ==========")
+  }, [])
+
   // Processar OAuth callback com token no hash
   useEffect(() => {
     const hash = window.location.hash
