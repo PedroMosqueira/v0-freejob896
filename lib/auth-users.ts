@@ -50,7 +50,6 @@ export async function addUser(email: string, passwordPlain: string): Promise<Use
     throw error
   }
 }
-}
 
 export async function updateUserPassword(
   previousState: { success: boolean; message: string },
