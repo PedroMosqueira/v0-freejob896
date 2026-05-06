@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { getServerSession } from "next-auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession()
+    const supabase = await createSupabaseServerClient()
+    
+    // Get session from Supabase
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
@@ -15,8 +19,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] 🔔 API: Creating notification for:", recipientEmail)
     console.log("[v0] 🔔 API: Notification data:", { title, message, type })
-
-    const supabase = await createSupabaseServerClient()
 
     const { data, error } = await supabase
       .from("notifications")
