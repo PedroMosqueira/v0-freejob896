@@ -1,7 +1,6 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { auth } from "@/auth"
 
 export interface Rating {
   id: string

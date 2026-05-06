@@ -1,7 +1,6 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
 
 export interface UserProfile {
