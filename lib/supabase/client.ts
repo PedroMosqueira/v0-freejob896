@@ -10,7 +10,6 @@ if (typeof window !== "undefined") {
       return originalBtoa(str)
     } catch (e) {
       // Se falhar (caracteres UTF-8), converte para base64 manualmente
-      // Converte string UTF-8 para UTF-16, depois para base64
       try {
         return originalBtoa(unescape(encodeURIComponent(str)))
       } catch (e2) {
@@ -21,10 +20,21 @@ if (typeof window !== "undefined") {
   }
 }
 
+// Singleton - criar apenas uma instância do cliente
+let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
+
 export function createSupabaseBrowserClient() {
-  return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  if (!supabaseInstance) {
+    supabaseInstance = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    console.log("[v0] ✅ Supabase client criado (singleton)")
+  }
+  return supabaseInstance
 }
 
+// Alias para compatibilidade
 export function createClient() {
-  return createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  return createSupabaseBrowserClient()
 }

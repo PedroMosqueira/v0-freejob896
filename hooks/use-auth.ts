@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { createClient } from "@supabase/supabase-js"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export function useAuth() {
   const [email, setEmail] = useState<string | null>(null)
@@ -9,10 +9,7 @@ export function useAuth() {
   const [isFreeUser, setIsFreeUser] = useState(true)
   const [session, setSession] = useState<any>(null)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  )
+  const supabase = createSupabaseBrowserClient()
 
   // Verificar sessão ao carregar o componente
   useEffect(() => {

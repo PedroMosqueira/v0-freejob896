@@ -5,14 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
+import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export function AuthForm() {
   const router = useRouter()
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-  )
+  const supabase = createSupabaseBrowserClient()
   
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
