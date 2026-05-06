@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useState, useEffect } from "react"
 import { Check, Sparkles, Zap, Shield, Crown, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,25 +8,25 @@ import { getUserSubscription, type UserSubscription, PLAN_FEATURES } from "@/lib
 import { useRouter } from "next/navigation"
 
 export function UpgradePageContent() {
-  const { data: session } = useSession()
+  const { email } = useAuth()
   const router = useRouter()
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadSubscription() {
-      if (!session?.user?.email) {
+      if (!email) {
         setLoading(false)
         return
       }
 
-      const sub = await getUserSubscription(session.user.email)
+      const sub = await getUserSubscription(email)
       setSubscription(sub)
       setLoading(false)
     }
 
     loadSubscription()
-  }, [session])
+  }, [email])
 
   const isPremium = false // Desabilitado temporariamente
 
