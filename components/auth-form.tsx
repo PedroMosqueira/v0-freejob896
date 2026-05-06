@@ -23,8 +23,8 @@ export function AuthForm() {
 
     try {
       console.log("[v0] Window origin:", window.location.origin)
-      // Usar https://freejob.online/auth/callback exatamente como está na página
-      const redirectUrl = "https://freejob.online/auth/callback"
+      // Usar origin dinâmico para funcionar em qualquer domínio
+      const redirectUrl = `${window.location.origin}/auth/callback`
       console.log("[v0] Redirect URL:", redirectUrl)
       console.log("[v0] Iniciando login com Google")
       
