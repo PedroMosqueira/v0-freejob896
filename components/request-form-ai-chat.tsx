@@ -233,7 +233,11 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   }
 
   const handleEditInForm = () => {
-    onComplete(extractedInfo)
+    const finalInfo = { ...extractedInfo }
+    if (photos) {
+      finalInfo.images = photos
+    }
+    onComplete(finalInfo)
   }
 
   const handleConfirmFromPreview = () => {
@@ -245,7 +249,14 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       },
     ])
     setShowingPreview(false)
-    onComplete(extractedInfo)
+    
+    // Incluir fotos no objeto final
+    const finalInfo = { ...extractedInfo }
+    if (photos) {
+      finalInfo.images = photos
+    }
+    
+    onComplete(finalInfo)
   }
 
   return (
