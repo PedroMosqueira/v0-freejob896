@@ -41,6 +41,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [isComplete, setIsComplete] = useState(false)
   const [needsLocation, setNeedsLocation] = useState(false)
   const [askingForPhotos, setAskingForPhotos] = useState(false)
+  const [showingPreview, setShowingPreview] = useState(false)
   const [photos, setPhotos] = useState<FileList | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -224,19 +225,17 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     const files = e.currentTarget.files
     if (files && files.length > 0) {
       setPhotos(files)
-      const photoNames = Array.from(files)
-        .map((f) => f.name)
-        .join(", ")
+      const photoCount = files.length
 
       setMessages((prev) => [
         ...prev,
         {
           role: "user",
-          content: `📸 Adicionei ${files.length} foto(s)`,
+          content: `📸 Adicionei ${photoCount} foto(s)`,
         },
         {
           role: "assistant",
-          content: `✅ Ótimo! Recebi ${files.length} foto(s). Todas as informações estão prontas!`,
+          content: `✅ Ótimo! Recebi ${photoCount} foto(s). Agora vou mostrar uma pré-visualização da sua solicitação para você revisar.`,
         },
       ])
 
@@ -244,10 +243,36 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       setExtractedInfo(finalInfo)
       onExtract(finalInfo)
       setAskingForPhotos(false)
+      setShowingPreview(true)
     }
   }
 
-  const handleConfirmSubmit = () => {
+  const handleSkipPhotos = () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "Sem problema! Vou mostrar uma pré-visualização da sua solicitação.",
+      },
+    ])
+    setAskingForPhotos(false)
+    setShowingPreview(true)
+  }
+
+  const handleEditInForm = () => {
+    onComplete(extractedInfo)
+  }
+
+  const handleConfirmFromPreview = () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: "✅ Perfeito! Sua solicitação foi confirmada e enviada com sucesso! 🎉",
+      },
+    ])
+    setShowingPreview(false)
+    setIsComplete(false)
     onComplete(extractedInfo)
   }
 
@@ -338,10 +363,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
               </Button>
             </div>
             <Button
-              onClick={() => {
-                setAskingForPhotos(false)
-                setIsComplete(true)
-              }}
+              onClick={handleSkipPhotos}
               variant="ghost"
               size="sm"
               className="w-full text-xs"
@@ -351,12 +373,81 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           </div>
         )}
 
+        {/* Preview Section */}
+        {showingPreview && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
+            <h3 className="font-semibold text-green-900 text-sm">
+              📋 Pré-visualização da Solicitação
+            </h3>
+
+            <div className="space-y-3 text-sm">
+              {extractedInfo.title && (
+                <div className="border-b border-green-200 pb-2">
+                  <p className="text-xs font-semibold text-green-700">Serviço</p>
+                  <p className="text-green-900">{extractedInfo.title}</p>
+                </div>
+              )}
+
+              {extractedInfo.category && (
+                <div className="border-b border-green-200 pb-2">
+                  <p className="text-xs font-semibold text-green-700">Categoria</p>
+                  <p className="text-green-900">{extractedInfo.category}</p>
+                </div>
+              )}
+
+              {extractedInfo.description && (
+                <div className="border-b border-green-200 pb-2">
+                  <p className="text-xs font-semibold text-green-700">Descrição</p>
+                  <p className="text-green-900 whitespace-pre-line">{extractedInfo.description}</p>
+                </div>
+              )}
+
+              {(extractedInfo.city || extractedInfo.neighborhood) && (
+                <div className="border-b border-green-200 pb-2">
+                  <p className="text-xs font-semibold text-green-700">Localização</p>
+                  <p className="text-green-900">
+                    {extractedInfo.neighborhood && `${extractedInfo.neighborhood}, `}
+                    {extractedInfo.city}
+                    {extractedInfo.state && ` - ${extractedInfo.state}`}
+                  </p>
+                </div>
+              )}
+
+              {photos && (
+                <div className="border-b border-green-200 pb-2">
+                  <p className="text-xs font-semibold text-green-700">Fotos</p>
+                  <p className="text-green-900">{photos.length} foto(s) anexada(s)</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded p-3 space-y-2">
+              <p className="text-xs text-gray-600 mb-3">
+                Tudo correto? Você pode:
+              </p>
+              <Button
+                onClick={handleConfirmFromPreview}
+                className="w-full bg-green-600 hover:bg-green-700 text-sm"
+              >
+                ✅ Confirmar e Enviar
+              </Button>
+              <Button
+                onClick={handleEditInForm}
+                variant="outline"
+                className="w-full text-sm"
+              >
+                ✏️ Editar no Formulário
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
       <div className="border-t border-gray-200 p-4 space-y-3">
-        {!askingForPhotos && !isComplete && (
+        {!askingForPhotos && !showingPreview && (
           <div className="flex gap-2">
             <Input
               value={input}
@@ -378,12 +469,6 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
               )}
             </Button>
           </div>
-        )}
-
-        {isComplete && !askingForPhotos && (
-          <Button onClick={handleConfirmSubmit} className="w-full bg-green-600 hover:bg-green-700">
-            ✅ Confirmar e Enviar Solicitação
-          </Button>
         )}
 
         <input
