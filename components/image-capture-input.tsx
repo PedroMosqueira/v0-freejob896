@@ -82,11 +82,11 @@ async function compressImage(file: File): Promise<File> {
                       lastModified: Date.now(),
                     })
 
-                    console.log("[v0] Compressão OK:", {
-                      original: `${(file.size / 1024).toFixed(0)}KB`,
-                      compressed: `${(blob.size / 1024).toFixed(0)}KB`,
-                      ratio: `${(((file.size - blob.size) / file.size) * 100).toFixed(0)}%`,
-                    })
+                    const reduction = ((1 - blob.size / file.size) * 100).toFixed(0)
+                    console.log("[v0] ✅ Foto comprimida com sucesso!")
+                    console.log(`    Original: ${(file.size / 1024).toFixed(0)}KB`)
+                    console.log(`    Comprimida: ${(blob.size / 1024).toFixed(0)}KB`)
+                    console.log(`    Redução: ${reduction}%`)
 
                     resolve(compressedFile)
                   } catch (e) {
@@ -165,14 +165,15 @@ export function ImageCaptureInput({
         }
 
         try {
-          console.log("[v0] Comprimindo:", file.name, `(${(file.size / 1024).toFixed(0)}KB)`)
+          const originalSize = (file.size / 1024).toFixed(0)
+          console.log(`[v0] 📸 Comprimindo foto: ${file.name} (${originalSize}KB)`)
           const compressed = await compressImage(file)
           compressedFiles.push(compressed)
           
           // Delay para liberar GC
           await new Promise((resolve) => setTimeout(resolve, 200))
         } catch (error) {
-          console.error("[v0] Falha ao comprimir, usando original:", error)
+          console.error("[v0] ❌ Falha ao comprimir, usando original:", error)
           compressedFiles.push(file)
         }
       }
