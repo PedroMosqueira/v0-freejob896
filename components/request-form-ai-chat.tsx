@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
-import { Send, MapPin, Loader2 } from "lucide-react"
+import { Send, MapPin, Loader2, Camera, Image as ImageIcon } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"
@@ -18,6 +18,7 @@ interface ExtractedInfo {
   city?: string
   state?: string
   neighborhood?: string
+  images?: FileList
 }
 
 interface ChatProps {
@@ -30,20 +31,28 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     {
       role: "assistant",
       content:
-        "Olá! Vou ajudá-lo a descrever o serviço que você precisa. Me conte o que você está procurando. 😊",
+        "Olá! 👋 Vou ajudá-lo a descrever o serviço que você precisa. Me conte o que você está procurando de forma natural, e eu vou extrair as informações para preencher o formulário.",
     },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo>({})
-  const [missingFields, setMissingFields] = useState<string[]>([
-    "title",
-    "description",
-    "category",
-  ])
+  const [missingFields, setMissingFields] = useState<string[]>([])
   const [isComplete, setIsComplete] = useState(false)
   const [needsLocation, setNeedsLocation] = useState(false)
+  const [askingForPhotos, setAskingForPhotos] = useState(false)
+  const [photos, setPhotos] = useState<FileList | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const fieldTranslations: Record<string, string> = {
+    title: "título do serviço",
+    description: "descrição detalhada",
+    category: "categoria",
+    city: "cidade",
+    neighborhood: "bairro",
+    state: "estado",
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -91,17 +100,40 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         console.log("[v0] Extracted info updated:", updated)
       }
 
-      // Atualizar status de campos faltantes
-      if (data.missingFields) {
+      // Processar campos faltantes com mensagem amigável
+      if (data.missingFields && data.missingFields.length > 0) {
         setMissingFields(data.missingFields)
+        
+        // Se ainda faltam campos, adicionar mensagem de feedback
+        if (data.missingFields.length > 0 && !data.isComplete) {
+          const missingFieldsText = data.missingFields
+            .map((field: string) => fieldTranslations[field] || field)
+            .join(", ")
+          
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: `📋 Para completar sua solicitação, ainda preciso de:\n• ${missingFieldsText.split(", ").join("\n• ")}`,
+            },
+          ])
+        }
       }
 
       if (data.needsLocation) {
         setNeedsLocation(true)
       }
 
-      if (data.isComplete) {
+      if (data.isComplete && data.missingFields.length === 0) {
         setIsComplete(true)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "✅ Perfeito! Todas as informações foram coletadas. Agora vou solicitar algumas fotos do serviço para melhorar sua solicitação.",
+          },
+        ])
+        setAskingForPhotos(true)
       }
     } catch (error) {
       console.error("[v0] Error sending message:", error)
@@ -119,27 +151,104 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
 
   const handleUseLocation = () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords
-        console.log("[v0] Location received:", latitude, longitude)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "📍 Buscando sua localização...",
+        },
+      ])
 
-        // Simulação: aqui você poderia fazer reverse geocoding
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "Ótimo! Sua localização foi registrada.",
-          },
-        ])
-        setNeedsLocation(false)
-      })
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+
+          // Fazer reverse geocoding (simplificado)
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            )
+            const locationData = await response.json()
+
+            const city = locationData.address?.city || locationData.address?.town || "Localização detectada"
+            const state = locationData.address?.state_code || ""
+            const neighborhood = locationData.address?.suburb || locationData.address?.neighbourhood || ""
+
+            const updated = { ...extractedInfo, city, state, neighborhood, latitude, longitude }
+            setExtractedInfo(updated)
+            onExtract(updated)
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: `✅ Localização registrada!\n📍 ${neighborhood || city}, ${state}`,
+              },
+            ])
+
+            setNeedsLocation(false)
+          } catch (error) {
+            console.error("[v0] Reverse geocoding error:", error)
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: "❌ Não consegui determinar sua localização. Por favor, digite sua cidade e bairro.",
+              },
+            ])
+          }
+        },
+        (error) => {
+          console.error("[v0] Geolocation error:", error)
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "❌ Permissão de localização negada. Por favor, digite sua cidade e bairro.",
+            },
+          ])
+        }
+      )
+    }
+  }
+
+  const handlePhotoCapture = (source: "camera" | "gallery") => {
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = "image/*"
+      fileInputRef.current.capture = source === "camera" ? "environment" : undefined
+      fileInputRef.current.click()
+    }
+  }
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.currentTarget.files
+    if (files && files.length > 0) {
+      setPhotos(files)
+      const photoNames = Array.from(files)
+        .map((f) => f.name)
+        .join(", ")
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: `📸 Adicionei ${files.length} foto(s)`,
+        },
+        {
+          role: "assistant",
+          content: `✅ Ótimo! Recebi ${files.length} foto(s). Todas as informações estão prontas!`,
+        },
+      ])
+
+      const finalInfo = { ...extractedInfo, images: files }
+      setExtractedInfo(finalInfo)
+      onExtract(finalInfo)
+      setAskingForPhotos(false)
     }
   }
 
   const handleConfirmSubmit = () => {
-    if (isComplete) {
-      onComplete(extractedInfo)
-    }
+    onComplete(extractedInfo)
   }
 
   return (
@@ -152,7 +261,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${
+              className={`max-w-xs px-4 py-2 rounded-lg whitespace-pre-line ${
                 msg.role === "user"
                   ? "bg-blue-500 text-white rounded-br-none"
                   : "bg-gray-100 text-gray-800 rounded-bl-none"
@@ -164,10 +273,10 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         ))}
 
         {/* Extracted Info Display */}
-        {Object.keys(extractedInfo).length > 0 && (
+        {Object.keys(extractedInfo).length > 0 && !askingForPhotos && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-2">
             <p className="text-xs font-semibold text-blue-900 mb-2">
-              Informações Extraídas:
+              ✅ Informações Coletadas:
             </p>
             <div className="space-y-1 text-xs text-blue-800">
               {extractedInfo.title && <p>📌 Serviço: {extractedInfo.title}</p>}
@@ -179,7 +288,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
               )}
               {(extractedInfo.city || extractedInfo.neighborhood) && (
                 <p>
-                  📍 Local: {extractedInfo.neighborhood || extractedInfo.city}
+                  📍 Local: {extractedInfo.neighborhood ? `${extractedInfo.neighborhood}, ` : ""}{extractedInfo.city}
+                  {extractedInfo.state ? ` - ${extractedInfo.state}` : ""}
                 </p>
               )}
             </div>
@@ -201,21 +311,43 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           </div>
         )}
 
-        {/* Missing Fields Info */}
-        {missingFields.length > 0 && !isComplete && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
-            <p className="text-xs text-amber-800">
-              Faltam: {missingFields.join(", ")}
+        {/* Photo Upload Section */}
+        {askingForPhotos && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+            <p className="text-sm text-amber-900 font-semibold">
+              📸 Adicionar Fotos (opcional)
             </p>
-          </div>
-        )}
-
-        {/* Complete Message */}
-        {isComplete && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-sm text-green-800 font-semibold">
-              ✅ Tudo pronto! Você pode confirmar a solicitação.
-            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handlePhotoCapture("camera")}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 flex-1"
+              >
+                <Camera className="w-4 h-4" />
+                Tirar Foto
+              </Button>
+              <Button
+                onClick={() => handlePhotoCapture("gallery")}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 flex-1"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Galeria
+              </Button>
+            </div>
+            <Button
+              onClick={() => {
+                setAskingForPhotos(false)
+                setIsComplete(true)
+              }}
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs"
+            >
+              Prosseguir sem fotos
+            </Button>
           </div>
         )}
 
@@ -224,33 +356,44 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
 
       {/* Input Area */}
       <div className="border-t border-gray-200 p-4 space-y-3">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Descreva o serviço que precisa..."
-            disabled={loading || isComplete}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={loading || !input.trim()}
-            size="icon"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
+        {!askingForPhotos && !isComplete && (
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              placeholder="Descreva o serviço que precisa..."
+              disabled={loading}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={loading || !input.trim()}
+              size="icon"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        )}
 
-        {isComplete && (
-          <Button onClick={handleConfirmSubmit} className="w-full">
-            Confirmar Solicitação
+        {isComplete && !askingForPhotos && (
+          <Button onClick={handleConfirmSubmit} className="w-full bg-green-600 hover:bg-green-700">
+            ✅ Confirmar e Enviar Solicitação
           </Button>
         )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handlePhotoSelect}
+          accept="image/*"
+          className="hidden"
+          multiple
+        />
       </div>
     </div>
   )
