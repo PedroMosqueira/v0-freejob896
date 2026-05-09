@@ -1,10 +1,14 @@
-import { createClient } from "@supabase/supabase-js"
+import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
+
+export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
   const error = requestUrl.searchParams.get("error")
+  const cookieStore = await cookies()
 
   console.log("[v0] ========== AUTH CALLBACK ==========")
   console.log("[v0] Full URL:", request.url)
@@ -31,18 +35,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/?error=config_missing", requestUrl.origin))
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Usar createServerClient para servidor
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          } catch {
+            // SSR context limitation
+          }
+        },
+      },
+    })
 
     try {
       console.log("[v0] 📡 Chamando exchangeCodeForSession...")
-      console.log("[v0] Supabase URL:", supabaseUrl?.substring(0, 30) + "...")
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
       if (exchangeError) {
         console.error("[v0] ❌ Exchange error completo:", JSON.stringify(exchangeError, null, 2))
         console.error("[v0] ❌ Exchange error message:", exchangeError.message)
         console.error("[v0] ❌ Exchange error code:", exchangeError.code)
-        console.error("[v0] ❌ Exchange error status:", (exchangeError as any).status)
         return NextResponse.redirect(new URL("/?error=exchange_failed", requestUrl.origin))
       }
 
