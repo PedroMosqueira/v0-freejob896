@@ -390,8 +390,6 @@ export default function RequestForm() {
       return prev.filter((_, i) => i !== indexToRemove)
     })
   }
-    setImagePreviews((prev) => prev.filter((_, index) => index !== indexToRemove))
-  }
 
   const searchNeighborhoods = async (query: string) => {
     if (query.length < 2 || !city || !state) {
