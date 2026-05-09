@@ -6,14 +6,11 @@ import { notificationManager } from "@/lib/notifications"
 
 export function useNotifications() {
   const [email, setEmail] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
   const supabase = createSupabaseBrowserClient()
   const channelRef = useRef<any>(null)
-  const unsubscribeRef = useRef<(() => void) | null>(null)
+  const listenerSetupRef = useRef<string | null>(null)
 
   useEffect(() => {
-    setMounted(true)
-    
     // Obter email da sessão atual
     const getEmail = async () => {
       const {
@@ -28,28 +25,31 @@ export function useNotifications() {
 
     return () => {
       // Cleanup ao desmontar
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current()
-      }
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+        listenerSetupRef.current = null
       }
     }
   }, [])
 
   useEffect(() => {
-    if (!mounted || !email) {
+    if (!email) {
       return
     }
 
-    // Limpar listener anterior antes de criar novo
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current()
-    }
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
+    // Se o listener já está configurado para este email, não fazer nada
+    if (listenerSetupRef.current === email) {
+      return
     }
 
+    // Remover listener anterior
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
+
+    // Criar novo listener
     const channel = supabase
       .channel(`user-notifications-${email}`, {
         config: {
@@ -91,11 +91,15 @@ export function useNotifications() {
       })
 
     channelRef.current = channel
+    listenerSetupRef.current = email
 
     return () => {
-      if (channel) {
-        supabase.removeChannel(channel)
+      // Cleanup quando email muda
+      if (channelRef.current && listenerSetupRef.current === email) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+        listenerSetupRef.current = null
       }
     }
-  }, [mounted, email, supabase])
+  }, [email])
 }
