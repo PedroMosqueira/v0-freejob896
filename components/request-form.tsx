@@ -373,20 +373,23 @@ export default function RequestForm() {
   }
 
   const handleImageCapture = (files: FileList) => {
-    const newPreviews: string[] = []
     Array.from(files).forEach((file) => {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        newPreviews.push(reader.result as string)
-        if (newPreviews.length === files.length) {
-          setImagePreviews((prev) => [...prev, ...newPreviews])
-        }
-      }
-      reader.readAsDataURL(file)
+      // Criar blob URL em vez de data URL para economizar memória
+      const blobUrl = URL.createObjectURL(file)
+      setImagePreviews((prev) => [...prev, blobUrl])
     })
   }
 
   const handleRemoveImage = (indexToRemove: number) => {
+    setImagePreviews((prev) => {
+      // Revogar blob URL para liberar memória
+      const urlToRemove = prev[indexToRemove]
+      if (urlToRemove && urlToRemove.startsWith("blob:")) {
+        URL.revokeObjectURL(urlToRemove)
+      }
+      return prev.filter((_, i) => i !== indexToRemove)
+    })
+  }
     setImagePreviews((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
 
