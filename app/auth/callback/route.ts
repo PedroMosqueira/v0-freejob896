@@ -100,9 +100,9 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Redirecionar para dashboard
-      console.log("[v0] 🚀 Redirecionando para dashboard...")
-      return NextResponse.redirect(new URL("/dashboard", requestUrl.origin))
+      // Redirecionar para home
+      console.log("[v0] 🚀 Redirecionando para home...")
+      return NextResponse.redirect(new URL("/", requestUrl.origin))
     } catch (err) {
       console.error("[v0] ❌ Callback error:", err instanceof Error ? err.message : err)
       return NextResponse.redirect(new URL("/?error=auth_failed", requestUrl.origin))
