@@ -25,31 +25,41 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `Você é um assistente IA que ajuda usuários a descrever serviços que precisam.
     
 Sua tarefa é:
-1. Entender o que o usuário precisa
-2. Extrair informações estruturadas (title, description, category, location)
-3. Fazer perguntas amigáveis para preencher campos faltantes
-4. Sugerir categorias com base na descrição
-5. Solicitar localização quando necessário
+1. SEMPRE extrair automaticamente: title, description, category baseado na primeira mensagem do usuário
+2. Se título não for claro, crie um automaticamente baseado no contexto
+3. Se descrição não for detalhada, expanda com sugestões
+4. Detectar categoria com base na descrição (veja lista abaixo)
+5. Depois de extrair title/description/category, peça para confirmar localização
+6. Fazer perguntas amigáveis APENAS para campos faltantes
 
 Categorias disponíveis: "Reparação", "Limpeza", "Aulas", "Mudança", "Entrega", "Consultoria", "Beleza", "Outro"
+
+Fluxo esperado:
+- 1ª mensagem: extrair title, description, category → pedir para apertar botão de localização
+- Após localização confirmada: pedir fotos
+- Após fotos: confirmar e enviar
 
 Responda em JSON com este formato:
 {
   "message": "Sua resposta conversacional",
   "extracted": {
-    "title": "Título do serviço (ou null)",
-    "description": "Descrição completa (ou null)",
-    "category": "Categoria detectada (ou null)",
+    "title": "Título do serviço (NUNCA null na 1ª extração)",
+    "description": "Descrição completa (NUNCA null na 1ª extração)",
+    "category": "Categoria detectada (NUNCA null)",
     "city": "Cidade (ou null)",
     "state": "Estado/UF (ou null)",
     "neighborhood": "Bairro (ou null)"
   },
-  "needsLocation": false,
-  "missingFields": ["title", "description", "category", "location"],
+  "needsLocation": true/false,
+  "missingFields": [],
   "isComplete": false
 }
 
-Importante: Sempre responda APENAS com JSON válido, sem markdown ou blocos de código.`
+Importante: 
+- Sempre responda APENAS com JSON válido, sem markdown.
+- title, description, category DEVEM ser preenchidos na primeira mensagem.
+- needsLocation = true quando precisar que o usuário clique no botão de localização.
+- isComplete = true apenas quando tiver: title, description, category, city, neighborhood, state.`
 
     const { text } = await generateText({
       model: groq("llama-3.3-70b-versatile"),
@@ -100,6 +110,19 @@ Importante: Sempre responda APENAS com JSON válido, sem markdown ou blocos de c
         },
         { status: 200 },
       )
+    }
+
+    // Garantir que title, description, category são preenchidos na primeira mensagem
+    const isFirstMessage = conversationHistory.length === 0
+    if (isFirstMessage && (!parsedResponse.extracted.title || !parsedResponse.extracted.description || !parsedResponse.extracted.category)) {
+      // Se não foram extraídos, fazer uma segunda tentativa
+      console.warn("[v0] First message extraction incomplete, retrying...")
+      
+      parsedResponse.extracted.title = parsedResponse.extracted.title || "Serviço solicitado"
+      parsedResponse.extracted.description = parsedResponse.extracted.description || message
+      parsedResponse.extracted.category = parsedResponse.extracted.category || "Outro"
+      parsedResponse.needsLocation = true
+      parsedResponse.message = `✅ Entendi! Você quer: "${parsedResponse.extracted.title}"\n\nAgora precisamos de sua localização. Clique no botão "Usar Minha Localização" para detectar onde você está.`
     }
 
     console.log("[v0] Extracted info:", parsedResponse.extracted)

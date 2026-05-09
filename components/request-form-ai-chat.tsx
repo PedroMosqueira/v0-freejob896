@@ -31,15 +31,14 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     {
       role: "assistant",
       content:
-        "Olá! 👋 Vou ajudá-lo a descrever o serviço que você precisa. Me conte o que você está procurando de forma natural, e eu vou extrair as informações para preencher o formulário.",
+        "Olá! Vou ajudá-lo a descrever o serviço que você precisa. Me conte o que você está procurando de forma natural.",
     },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo>({})
-  const [missingFields, setMissingFields] = useState<string[]>([])
-  const [isComplete, setIsComplete] = useState(false)
-  const [needsLocation, setNeedsLocation] = useState(false)
+  const [isFirstMessage, setIsFirstMessage] = useState(true)
+  const [locationConfirmed, setLocationConfirmed] = useState(false)
   const [askingForPhotos, setAskingForPhotos] = useState(false)
   const [showingPreview, setShowingPreview] = useState(false)
   const [photos, setPhotos] = useState<FileList | null>(null)
@@ -99,42 +98,16 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         setExtractedInfo(updated)
         onExtract(updated)
         console.log("[v0] Extracted info updated:", updated)
-      }
 
-      // Processar campos faltantes com mensagem amigável
-      if (data.missingFields && data.missingFields.length > 0) {
-        setMissingFields(data.missingFields)
-        
-        // Se ainda faltam campos, adicionar mensagem de feedback
-        if (data.missingFields.length > 0 && !data.isComplete) {
-          const missingFieldsText = data.missingFields
-            .map((field: string) => fieldTranslations[field] || field)
-            .join(", ")
-          
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: `📋 Para completar sua solicitação, ainda preciso de:\n• ${missingFieldsText.split(", ").join("\n• ")}`,
-            },
-          ])
+        // Se é primeira mensagem e extraiu title/description/category, pedir localização
+        if (isFirstMessage && data.extracted.title && data.extracted.description && data.extracted.category) {
+          setIsFirstMessage(false)
         }
-      }
 
-      if (data.needsLocation) {
-        setNeedsLocation(true)
-      }
-
-      if (data.isComplete && data.missingFields.length === 0) {
-        setIsComplete(true)
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: "✅ Perfeito! Todas as informações foram coletadas. Agora vou solicitar algumas fotos do serviço para melhorar sua solicitação.",
-          },
-        ])
-        setAskingForPhotos(true)
+        // Se a IA indicou que precisa de localização, mostrar botão
+        if (data.needsLocation && !locationConfirmed) {
+          // Localização será pedida através da UI
+        }
       }
     } catch (error) {
       console.error("[v0] Error sending message:", error)
@@ -156,7 +129,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         ...prev,
         {
           role: "assistant",
-          content: "📍 Buscando sua localização...",
+          content: "Obtendo sua localização...",
         },
       ])
 
@@ -164,37 +137,37 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         async (position) => {
           const { latitude, longitude } = position.coords
 
-          // Fazer reverse geocoding (simplificado)
           try {
             const response = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
             )
             const locationData = await response.json()
 
-            const city = locationData.address?.city || locationData.address?.town || "Localização detectada"
-            const state = locationData.address?.state_code || ""
+            const city = locationData.address?.city || locationData.address?.town || ""
+            const state = locationData.address?.state_code || locationData.address?.state || ""
             const neighborhood = locationData.address?.suburb || locationData.address?.neighbourhood || ""
 
-            const updated = { ...extractedInfo, city, state, neighborhood, latitude, longitude }
+            const updated = { ...extractedInfo, city, state, neighborhood }
             setExtractedInfo(updated)
+            setLocationConfirmed(true)
             onExtract(updated)
 
             setMessages((prev) => [
               ...prev,
               {
                 role: "assistant",
-                content: `✅ Localização registrada!\n📍 ${neighborhood || city}, ${state}`,
+                content: `Ótimo! Sua localização foi detectada: ${neighborhood ? `${neighborhood}, ` : ""}${city} - ${state}\n\nAgora vamos adicionar algumas fotos do serviço.`,
               },
             ])
 
-            setNeedsLocation(false)
+            setAskingForPhotos(true)
           } catch (error) {
             console.error("[v0] Reverse geocoding error:", error)
             setMessages((prev) => [
               ...prev,
               {
                 role: "assistant",
-                content: "❌ Não consegui determinar sua localização. Por favor, digite sua cidade e bairro.",
+                content: "Não consegui determinar sua localização. Por favor, digite sua cidade e bairro.",
               },
             ])
           }
@@ -205,7 +178,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
             ...prev,
             {
               role: "assistant",
-              content: "❌ Permissão de localização negada. Por favor, digite sua cidade e bairro.",
+              content: "Permissão de localização negada. Por favor, digite sua cidade e bairro.",
             },
           ])
         }
@@ -252,7 +225,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       ...prev,
       {
         role: "assistant",
-        content: "Sem problema! Vou mostrar uma pré-visualização da sua solicitação.",
+        content: "Tudo bem! Vou mostrar uma pré-visualização da sua solicitação.",
       },
     ])
     setAskingForPhotos(false)
@@ -268,11 +241,10 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       ...prev,
       {
         role: "assistant",
-        content: "✅ Perfeito! Sua solicitação foi confirmada e enviada com sucesso! 🎉",
+        content: "Sua solicitação foi confirmada e enviada com sucesso!",
       },
     ])
     setShowingPreview(false)
-    setIsComplete(false)
     onComplete(extractedInfo)
   }
 
@@ -321,14 +293,15 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           </div>
         )}
 
-        {/* Location Button */}
-        {needsLocation && (
-          <div className="flex gap-2">
+        {/* Location Button - Only show if title/description/category extracted but location not yet confirmed */}
+        {!locationConfirmed && !isFirstMessage && extractedInfo.title && extractedInfo.description && extractedInfo.category && !askingForPhotos && !showingPreview && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-900 mb-3">
+              Agora preciso de sua localização:
+            </p>
             <Button
               onClick={handleUseLocation}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
             >
               <MapPin className="w-4 h-4" />
               Usar Minha Localização
@@ -447,7 +420,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
 
       {/* Input Area */}
       <div className="border-t border-gray-200 p-4 space-y-3">
-        {!askingForPhotos && !showingPreview && (
+        {/* Show input only when not in location/photos/preview stages */}
+        {isFirstMessage && !locationConfirmed && !askingForPhotos && !showingPreview && (
           <div className="flex gap-2">
             <Input
               value={input}
