@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Loader2, MapPin, AlertCircle } from "lucide-react"
 import { CategoryCombobox } from "@/components/category-combobox"
 import { ImageCaptureInput } from "@/components/image-capture-input"
+import { RequestFormAIChat } from "@/components/request-form-ai-chat"
 
 const stateNameToAbbr: Record<string, string> = {
   Acre: "AC",
@@ -50,6 +51,9 @@ export default function RequestForm() {
   const { toast } = useToast()
   const formRef = useRef<HTMLFormElement>(null)
   const errorBannerRef = useRef<HTMLDivElement>(null)
+
+  // AI Chat mode toggle
+  const [useAIChat, setUseAIChat] = useState(false)
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -501,33 +505,69 @@ export default function RequestForm() {
     <div className="space-y-4">
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
+            <Button
+              variant={useAIChat ? "default" : "outline"}
+              size="sm"
+              onClick={() => setUseAIChat(!useAIChat)}
+            >
+              {useAIChat ? "Voltar ao Formulário" : "Usar IA"}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-6">
-          {/* Banner de erros de validação */}
-          {Object.keys(errors).length > 0 && (
-            <div
-              ref={errorBannerRef}
-              className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-sm"
-              role="alert"
-              aria-live="assertive"
-            >
-              <div className="flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-red-800 mb-2">Formulário com erros</h3>
-                  <ul className="text-sm text-red-700 space-y-1">
-                    {Object.entries(errors).map(([field, error]) => (
-                      <li key={field} className="flex items-start gap-2">
-                        <span className="text-red-500 mt-1">•</span>
-                        <span>{error}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+          {/* AI Chat Mode */}
+          {useAIChat && (
+            <RequestFormAIChat
+              onExtract={(info) => {
+                if (info.title) setTitle(info.title)
+                if (info.description) setDescription(info.description)
+                if (info.category) setCategory(info.category)
+                if (info.city) setCity(info.city)
+                if (info.state) setState(info.state)
+                if (info.neighborhood) setNeighborhood(info.neighborhood)
+              }}
+              onComplete={(info) => {
+                // Preencher form e fazer submit
+                if (info.title) setTitle(info.title)
+                if (info.description) setDescription(info.description)
+                if (info.category) setCategory(info.category)
+                if (info.city) setCity(info.city)
+                if (info.state) setState(info.state)
+                if (info.neighborhood) setNeighborhood(info.neighborhood)
+                setUseAIChat(false)
+              }}
+            />
           )}
+
+          {/* Traditional Form Mode */}
+          {!useAIChat && (
+            <>
+              {/* Banner de erros de validação */}
+              {Object.keys(errors).length > 0 && (
+                <div
+                  ref={errorBannerRef}
+                  className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-sm"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  <div className="flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-red-800 mb-2">Formulário com erros</h3>
+                      <ul className="text-sm text-red-700 space-y-1">
+                        {Object.entries(errors).map(([field, error]) => (
+                          <li key={field} className="flex items-start gap-2">
+                            <span className="text-red-500 mt-1">•</span>
+                            <span>{error}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
 
           <form ref={formRef} onSubmit={handleSubmit} className="grid gap-4 sm:gap-6">
             <div className="grid gap-2">
@@ -813,6 +853,8 @@ export default function RequestForm() {
               {isSubmitting ? "Enviando..." : "Pedir Serviço"}
             </Button>
           </form>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
