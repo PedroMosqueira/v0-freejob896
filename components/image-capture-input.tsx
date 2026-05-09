@@ -16,38 +16,47 @@ interface ImageCaptureInputProps {
 async function compressImage(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     try {
-      const isLargeFile = file.size > 5 * 1024 * 1024 // 5MB
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      
+      // Em mobile, ser muito mais agressivo
+      const MAX_WIDTH = isMobileDevice ? 640 : 1024
+      const MAX_HEIGHT = isMobileDevice ? 640 : 1024
+      const quality = isMobileDevice ? 0.3 : 0.5
 
       const reader = new FileReader()
+      let blobUrl: string | null = null
       
       reader.onload = (e) => {
         try {
           const img = new Image()
+          
           img.onload = () => {
             try {
+              // Limpar blob URL após carregar
+              if (blobUrl) {
+                URL.revokeObjectURL(blobUrl)
+              }
+
               const canvas = document.createElement("canvas")
-              const ctx = canvas.getContext("2d")
+              const ctx = canvas.getContext("2d", { alpha: false })
               
               if (!ctx) {
-                reject(new Error("Contexto canvas não disponível"))
+                reject(new Error("Canvas context unavailable"))
                 return
               }
 
-              // Dimensões mais agressivas para mobile
-              const MAX_WIDTH = isLargeFile ? 800 : 1024
-              const MAX_HEIGHT = isLargeFile ? 800 : 1024
               let width = img.width
               let height = img.height
 
-              // Calcula novo tamanho mantendo proporção
+              // Resize mantendo proporção
               if (width > height) {
                 if (width > MAX_WIDTH) {
-                  height = (height * MAX_WIDTH) / width
+                  height = Math.round((height * MAX_WIDTH) / width)
                   width = MAX_WIDTH
                 }
               } else {
                 if (height > MAX_HEIGHT) {
-                  width = (width * MAX_HEIGHT) / height
+                  width = Math.round((width * MAX_HEIGHT) / height)
                   height = MAX_HEIGHT
                 }
               }
@@ -55,57 +64,66 @@ async function compressImage(file: File): Promise<File> {
               canvas.width = width
               canvas.height = height
 
-              // Desenha imagem redimensionada
+              ctx.fillStyle = "#ffffff"
+              ctx.fillRect(0, 0, width, height)
               ctx.drawImage(img, 0, 0, width, height)
 
-              // Qualidade mais agressiva para economizar memória
-              const quality = isLargeFile ? 0.4 : 0.55
-
+              // Usar JPEG para melhor compressão em mobile
               canvas.toBlob(
                 (blob) => {
-                  if (blob) {
-                    const compressedFile = new File([blob], file.name, {
+                  try {
+                    if (!blob || blob.size === 0) {
+                      reject(new Error("Empty blob after compression"))
+                      return
+                    }
+
+                    const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
                       type: "image/jpeg",
                       lastModified: Date.now(),
                     })
-                    console.log("[v0] Imagem comprimida:", {
-                      original: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
-                      compressed: `${(blob.size / 1024 / 1024).toFixed(2)}MB`,
-                      reduction: `${(((file.size - blob.size) / file.size) * 100).toFixed(0)}%`,
+
+                    console.log("[v0] Compressão OK:", {
+                      original: `${(file.size / 1024).toFixed(0)}KB`,
+                      compressed: `${(blob.size / 1024).toFixed(0)}KB`,
+                      ratio: `${(((file.size - blob.size) / file.size) * 100).toFixed(0)}%`,
                     })
+
                     resolve(compressedFile)
-                  } else {
-                    reject(new Error("Falha ao comprimir imagem (blob vazio)"))
+                  } catch (e) {
+                    console.error("[v0] Erro ao criar File:", e)
+                    reject(e)
                   }
                 },
                 "image/jpeg",
                 quality,
               )
             } catch (canvasError) {
-              console.error("[v0] Erro ao processar canvas:", canvasError)
-              reject(new Error("Erro ao processar imagem no canvas"))
+              console.error("[v0] Canvas error:", canvasError)
+              reject(canvasError)
             }
           }
           
           img.onerror = () => {
-            reject(new Error("Falha ao carregar imagem"))
+            if (blobUrl) URL.revokeObjectURL(blobUrl)
+            reject(new Error("Image load failed"))
           }
           
-          // Usar blob URL em vez de data URL para economizar memória
-          img.src = URL.createObjectURL(file)
+          blobUrl = URL.createObjectURL(file)
+          img.src = blobUrl
         } catch (imgError) {
-          console.error("[v0] Erro ao criar Image:", imgError)
-          reject(new Error("Erro ao criar objeto de imagem"))
+          console.error("[v0] Image creation error:", imgError)
+          reject(imgError)
         }
       }
 
       reader.onerror = () => {
-        reject(new Error("Falha ao ler arquivo"))
+        reject(new Error("File read failed"))
       }
 
+      // Usar ArrayBuffer para economizar memória
       reader.readAsArrayBuffer(file)
     } catch (error) {
-      console.error("[v0] Erro geral na compressão:", error)
+      console.error("[v0] Compression error:", error)
       reject(error)
     }
   })
@@ -126,46 +144,57 @@ export function ImageCaptureInput({
     e.stopPropagation()
 
     const files = e.target.files
-    if (files && files.length > 0) {
-      setIsCompressing(true)
+    if (!files || files.length === 0) return
 
-      try {
-        console.log("[v0] Iniciando compressão de", files.length, "arquivo(s)")
+    setIsCompressing(true)
 
-        // Limita a 3 imagens por vez em mobile para economizar memória
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
-        const maxFiles = isMobileDevice ? 1 : files.length
-        const filesToProcess = Array.from(files).slice(0, maxFiles)
+    try {
+      console.log("[v0] Iniciando compressão de", files.length, "arquivo(s)")
 
-        // Comprime cada imagem selecionada com delay para liberar memória
-        const compressedFiles = []
-        for (const file of filesToProcess) {
-          try {
-            const compressed = await compressImage(file)
-            compressedFiles.push(compressed)
-            // Pequeno delay para liberar memória entre compressões
-            await new Promise((resolve) => setTimeout(resolve, 100))
-          } catch (error) {
-            console.error("[v0] Erro ao comprimir arquivo individual:", error)
-            // Se falhar, usa original (fallback)
-            compressedFiles.push(file)
-          }
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      
+      // Processa apenas 1 arquivo por vez em mobile para evitar pico de memória
+      const filesToProcess = isMobileDevice ? [files[0]] : Array.from(files)
+
+      const compressedFiles = []
+
+      for (const file of filesToProcess) {
+        if (!file.type.startsWith("image/")) {
+          console.warn("[v0] Arquivo ignorado (não é imagem):", file.name)
+          continue
         }
 
-        // Cria um FileList customizado com as imagens comprimidas
-        const dataTransfer = new DataTransfer()
-        compressedFiles.forEach((file) => dataTransfer.items.add(file))
-
-        onCapture(dataTransfer.files)
-      } catch (error) {
-        console.error("[v0] Erro geral ao comprimir imagens:", error)
-        // Se falhar completamente, usa arquivos originais
-        onCapture(files)
-      } finally {
-        setIsCompressing(false)
-        // Reset input para permitir captura da mesma foto novamente
-        e.target.value = ""
+        try {
+          console.log("[v0] Comprimindo:", file.name, `(${(file.size / 1024).toFixed(0)}KB)`)
+          const compressed = await compressImage(file)
+          compressedFiles.push(compressed)
+          
+          // Delay para liberar GC
+          await new Promise((resolve) => setTimeout(resolve, 200))
+        } catch (error) {
+          console.error("[v0] Falha ao comprimir, usando original:", error)
+          compressedFiles.push(file)
+        }
       }
+
+      if (compressedFiles.length === 0) {
+        console.warn("[v0] Nenhum arquivo foi comprimido")
+        return
+      }
+
+      // Cria FileList com imagens comprimidas
+      const dataTransfer = new DataTransfer()
+      compressedFiles.forEach((file) => dataTransfer.items.add(file))
+
+      console.log("[v0] Enviando", compressedFiles.length, "arquivo(s) comprimido(s)")
+      onCapture(dataTransfer.files)
+    } catch (error) {
+      console.error("[v0] Erro geral:", error)
+      // Fallback: envia original se compressão falhar totalmente
+      onCapture(files)
+    } finally {
+      setIsCompressing(false)
+      e.target.value = ""
     }
   }
 
