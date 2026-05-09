@@ -1,105 +1,104 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 import { notificationManager } from "@/lib/notifications"
 
+let activeChannelRef: any = null
+let activeEmailRef: string | null = null
+
 export function useNotifications() {
-  const [email, setEmail] = useState<string | null>(null)
   const supabase = createSupabaseBrowserClient()
-  const channelRef = useRef<any>(null)
-  const listenerSetupRef = useRef<string | null>(null)
+  const setupInProgressRef = useRef(false)
 
   useEffect(() => {
-    // Obter email da sessão atual
-    const getEmail = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session?.user?.email) {
-        setEmail(session.user.email)
-      }
-    }
+    let mounted = true
 
-    getEmail()
+    const setupNotifications = async () => {
+      if (setupInProgressRef.current || !mounted) return
 
-    return () => {
-      // Cleanup ao desmontar
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-        listenerSetupRef.current = null
-      }
-    }
-  }, [])
+      setupInProgressRef.current = true
 
-  useEffect(() => {
-    if (!email) {
-      return
-    }
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-    // Se o listener já está configurado para este email, não fazer nada
-    if (listenerSetupRef.current === email) {
-      return
-    }
+        if (!session?.user?.email || !mounted) {
+          setupInProgressRef.current = false
+          return
+        }
 
-    // Remover listener anterior
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current)
-      channelRef.current = null
-    }
+        const email = session.user.email
 
-    // Criar novo listener
-    const channel = supabase
-      .channel(`user-notifications-${email}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${email}`,
-        },
-        (payload) => {
-          const notification = payload.new as {
-            title: string
-            message: string
-            type: string
-            related_need_id?: string
-            related_proposal_id?: string
-          }
+        // Se já está configurado para este email, não fazer nada
+        if (activeEmailRef === email && activeChannelRef) {
+          setupInProgressRef.current = false
+          return
+        }
 
-          notificationManager.show({
-            title: notification.title,
-            body: notification.message,
-            type: notification.type as any,
-            needId: notification.related_need_id,
-            proposalId: notification.related_proposal_id,
+        // Remover listener anterior se existir
+        if (activeChannelRef) {
+          supabase.removeChannel(activeChannelRef)
+          activeChannelRef = null
+        }
+
+        // Criar novo listener
+        const channel = supabase
+          .channel(`realtime:${email}`, {
+            config: {
+              broadcast: { self: true },
+            },
+          })
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "notifications",
+              filter: `user_id=eq.${email}`,
+            },
+            (payload) => {
+              const notification = payload.new as {
+                title: string
+                message: string
+                type: string
+                related_need_id?: string
+                related_proposal_id?: string
+              }
+
+              notificationManager.show({
+                title: notification.title,
+                body: notification.message,
+                type: notification.type as any,
+                needId: notification.related_need_id,
+                proposalId: notification.related_proposal_id,
+              })
+
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("new-notification"))
+              }
+            },
+          )
+          .subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              console.log("[v0] Notificações realtime ativo para:", email)
+            }
           })
 
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("new-notification"))
-          }
-        },
-      )
-      .subscribe((status) => {
-        console.log("[v0] Notificações realtime status:", status)
-      })
-
-    channelRef.current = channel
-    listenerSetupRef.current = email
-
-    return () => {
-      // Cleanup quando email muda
-      if (channelRef.current && listenerSetupRef.current === email) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
-        listenerSetupRef.current = null
+        activeChannelRef = channel
+        activeEmailRef = email
+      } catch (error) {
+        console.error("[v0] Erro ao setup notificações:", error)
+      } finally {
+        setupInProgressRef.current = false
       }
     }
-  }, [email])
+
+    setupNotifications()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 }
