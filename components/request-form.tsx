@@ -529,14 +529,28 @@ export default function RequestForm() {
                 if (info.neighborhood) setNeighborhood(info.neighborhood)
               }}
               onComplete={(info) => {
-                // Preencher form e fazer submit
+                // Preencher todos os campos do formulário
                 if (info.title) setTitle(info.title)
                 if (info.description) setDescription(info.description)
                 if (info.category) setCategory(info.category)
                 if (info.city) setCity(info.city)
                 if (info.state) setState(info.state)
                 if (info.neighborhood) setNeighborhood(info.neighborhood)
+                
+                // Adicionar imagens se fornecidas
+                if (info.images && info.images.length > 0) {
+                  handleImageCapture(info.images)
+                }
+                
+                // Voltar para formulário
                 setUseAIChat(false)
+                
+                // Fazer submit automático após preencher dados
+                setTimeout(() => {
+                  if (formRef.current) {
+                    formRef.current.dispatchEvent(new Event('submit', { bubbles: true }))
+                  }
+                }, 300)
               }}
             />
           )}
