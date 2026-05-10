@@ -378,7 +378,9 @@ export default function RequestForm() {
 
   const handleImageCapture = (files: FileList | File[]) => {
     const fileArray = Array.isArray(files) ? files : Array.from(files)
-    fileArray.forEach((file) => {
+    console.log("[v0] handleImageCapture - processando", fileArray.length, "arquivo(s)")
+    fileArray.forEach((file, idx) => {
+      console.log(`[v0] handleImageCapture - arquivo ${idx + 1}:`, file.name, `(${(file.size / 1024 / 1024).toFixed(2)}MB)`)
       // Criar blob URL em vez de data URL para economizar memória
       const blobUrl = URL.createObjectURL(file)
       setImagePreviews((prev) => [...prev, blobUrl])
@@ -534,6 +536,9 @@ export default function RequestForm() {
                 if (info.neighborhood) setNeighborhood(info.neighborhood)
               }}
               onComplete={(info) => {
+                console.log("[v0] onComplete - info:", info)
+                console.log("[v0] onComplete - images count:", info.images?.length || 0)
+                
                 // Preencher todos os campos do formulário
                 if (info.title) setTitle(info.title)
                 if (info.description) setDescription(info.description)
@@ -544,6 +549,7 @@ export default function RequestForm() {
                 
                 // Adicionar imagens se fornecidas
                 if (info.images && info.images.length > 0) {
+                  console.log("[v0] Adicionando", info.images.length, "imagem(ns)")
                   handleImageCapture(info.images)
                 }
                 
