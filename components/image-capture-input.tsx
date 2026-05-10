@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import ImageCompression from "browser-image-compression"
 import { Button } from "@/components/ui/button"
 import { Camera, Upload } from "lucide-react"
 import { useRef, useState } from "react"
@@ -14,102 +14,37 @@ interface ImageCaptureInputProps {
 }
 
 async function compressImage(file: File): Promise<File> {
-  return new Promise((resolve, reject) => {
-    try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      
-      // Em mobile, ser muito mais agressivo
-      const MAX_WIDTH = isMobileDevice ? 640 : 1024
-      const MAX_HEIGHT = isMobileDevice ? 640 : 1024
-      const quality = isMobileDevice ? 0.3 : 0.5
-
-      // Usar blob URL em vez de data URL para economizar memória
-      const blobUrl = URL.createObjectURL(file)
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      
-      img.onload = () => {
-        try {
-          // Limpar blob URL após carregar
-          URL.revokeObjectURL(blobUrl)
-
-          const canvas = document.createElement("canvas")
-          const ctx = canvas.getContext("2d", { alpha: false })
-          
-          if (!ctx) {
-            reject(new Error("Canvas context unavailable"))
-            return
-          }
-
-          let width = img.width
-          let height = img.height
-
-          // Resize mantendo proporção
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width)
-              width = MAX_WIDTH
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height)
-              height = MAX_HEIGHT
-            }
-          }
-
-          canvas.width = width
-          canvas.height = height
-
-          ctx.fillStyle = "#ffffff"
-          ctx.fillRect(0, 0, width, height)
-          ctx.drawImage(img, 0, 0, width, height)
-
-          // Usar JPEG para melhor compressão em mobile
-          canvas.toBlob(
-            (blob) => {
-              try {
-                if (!blob || blob.size === 0) {
-                  reject(new Error("Empty blob after compression"))
-                  return
-                }
-
-                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
-                  type: "image/jpeg",
-                  lastModified: Date.now(),
-                })
-
-                const reduction = ((1 - blob.size / file.size) * 100).toFixed(0)
-                console.log("[v0] ✅ Foto comprimida com sucesso!")
-                console.log(`    Original: ${(file.size / 1024).toFixed(0)}KB`)
-                console.log(`    Comprimida: ${(blob.size / 1024).toFixed(0)}KB`)
-                console.log(`    Redução: ${reduction}%`)
-
-                resolve(compressedFile)
-              } catch (e) {
-                console.error("[v0] Erro ao criar File:", e)
-                reject(e)
-              }
-            },
-            "image/jpeg",
-            quality,
-          )
-        } catch (canvasError) {
-          console.error("[v0] Canvas error:", canvasError)
-          reject(canvasError)
-        }
-      }
-
-      img.onerror = () => {
-        URL.revokeObjectURL(blobUrl)
-        reject(new Error("Image load failed"))
-      }
-
-      img.src = blobUrl
-    } catch (error) {
-      console.error("[v0] Compression error:", error)
-      reject(error)
+  try {
+    // Configuração otimizada para mobile e desktop
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    
+    const options = {
+      maxSizeMB: isMobileDevice ? 0.5 : 0.9,
+      maxWidthOrHeight: isMobileDevice ? 800 : 1600,
+      useWebWorker: true,
+      fileType: "image/jpeg", // Converte HEIC → JPEG automaticamente
+      initialQuality: isMobileDevice ? 0.6 : 0.8,
     }
-  })
+
+    const originalSize = (file.size / 1024).toFixed(0)
+    console.log(`[v0] 📸 Comprimindo foto: ${file.name} (${originalSize}KB)`)
+    
+    const compressed = await ImageCompression(file, options)
+    
+    const compressedSize = (compressed.size / 1024).toFixed(0)
+    const reduction = ((1 - compressed.size / file.size) * 100).toFixed(0)
+    
+    console.log("[v0] ✅ Foto comprimida com sucesso!")
+    console.log(`    Original: ${originalSize}KB`)
+    console.log(`    Comprimida: ${compressedSize}KB`)
+    console.log(`    Redução: ${reduction}%`)
+    
+    return compressed
+  } catch (error) {
+    console.error("[v0] Erro na compressão:", error)
+    // Fallback: retorna arquivo original se compressão falhar
+    return file
+  }
 }
 
 export function ImageCaptureInput({
@@ -148,12 +83,11 @@ export function ImageCaptureInput({
         }
 
         try {
-          const originalSize = (file.size / 1024).toFixed(0)
-          console.log(`[v0] 📸 Comprimindo foto: ${file.name} (${originalSize}KB)`)
+          // PASSO 1: Comprimir ANTES de fazer preview
           const compressed = await compressImage(file)
           compressedFiles.push(compressed)
           
-          // Delay para liberar GC
+          // PASSO 2: Liberar GC entre arquivos
           await new Promise((resolve) => setTimeout(resolve, 200))
         } catch (error) {
           console.error("[v0] ❌ Falha ao comprimir, usando original:", error)
