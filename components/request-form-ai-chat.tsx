@@ -270,6 +270,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     // Incluir fotos no objeto final
     const finalInfo = { ...extractedInfo }
     if (photos && photos.length > 0) {
+      console.log("[v0] handleConfirmFromPreview - enviando", photos.length, "foto(s)")
       finalInfo.images = photos
     }
     
