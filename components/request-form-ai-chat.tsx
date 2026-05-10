@@ -42,8 +42,17 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [askingForPhotos, setAskingForPhotos] = useState(false)
   const [showingPreview, setShowingPreview] = useState(false)
   const [photos, setPhotos] = useState<FileList | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Detectar se é mobile
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent))
+    }
+    checkMobile()
+  }, [])
 
   const fieldTranslations: Record<string, string> = {
     title: "título do serviço",
@@ -189,7 +198,12 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const handlePhotoCapture = (source: "camera" | "gallery") => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = "image/*"
-      fileInputRef.current.capture = source === "camera" ? "environment" : undefined
+      // Remover o atributo capture ou definir corretamente apenas para câmera
+      if (source === "camera") {
+        fileInputRef.current.capture = "environment"
+      } else {
+        fileInputRef.current.removeAttribute("capture")
+      }
       fileInputRef.current.click()
     }
   }
@@ -342,20 +356,22 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
               📸 Adicionar Fotos (opcional)
             </p>
             <div className="flex gap-2">
-              <Button
-                onClick={() => handlePhotoCapture("camera")}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 flex-1"
-              >
-                <Camera className="w-4 h-4" />
-                Tirar Foto
-              </Button>
+              {isMobile && (
+                <Button
+                  onClick={() => handlePhotoCapture("camera")}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <Camera className="w-4 h-4" />
+                  Tirar Foto
+                </Button>
+              )}
               <Button
                 onClick={() => handlePhotoCapture("gallery")}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 flex-1"
+                className={`flex items-center gap-2 ${isMobile ? "flex-1" : "w-full"}`}
               >
                 <ImageIcon className="w-4 h-4" />
                 Galeria
