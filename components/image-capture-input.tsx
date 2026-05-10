@@ -123,8 +123,6 @@ async function compressImage(file: File): Promise<File> {
     }
   })
 }
-
-export function ImageCaptureInput({
   onCapture,
   multiple = false,
   disabled = false,
