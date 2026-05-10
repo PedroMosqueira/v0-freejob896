@@ -57,21 +57,16 @@ export function ImageCaptureInput({
     if (!files || files.length === 0) return
 
     setIsCompressing(true)
-    console.log("[v0] Iniciando compressão de", files.length, "foto(s)")
 
     try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
-      console.log("[v0] Device:", isMobileDevice ? "Mobile" : "Desktop")
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
       
-      // Processa apenas 1 arquivo por vez em mobile
-      const filesToProcess = isMobileDevice ? [files[0]] : Array.from(files)
-      console.log("[v0] Processando", filesToProcess.length, "arquivo(s)")
+      // Processar TODAS as fotos, uma por vez para não sobrecarregar memória
+      const filesToProcess = Array.from(files)
 
       const compressedFiles: File[] = []
 
       for (const file of filesToProcess) {
-        console.log(`[v0] Processando ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-        
         if (!file.type.startsWith("image/")) {
           console.warn("[v0] Arquivo ignorado:", file.name)
           continue
@@ -79,10 +74,9 @@ export function ImageCaptureInput({
 
         try {
           const compressed = await compressImage(file)
-          console.log(`[v0] Comprimida para ${(compressed.size / 1024 / 1024).toFixed(2)}MB`)
           compressedFiles.push(compressed)
           
-          // Liberar GC agressivamente em mobile
+          // Liberar GC entre arquivos (agressivo em mobile)
           await new Promise((resolve) => setTimeout(resolve, isMobileDevice ? 300 : 100))
         } catch (error) {
           console.error("[v0] Falha ao comprimir:", error)
@@ -91,11 +85,8 @@ export function ImageCaptureInput({
       }
 
       if (compressedFiles.length === 0) {
-        console.warn("[v0] Nenhuma imagem válida")
         return
       }
-
-      console.log("[v0] Enviando", compressedFiles.length, "arquivo(s)")
       
       // Criar novo FileList
       const dataTransfer = new DataTransfer()
@@ -104,7 +95,6 @@ export function ImageCaptureInput({
       })
 
       onCapture(dataTransfer.files)
-      console.log("[v0] Sucesso!")
     } catch (error) {
       console.error("[v0] Erro fatal:", error)
       onCapture(files)
