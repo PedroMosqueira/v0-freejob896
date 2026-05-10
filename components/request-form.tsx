@@ -376,8 +376,9 @@ export default function RequestForm() {
     }
   }
 
-  const handleImageCapture = (files: FileList) => {
-    Array.from(files).forEach((file) => {
+  const handleImageCapture = (files: FileList | File[]) => {
+    const fileArray = Array.isArray(files) ? files : Array.from(files)
+    fileArray.forEach((file) => {
       // Criar blob URL em vez de data URL para economizar memória
       const blobUrl = URL.createObjectURL(file)
       setImagePreviews((prev) => [...prev, blobUrl])
