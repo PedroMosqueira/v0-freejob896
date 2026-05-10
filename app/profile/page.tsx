@@ -87,7 +87,7 @@ export default function ProfilePage() {
           <RatingsList userEmail={profile.email} />
         </div>
 
-        <ProfileForm profile={profile} />
+        <ProfileForm profile={profile} userEmail={email || ""} />
         <ProfessionalDataForm profile={profile} onUpdate={() => setRefreshKey(k => k + 1)} />
       </div>
     </div>

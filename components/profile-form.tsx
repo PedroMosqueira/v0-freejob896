@@ -10,18 +10,22 @@ import { useFormState } from "react-dom"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { PhoneValidationModal } from "@/components/phone-validation-modal"
 
 interface ProfileFormProps {
   profile: UserProfile
+  userEmail: string
 }
 
-export function ProfileForm({ profile }: ProfileFormProps) {
+export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [state, formAction] = useFormState(updateUserProfile, null)
   const [fullName, setFullName] = useState(profile.fullName || "")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [phone, setPhone] = useState(profile.phone || "")
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [phoneValidated, setPhoneValidated] = useState(profile.phoneValidated || false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -61,6 +65,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     if (errors.phone) {
       setErrors({ ...errors, phone: undefined })
     }
+  }
+
+  const handlePhoneValidationSuccess = (phone: string) => {
+    setPhone(phone)
+    setPhoneValidated(true)
+    setShowPhoneModal(false)
+    toast({
+      title: "Telefone validado!",
+      description: "Seu telefone foi validado com sucesso.",
+      variant: "success",
+    })
+    router.refresh()
   }
 
   useEffect(() => {
@@ -109,22 +125,35 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         <input type="hidden" name="lastName" value={lastName} />
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefone</Label>
-          <Input
-            id="phone"
-            name="phone"
-            placeholder="(11) 98765-4321"
-            value={phone}
-            onChange={(e) => handlePhoneChange(e.target.value)}
-            className={`${errors.phone ? "border-red-500" : ""}`}
-          />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="phone">Telefone</Label>
+            {phoneValidated && (
+              <span className="text-xs text-green-600 font-semibold">✓ Validado</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              id="phone"
+              name="phone"
+              placeholder="(11) 98765-4321"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              disabled={phoneValidated}
+              className={`${errors.phone ? "border-red-500" : ""}`}
+            />
+            {!phoneValidated && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowPhoneModal(true)}
+                className="whitespace-nowrap"
+              >
+                Validar
+              </Button>
+            )}
+          </div>
           {errors.phone && (
             <p className="text-sm text-red-500">{errors.phone}</p>
-          )}
-          {profile.phoneValidated && (
-            <p className="text-xs text-green-600">
-              ✓ Telefone validado
-            </p>
           )}
         </div>
 
@@ -161,6 +190,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           Salvar Alterações
         </Button>
       </form>
+
+      <PhoneValidationModal
+        isOpen={showPhoneModal}
+        onClose={() => setShowPhoneModal(false)}
+        onSuccess={handlePhoneValidationSuccess}
+        currentUserEmail={userEmail}
+      />
     </Card>
   )
 }
