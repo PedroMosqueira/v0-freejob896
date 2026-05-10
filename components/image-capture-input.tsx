@@ -15,29 +15,23 @@ interface ImageCaptureInputProps {
 
 async function compressImage(file: File): Promise<File> {
   try {
-    // Configuração otimizada para mobile e desktop
+    // Configuração otimizada seguindo padrão OLX
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
     
-    const options = {
-      maxSizeMB: isMobileDevice ? 0.5 : 0.9,
+    const originalSize = file.size / 1024 / 1024
+    console.log(`[v0] Original: ${originalSize.toFixed(2)}MB`)
+    
+    // 1. Comprimir ANTES de tudo
+    const compressed = await ImageCompression(file, {
+      maxSizeMB: isMobileDevice ? 0.5 : 0.8,
       maxWidthOrHeight: isMobileDevice ? 800 : 1600,
       useWebWorker: true,
-      fileType: "image/jpeg", // Converte HEIC → JPEG automaticamente
+      fileType: "image/webp", // WebP para melhor compressão (como OLX)
       initialQuality: isMobileDevice ? 0.6 : 0.8,
-    }
-
-    const originalSize = (file.size / 1024).toFixed(0)
-    console.log(`[v0] 📸 Comprimindo foto: ${file.name} (${originalSize}KB)`)
+    })
     
-    const compressed = await ImageCompression(file, options)
-    
-    const compressedSize = (compressed.size / 1024).toFixed(0)
-    const reduction = ((1 - compressed.size / file.size) * 100).toFixed(0)
-    
-    console.log("[v0] ✅ Foto comprimida com sucesso!")
-    console.log(`    Original: ${originalSize}KB`)
-    console.log(`    Comprimida: ${compressedSize}KB`)
-    console.log(`    Redução: ${reduction}%`)
+    const compressedSize = compressed.size / 1024 / 1024
+    console.log(`[v0] Comprimida: ${compressedSize.toFixed(2)}MB`)
     
     return compressed
   } catch (error) {
@@ -67,8 +61,6 @@ export function ImageCaptureInput({
     setIsCompressing(true)
 
     try {
-      console.log("[v0] Iniciando compressão de", files.length, "arquivo(s)")
-
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
       
       // Processa apenas 1 arquivo por vez em mobile para evitar pico de memória
