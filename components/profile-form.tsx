@@ -20,6 +20,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
   const [fullName, setFullName] = useState(profile.fullName || "")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState(profile.phone || "")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const { toast } = useToast()
   const router = useRouter()
@@ -37,6 +38,13 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     return { first: firstName, last: lastName }
   }
 
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "")
+    if (cleaned.length <= 2) return cleaned
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+  }
+
   const handleFullNameChange = (value: string) => {
     setFullName(value)
     const { first, last } = extractNameParts(value)
@@ -44,6 +52,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     setLastName(last)
     if (errors.fullName) {
       setErrors({ ...errors, fullName: undefined })
+    }
+  }
+
+  const handlePhoneChange = (value: string) => {
+    const formatted = formatPhone(value)
+    setPhone(formatted)
+    if (errors.phone) {
+      setErrors({ ...errors, phone: undefined })
     }
   }
 
@@ -91,6 +107,26 @@ export function ProfileForm({ profile }: ProfileFormProps) {
         {/* Inputs hidden para firstName e lastName */}
         <input type="hidden" name="firstName" value={firstName} />
         <input type="hidden" name="lastName" value={lastName} />
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Telefone</Label>
+          <Input
+            id="phone"
+            name="phone"
+            placeholder="(11) 98765-4321"
+            value={phone}
+            onChange={(e) => handlePhoneChange(e.target.value)}
+            className={`${errors.phone ? "border-red-500" : ""}`}
+          />
+          {errors.phone && (
+            <p className="text-sm text-red-500">{errors.phone}</p>
+          )}
+          {profile.phoneValidated && (
+            <p className="text-xs text-green-600">
+              ✓ Telefone validado
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <Label htmlFor="city">Cidade</Label>
