@@ -15,19 +15,18 @@ interface ImageCaptureInputProps {
 
 async function compressImage(file: File): Promise<File> {
   try {
-    // Configuração otimizada seguindo padrão OLX
     const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
     
     const originalSize = file.size / 1024 / 1024
     console.log(`[v0] Original: ${originalSize.toFixed(2)}MB`)
     
-    // 1. Comprimir ANTES de tudo
+    // Comprimir com JPEG (mais compatível que WebP)
     const compressed = await ImageCompression(file, {
       maxSizeMB: isMobileDevice ? 0.5 : 0.8,
       maxWidthOrHeight: isMobileDevice ? 800 : 1600,
       useWebWorker: true,
-      fileType: "image/webp", // WebP para melhor compressão (como OLX)
-      initialQuality: isMobileDevice ? 0.6 : 0.8,
+      fileType: "image/jpeg",
+      initialQuality: isMobileDevice ? 0.65 : 0.85,
     })
     
     const compressedSize = compressed.size / 1024 / 1024
@@ -36,7 +35,6 @@ async function compressImage(file: File): Promise<File> {
     return compressed
   } catch (error) {
     console.error("[v0] Erro na compressão:", error)
-    // Fallback: retorna arquivo original se compressão falhar
     return file
   }
 }
@@ -59,48 +57,56 @@ export function ImageCaptureInput({
     if (!files || files.length === 0) return
 
     setIsCompressing(true)
+    console.log("[v0] Iniciando compressão de", files.length, "foto(s)")
 
     try {
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
+      console.log("[v0] Device:", isMobileDevice ? "Mobile" : "Desktop")
       
-      // Processa apenas 1 arquivo por vez em mobile para evitar pico de memória
+      // Processa apenas 1 arquivo por vez em mobile
       const filesToProcess = isMobileDevice ? [files[0]] : Array.from(files)
+      console.log("[v0] Processando", filesToProcess.length, "arquivo(s)")
 
-      const compressedFiles = []
+      const compressedFiles: File[] = []
 
       for (const file of filesToProcess) {
+        console.log(`[v0] Processando ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+        
         if (!file.type.startsWith("image/")) {
-          console.warn("[v0] Arquivo ignorado (não é imagem):", file.name)
+          console.warn("[v0] Arquivo ignorado:", file.name)
           continue
         }
 
         try {
-          // PASSO 1: Comprimir ANTES de fazer preview
           const compressed = await compressImage(file)
+          console.log(`[v0] Comprimida para ${(compressed.size / 1024 / 1024).toFixed(2)}MB`)
           compressedFiles.push(compressed)
           
-          // PASSO 2: Liberar GC entre arquivos
-          await new Promise((resolve) => setTimeout(resolve, 200))
+          // Liberar GC agressivamente em mobile
+          await new Promise((resolve) => setTimeout(resolve, isMobileDevice ? 300 : 100))
         } catch (error) {
-          console.error("[v0] ❌ Falha ao comprimir, usando original:", error)
+          console.error("[v0] Falha ao comprimir:", error)
           compressedFiles.push(file)
         }
       }
 
       if (compressedFiles.length === 0) {
-        console.warn("[v0] Nenhum arquivo foi comprimido")
+        console.warn("[v0] Nenhuma imagem válida")
         return
       }
 
-      // Cria FileList com imagens comprimidas
+      console.log("[v0] Enviando", compressedFiles.length, "arquivo(s)")
+      
+      // Criar novo FileList
       const dataTransfer = new DataTransfer()
-      compressedFiles.forEach((file) => dataTransfer.items.add(file))
+      compressedFiles.forEach((file) => {
+        dataTransfer.items.add(file)
+      })
 
-      console.log("[v0] Enviando", compressedFiles.length, "arquivo(s) comprimido(s)")
       onCapture(dataTransfer.files)
+      console.log("[v0] Sucesso!")
     } catch (error) {
-      console.error("[v0] Erro geral:", error)
-      // Fallback: envia original se compressão falhar totalmente
+      console.error("[v0] Erro fatal:", error)
       onCapture(files)
     } finally {
       setIsCompressing(false)
