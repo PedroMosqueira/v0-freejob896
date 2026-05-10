@@ -510,7 +510,8 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Tenho Interesse em: {need.title}</DialogTitle>
@@ -540,12 +541,16 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
           </div>
         )}
 
-        <Tabs defaultValue="propor-visita" className="w-full" disabled={isCheckingPermission || !canExpress}>
+        <Tabs
+          defaultValue="propor-visita"
+          className="w-full"
+          disabled={isCheckingPermission || !canExpress || !phoneValidated}
+        >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="propor-visita" disabled={!canExpress}>
+            <TabsTrigger value="propor-visita" disabled={!canExpress || !phoneValidated}>
               Propor Visita
             </TabsTrigger>
-            <TabsTrigger value="aceitar-direto" disabled={!canExpress}>
+            <TabsTrigger value="aceitar-direto" disabled={!canExpress || !phoneValidated}>
               Aceitar Direto
             </TabsTrigger>
           </TabsList>
@@ -629,5 +634,13 @@ function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSucce
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    <PhoneValidationModal
+      isOpen={showPhoneModal}
+      onClose={() => setShowPhoneModal(false)}
+      onSuccess={handlePhoneValidationSuccess}
+      currentUserEmail={currentUserEmail}
+    />
+  </>
   )
 }
