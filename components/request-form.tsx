@@ -332,6 +332,44 @@ export default function RequestForm() {
         }
       }
 
+      // Fazer upload das imagens se existirem
+      let imageUrls: string[] | undefined
+      if (imagePreviews.length > 0) {
+        try {
+          const formData = new FormData()
+          
+          // Converter blob URLs para File objects
+          for (let i = 0; i < imagePreviews.length; i++) {
+            const blobUrl = imagePreviews[i]
+            const response = await fetch(blobUrl)
+            const blob = await response.blob()
+            const file = new File([blob], `photo-${i}.jpg`, { type: "image/jpeg" })
+            formData.append("files", file)
+          }
+          
+          formData.append("needId", `temp-${Date.now()}`)
+
+          const uploadResponse = await fetch("/api/needs/upload-images", {
+            method: "POST",
+            body: formData,
+          })
+
+          if (!uploadResponse.ok) {
+            console.warn("Falha ao fazer upload de imagens, continuando sem elas...")
+          } else {
+            const uploadData = await uploadResponse.json()
+            imageUrls = uploadData.urls
+          }
+        } catch (uploadError) {
+          console.error("Erro ao fazer upload de imagens:", uploadError)
+          toast({
+            title: "Aviso",
+            description: "Ocorreu um erro ao fazer upload das imagens, mas seu pedido foi criado.",
+            variant: "default",
+          })
+        }
+      }
+
       const newNeed: NewNeedInput = {
         title,
         description: description || undefined,
@@ -342,7 +380,7 @@ export default function RequestForm() {
         latitude: finalLatitude,
         longitude: finalLongitude,
         requesterEmail: email,
-        images: imagePreviews.length > 0 ? imagePreviews : undefined,
+        images: imageUrls,
       }
 
       await addNeed(newNeed)
