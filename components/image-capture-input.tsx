@@ -23,61 +23,57 @@ async function compressImage(file: File): Promise<File> {
       const MAX_HEIGHT = isMobileDevice ? 640 : 1024
       const quality = isMobileDevice ? 0.3 : 0.5
 
-      const reader = new FileReader()
-      let blobUrl: string | null = null
+      // Usar blob URL em vez de data URL para economizar memória
+      const blobUrl = URL.createObjectURL(file)
+      const img = new Image()
+      img.crossOrigin = "anonymous"
       
-      reader.onload = (e) => {
+      img.onload = () => {
         try {
-          const img = new Image()
+          // Limpar blob URL após carregar
+          URL.revokeObjectURL(blobUrl)
+
+          const canvas = document.createElement("canvas")
+          const ctx = canvas.getContext("2d", { alpha: false })
           
-          img.onload = () => {
-            try {
-              // Limpar blob URL após carregar
-              if (blobUrl) {
-                URL.revokeObjectURL(blobUrl)
-              }
+          if (!ctx) {
+            reject(new Error("Canvas context unavailable"))
+            return
+          }
 
-              const canvas = document.createElement("canvas")
-              const ctx = canvas.getContext("2d", { alpha: false })
-              
-              if (!ctx) {
-                reject(new Error("Canvas context unavailable"))
-                return
-              }
+          let width = img.width
+          let height = img.height
 
-              let width = img.width
-              let height = img.height
+          // Resize mantendo proporção
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width)
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height)
+              height = MAX_HEIGHT
+            }
+          }
 
-              // Resize mantendo proporção
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height = Math.round((height * MAX_WIDTH) / width)
-                  width = MAX_WIDTH
+          canvas.width = width
+          canvas.height = height
+
+          ctx.fillStyle = "#ffffff"
+          ctx.fillRect(0, 0, width, height)
+          ctx.drawImage(img, 0, 0, width, height)
+
+          // Usar JPEG para melhor compressão em mobile
+          canvas.toBlob(
+            (blob) => {
+              try {
+                if (!blob || blob.size === 0) {
+                  reject(new Error("Empty blob after compression"))
+                  return
                 }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width = Math.round((width * MAX_HEIGHT) / height)
-                  height = MAX_HEIGHT
-                }
-              }
 
-              canvas.width = width
-              canvas.height = height
-
-              ctx.fillStyle = "#ffffff"
-              ctx.fillRect(0, 0, width, height)
-              ctx.drawImage(img, 0, 0, width, height)
-
-              // Usar JPEG para melhor compressão em mobile
-              canvas.toBlob(
-                (blob) => {
-                  try {
-                    if (!blob || blob.size === 0) {
-                      reject(new Error("Empty blob after compression"))
-                      return
-                    }
-
-                    const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
                       type: "image/jpeg",
                       lastModified: Date.now(),
                     })
@@ -104,11 +100,10 @@ async function compressImage(file: File): Promise<File> {
           }
           
           img.onerror = () => {
-            if (blobUrl) URL.revokeObjectURL(blobUrl)
+            URL.revokeObjectURL(blobUrl)
             reject(new Error("Image load failed"))
           }
           
-          blobUrl = URL.createObjectURL(file)
           img.src = blobUrl
         } catch (imgError) {
           console.error("[v0] Image creation error:", imgError)
@@ -116,12 +111,12 @@ async function compressImage(file: File): Promise<File> {
         }
       }
 
-      reader.onerror = () => {
-        reject(new Error("File read failed"))
+      img.onerror = () => {
+        URL.revokeObjectURL(blobUrl)
+        reject(new Error("Image load failed"))
       }
-
-      // Usar ArrayBuffer para economizar memória
-      reader.readAsArrayBuffer(file)
+      
+      img.src = blobUrl
     } catch (error) {
       console.error("[v0] Compression error:", error)
       reject(error)

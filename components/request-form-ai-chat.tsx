@@ -225,15 +225,20 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       const totalCount = combinedFiles.length
       const newCount = files.length
 
+      // Se é primeira vez (askingForPhotos), mostrar preview automaticamente
+      const isFirstPhoto = !photos || photos.length === 0
+      
       setMessages((prev) => [
         ...prev,
         {
           role: "user",
-          content: `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
+          content: isFirstPhoto ? `📸 Adicionei ${newCount} foto(s)` : `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
         },
         {
           role: "assistant",
-          content: `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
+          content: isFirstPhoto 
+            ? `✅ Ótimo! Agora vou mostrar uma pré-visualização da sua solicitação para você revisar.`
+            : `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
         },
       ])
 
@@ -241,24 +246,12 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       setExtractedInfo(finalInfo)
       onExtract(finalInfo)
       
-      // Se estava pedindo fotos pela primeira vez, ir para preview
-      if (askingForPhotos && !showingPreview) {
+      // Se era primeira foto e estava pedindo fotos, ir para preview
+      if (isFirstPhoto && askingForPhotos) {
         setAskingForPhotos(false)
         setShowingPreview(true)
       }
     }
-  }
-
-  const handleSkipPhotos = () => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Tudo bem! Vou mostrar uma pré-visualização da sua solicitação.",
-      },
-    ])
-    setAskingForPhotos(false)
-    setShowingPreview(true)
   }
 
   const handleEditInForm = () => {
@@ -353,7 +346,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         {askingForPhotos && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
             <p className="text-sm text-amber-900 font-semibold">
-              📸 Adicionar Fotos (opcional)
+              📸 Adicionar Fotos (obrigatório - mínimo 1)
             </p>
             <div className="flex gap-2">
               {isMobile && (
@@ -377,14 +370,9 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
                 Galeria
               </Button>
             </div>
-            <Button
-              onClick={handleSkipPhotos}
-              variant="ghost"
-              size="sm"
-              className="w-full text-xs"
-            >
-              Prosseguir sem fotos
-            </Button>
+            {!photos && (
+              <p className="text-xs text-amber-700">Você deve adicionar pelo menos uma foto para continuar.</p>
+            )}
           </div>
         )}
 
