@@ -18,7 +18,7 @@ interface ExtractedInfo {
   city?: string
   state?: string
   neighborhood?: string
-  images?: FileList
+  images?: File[]
 }
 
 interface ChatProps {
@@ -41,7 +41,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [locationConfirmed, setLocationConfirmed] = useState(false)
   const [askingForPhotos, setAskingForPhotos] = useState(false)
   const [showingPreview, setShowingPreview] = useState(false)
-  const [photos, setPhotos] = useState<FileList | null>(null)
+  const [photos, setPhotos] = useState<File[]>([])
   const [isMobile, setIsMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -211,22 +211,16 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.currentTarget.files
     if (files && files.length > 0) {
-      // Combinar fotos antigas com novas
+      // Combinar fotos antigas com novas - usando array simples
       const newFiles = Array.from(files)
-      const existingPhotos = photos ? Array.from(photos) : []
-      const allPhotos = [...existingPhotos, ...newFiles]
-      
-      // Criar novo FileList-like object
-      const dataTransfer = new DataTransfer()
-      allPhotos.forEach((file) => dataTransfer.items.add(file))
-      const combinedFiles = dataTransfer.files
+      const allPhotos = [...photos, ...newFiles]
 
-      setPhotos(combinedFiles)
-      const totalCount = combinedFiles.length
+      setPhotos(allPhotos)
+      const totalCount = allPhotos.length
       const newCount = files.length
 
       // Se é primeira vez (askingForPhotos), mostrar preview automaticamente
-      const isFirstPhoto = !photos || photos.length === 0
+      const isFirstPhoto = photos.length === 0
       
       setMessages((prev) => [
         ...prev,
@@ -242,7 +236,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         },
       ])
 
-      const finalInfo = { ...extractedInfo, images: combinedFiles }
+      const finalInfo = { ...extractedInfo, images: allPhotos }
       setExtractedInfo(finalInfo)
       onExtract(finalInfo)
       
@@ -256,7 +250,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
 
   const handleEditInForm = () => {
     const finalInfo = { ...extractedInfo }
-    if (photos) {
+    if (photos && photos.length > 0) {
       finalInfo.images = photos
     }
     onComplete(finalInfo)
@@ -274,7 +268,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     
     // Incluir fotos no objeto final
     const finalInfo = { ...extractedInfo }
-    if (photos) {
+    if (photos && photos.length > 0) {
       finalInfo.images = photos
     }
     
@@ -370,7 +364,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
                 Galeria
               </Button>
             </div>
-            {!photos && (
+            {!photos || photos.length === 0 && (
               <p className="text-xs text-amber-700">Você deve adicionar pelo menos uma foto para continuar.</p>
             )}
           </div>
@@ -416,7 +410,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
                 </div>
               )}
 
-              {photos && (
+              {photos && photos.length > 0 && (
                 <div className="border-b border-green-200 pb-2">
                   <div className="flex justify-between items-center">
                     <div>
