@@ -197,26 +197,41 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.currentTarget.files
     if (files && files.length > 0) {
-      setPhotos(files)
-      const photoCount = files.length
+      // Combinar fotos antigas com novas
+      const newFiles = Array.from(files)
+      const existingPhotos = photos ? Array.from(photos) : []
+      const allPhotos = [...existingPhotos, ...newFiles]
+      
+      // Criar novo FileList-like object
+      const dataTransfer = new DataTransfer()
+      allPhotos.forEach((file) => dataTransfer.items.add(file))
+      const combinedFiles = dataTransfer.files
+
+      setPhotos(combinedFiles)
+      const totalCount = combinedFiles.length
+      const newCount = files.length
 
       setMessages((prev) => [
         ...prev,
         {
           role: "user",
-          content: `📸 Adicionei ${photoCount} foto(s)`,
+          content: `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
         },
         {
           role: "assistant",
-          content: `✅ Ótimo! Recebi ${photoCount} foto(s). Agora vou mostrar uma pré-visualização da sua solicitação para você revisar.`,
+          content: `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
         },
       ])
 
-      const finalInfo = { ...extractedInfo, images: files }
+      const finalInfo = { ...extractedInfo, images: combinedFiles }
       setExtractedInfo(finalInfo)
       onExtract(finalInfo)
-      setAskingForPhotos(false)
-      setShowingPreview(true)
+      
+      // Se estava pedindo fotos pela primeira vez, ir para preview
+      if (askingForPhotos && !showingPreview) {
+        setAskingForPhotos(false)
+        setShowingPreview(true)
+      }
     }
   }
 
@@ -399,8 +414,20 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
 
               {photos && (
                 <div className="border-b border-green-200 pb-2">
-                  <p className="text-xs font-semibold text-green-700">Fotos</p>
-                  <p className="text-green-900">{photos.length} foto(s) anexada(s)</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs font-semibold text-green-700">Fotos</p>
+                      <p className="text-green-900">{photos.length} foto(s) anexada(s)</p>
+                    </div>
+                    <Button
+                      onClick={() => handlePhotoCapture("gallery")}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    >
+                      + Adicionar
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

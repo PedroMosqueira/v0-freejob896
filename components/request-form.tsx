@@ -505,14 +505,18 @@ export default function RequestForm() {
     <div className="space-y-4">
       <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center gap-4">
             <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
             <Button
-              variant={useAIChat ? "default" : "outline"}
-              size="sm"
               onClick={() => setUseAIChat(!useAIChat)}
+              className={`${
+                useAIChat
+                  ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                  : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              } text-white font-semibold shadow-lg`}
+              size="sm"
             >
-              {useAIChat ? "Voltar ao Formulário" : "Usar IA"}
+              {useAIChat ? "← Voltar ao Formulário" : "💬 Solicitar com Chat IA"}
             </Button>
           </div>
         </CardHeader>
