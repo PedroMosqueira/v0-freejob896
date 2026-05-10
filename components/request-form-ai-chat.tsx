@@ -42,8 +42,17 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [askingForPhotos, setAskingForPhotos] = useState(false)
   const [showingPreview, setShowingPreview] = useState(false)
   const [photos, setPhotos] = useState<FileList | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Detectar se é mobile
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent))
+    }
+    checkMobile()
+  }, [])
 
   const fieldTranslations: Record<string, string> = {
     title: "título do serviço",
@@ -189,7 +198,12 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const handlePhotoCapture = (source: "camera" | "gallery") => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = "image/*"
-      fileInputRef.current.capture = source === "camera" ? "environment" : undefined
+      // Remover o atributo capture ou definir corretamente apenas para câmera
+      if (source === "camera") {
+        fileInputRef.current.capture = "environment"
+      } else {
+        fileInputRef.current.removeAttribute("capture")
+      }
       fileInputRef.current.click()
     }
   }
@@ -211,15 +225,20 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       const totalCount = combinedFiles.length
       const newCount = files.length
 
+      // Se é primeira vez (askingForPhotos), mostrar preview automaticamente
+      const isFirstPhoto = !photos || photos.length === 0
+      
       setMessages((prev) => [
         ...prev,
         {
           role: "user",
-          content: `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
+          content: isFirstPhoto ? `📸 Adicionei ${newCount} foto(s)` : `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
         },
         {
           role: "assistant",
-          content: `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
+          content: isFirstPhoto 
+            ? `✅ Ótimo! Agora vou mostrar uma pré-visualização da sua solicitação para você revisar.`
+            : `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
         },
       ])
 
@@ -227,24 +246,12 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       setExtractedInfo(finalInfo)
       onExtract(finalInfo)
       
-      // Se estava pedindo fotos pela primeira vez, ir para preview
-      if (askingForPhotos && !showingPreview) {
+      // Se era primeira foto e estava pedindo fotos, ir para preview
+      if (isFirstPhoto && askingForPhotos) {
         setAskingForPhotos(false)
         setShowingPreview(true)
       }
     }
-  }
-
-  const handleSkipPhotos = () => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "Tudo bem! Vou mostrar uma pré-visualização da sua solicitação.",
-      },
-    ])
-    setAskingForPhotos(false)
-    setShowingPreview(true)
   }
 
   const handleEditInForm = () => {
@@ -339,36 +346,33 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
         {askingForPhotos && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
             <p className="text-sm text-amber-900 font-semibold">
-              📸 Adicionar Fotos (opcional)
+              📸 Adicionar Fotos (obrigatório - mínimo 1)
             </p>
             <div className="flex gap-2">
-              <Button
-                onClick={() => handlePhotoCapture("camera")}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 flex-1"
-              >
-                <Camera className="w-4 h-4" />
-                Tirar Foto
-              </Button>
+              {isMobile && (
+                <Button
+                  onClick={() => handlePhotoCapture("camera")}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <Camera className="w-4 h-4" />
+                  Tirar Foto
+                </Button>
+              )}
               <Button
                 onClick={() => handlePhotoCapture("gallery")}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-2 flex-1"
+                className={`flex items-center gap-2 ${isMobile ? "flex-1" : "w-full"}`}
               >
                 <ImageIcon className="w-4 h-4" />
                 Galeria
               </Button>
             </div>
-            <Button
-              onClick={handleSkipPhotos}
-              variant="ghost"
-              size="sm"
-              className="w-full text-xs"
-            >
-              Prosseguir sem fotos
-            </Button>
+            {!photos && (
+              <p className="text-xs text-amber-700">Você deve adicionar pelo menos uma foto para continuar.</p>
+            )}
           </div>
         )}
 
