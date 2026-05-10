@@ -28,11 +28,13 @@ Sua tarefa é:
 1. SEMPRE extrair automaticamente: title, description, category baseado na primeira mensagem do usuário
 2. Se título não for claro, crie um automaticamente baseado no contexto
 3. Se descrição não for detalhada, expanda com sugestões
-4. Detectar categoria com base na descrição (veja lista abaixo)
-5. Depois de extrair title/description/category, peça para confirmar localização
-6. Fazer perguntas amigáveis APENAS para campos faltantes
+4. Detectar categoria com base na descrição usando APENAS as categorias disponíveis listadas abaixo
+5. Se a descrição não se enquadrar em nenhuma categoria específica, use "Outros"
+6. Depois de extrair title/description/category, peça para confirmar localização
+7. Fazer perguntas amigáveis APENAS para campos faltantes
 
-Categorias disponíveis: "Reparação", "Limpeza", "Aulas", "Mudança", "Entrega", "Consultoria", "Beleza", "Outro"
+Categorias disponíveis (use EXATAMENTE como estão aqui):
+"Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis", "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista", "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças", "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira", "Professor Particular", "Outros"
 
 Fluxo esperado:
 - 1ª mensagem: extrair title, description, category → pedir para apertar botão de localização
@@ -45,7 +47,7 @@ Responda em JSON com este formato:
   "extracted": {
     "title": "Título do serviço (NUNCA null na 1ª extração)",
     "description": "Descrição completa (NUNCA null na 1ª extração)",
-    "category": "Categoria detectada (NUNCA null)",
+    "category": "Uma das categorias listadas acima (NUNCA null)",
     "city": "Cidade (ou null)",
     "state": "Estado/UF (ou null)",
     "neighborhood": "Bairro (ou null)"
@@ -58,6 +60,7 @@ Responda em JSON com este formato:
 Importante: 
 - Sempre responda APENAS com JSON válido, sem markdown.
 - title, description, category DEVEM ser preenchidos na primeira mensagem.
+- A categoria DEVE ser uma das listadas. Se não encontrar match perfeito, use "Outros".
 - needsLocation = true quando precisar que o usuário clique no botão de localização.
 - isComplete = true apenas quando tiver: title, description, category, city, neighborhood, state.`
 
@@ -120,9 +123,9 @@ Importante:
       
       parsedResponse.extracted.title = parsedResponse.extracted.title || "Serviço solicitado"
       parsedResponse.extracted.description = parsedResponse.extracted.description || message
-      parsedResponse.extracted.category = parsedResponse.extracted.category || "Outro"
+      parsedResponse.extracted.category = parsedResponse.extracted.category || "Outros"
       parsedResponse.needsLocation = true
-      parsedResponse.message = `✅ Entendi! Você quer: "${parsedResponse.extracted.title}"\n\nAgora precisamos de sua localização. Clique no botão "Usar Minha Localização" para detectar onde você está.`
+      parsedResponse.message = `Entendi! Você quer: "${parsedResponse.extracted.title}"\n\nAgora precisamos de sua localização. Clique no botão "Usar Minha Localização" para detectar onde você está.`
     }
 
     console.log("[v0] Extracted info:", parsedResponse.extracted)
