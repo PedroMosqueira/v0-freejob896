@@ -261,13 +261,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
           <Tabs
             defaultValue="propor-visita"
             className="w-full"
-            disabled={isCheckingPermission || !canExpress || !phoneValidated}
+            disabled={isCheckingPermission || !canExpress}
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="propor-visita" disabled={!canExpress || !phoneValidated}>
+              <TabsTrigger value="propor-visita" disabled={!canExpress}>
                 Propor Visita
               </TabsTrigger>
-              <TabsTrigger value="aceitar-direto" disabled={!canExpress || !phoneValidated}>
+              <TabsTrigger value="aceitar-direto" disabled={!canExpress}>
                 Aceitar Direto
               </TabsTrigger>
             </TabsList>

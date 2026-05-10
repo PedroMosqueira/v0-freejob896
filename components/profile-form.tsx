@@ -141,7 +141,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
               disabled={phoneValidated}
               className={`${errors.phone ? "border-red-500" : ""}`}
             />
-            {!phoneValidated && (
+            {profile.isProfessional && !phoneValidated && (
               <Button
                 type="button"
                 variant="outline"
