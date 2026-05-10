@@ -74,40 +74,28 @@ async function compressImage(file: File): Promise<File> {
                 }
 
                 const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
-                      type: "image/jpeg",
-                      lastModified: Date.now(),
-                    })
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                })
 
-                    const reduction = ((1 - blob.size / file.size) * 100).toFixed(0)
-                    console.log("[v0] ✅ Foto comprimida com sucesso!")
-                    console.log(`    Original: ${(file.size / 1024).toFixed(0)}KB`)
-                    console.log(`    Comprimida: ${(blob.size / 1024).toFixed(0)}KB`)
-                    console.log(`    Redução: ${reduction}%`)
+                const reduction = ((1 - blob.size / file.size) * 100).toFixed(0)
+                console.log("[v0] ✅ Foto comprimida com sucesso!")
+                console.log(`    Original: ${(file.size / 1024).toFixed(0)}KB`)
+                console.log(`    Comprimida: ${(blob.size / 1024).toFixed(0)}KB`)
+                console.log(`    Redução: ${reduction}%`)
 
-                    resolve(compressedFile)
-                  } catch (e) {
-                    console.error("[v0] Erro ao criar File:", e)
-                    reject(e)
-                  }
-                },
-                "image/jpeg",
-                quality,
-              )
-            } catch (canvasError) {
-              console.error("[v0] Canvas error:", canvasError)
-              reject(canvasError)
-            }
-          }
-          
-          img.onerror = () => {
-            URL.revokeObjectURL(blobUrl)
-            reject(new Error("Image load failed"))
-          }
-          
-          img.src = blobUrl
-        } catch (imgError) {
-          console.error("[v0] Image creation error:", imgError)
-          reject(imgError)
+                resolve(compressedFile)
+              } catch (e) {
+                console.error("[v0] Erro ao criar File:", e)
+                reject(e)
+              }
+            },
+            "image/jpeg",
+            quality,
+          )
+        } catch (canvasError) {
+          console.error("[v0] Canvas error:", canvasError)
+          reject(canvasError)
         }
       }
 
@@ -115,7 +103,7 @@ async function compressImage(file: File): Promise<File> {
         URL.revokeObjectURL(blobUrl)
         reject(new Error("Image load failed"))
       }
-      
+
       img.src = blobUrl
     } catch (error) {
       console.error("[v0] Compression error:", error)
@@ -123,6 +111,8 @@ async function compressImage(file: File): Promise<File> {
     }
   })
 }
+
+export function ImageCaptureInput({
   onCapture,
   multiple = false,
   disabled = false,
