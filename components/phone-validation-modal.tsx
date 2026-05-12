@@ -1,20 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-type ValidationStep = "phone" | "verification"
+type ValidationStep = "verification"
 
 interface PhoneValidationModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: (phone: string) => void
   currentUserEmail: string
+  phoneNumber: string
 }
 
 export function PhoneValidationModal({
@@ -22,40 +23,32 @@ export function PhoneValidationModal({
   onClose,
   onSuccess,
   currentUserEmail,
+  phoneNumber,
 }: PhoneValidationModalProps) {
-  const [step, setStep] = useState<ValidationStep>("phone")
-  const [phone, setPhone] = useState("")
+  const [step, setStep] = useState<ValidationStep>("verification")
   const [verificationCode, setVerificationCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const { toast } = useToast()
 
-  const formatPhone = (value: string) => {
-    const cleaned = value.replace(/\D/g, "")
-    if (cleaned.length <= 2) return cleaned
-    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+  // Limpar estado ao abrir/fechar
+  const handleClose = () => {
+    setVerificationCode("")
+    setError("")
+    setStep("verification")
+    onClose()
   }
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value)
-    setPhone(formatted)
-    setError("")
-  }
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+  // Solicitar código de verificação ao abrir o modal
+  const requestVerificationCode = async () => {
     setLoading(true)
+    setError("")
 
     try {
-      const cleanPhone = phone.replace(/\D/g, "")
-      if (cleanPhone.length !== 11) {
-        setError("Telefone deve ter 11 dígitos (com DDD)")
-        return
-      }
+      const cleanPhone = phoneNumber.replace(/\D/g, "")
 
-      // Solicitar código de verificação
+      console.log("[v0] Enviando telefone para validação:", cleanPhone)
+
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,17 +58,26 @@ export function PhoneValidationModal({
         }),
       })
 
+      console.log("[v0] Resposta status:", response.status)
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Erro ao enviar código de verificação")
+        const text = await response.text()
+        console.log("[v0] Erro response:", text)
+        try {
+          const data = JSON.parse(text)
+          throw new Error(data.message || "Erro ao enviar código de verificação")
+        } catch (parseErr) {
+          throw new Error(`Erro do servidor (${response.status}): Tente novamente`)
+        }
       }
 
-      setStep("verification")
+      console.log("[v0] Sucesso ao enviar código")
       toast({
         title: "Código enviado",
         description: "Verifique seu SMS para o código de verificação.",
       })
     } catch (err: any) {
+      console.error("[v0] Erro:", err)
       setError(err.message || "Erro ao solicitar verificação")
     } finally {
       setLoading(false)
@@ -90,12 +92,14 @@ export function PhoneValidationModal({
     try {
       if (!verificationCode || verificationCode.length !== 6) {
         setError("Código deve ter 6 dígitos")
+        setLoading(false)
         return
       }
 
-      const cleanPhone = phone.replace(/\D/g, "")
+      const cleanPhone = phoneNumber.replace(/\D/g, "")
 
-      // Verificar código e salvar telefone
+      console.log("[v0] Verificando código para telefone:", cleanPhone)
+
       const response = await fetch("/api/phone/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -106,10 +110,20 @@ export function PhoneValidationModal({
         }),
       })
 
+      console.log("[v0] Resposta verify status:", response.status)
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || "Código inválido")
+        const text = await response.text()
+        console.log("[v0] Erro verify response:", text)
+        try {
+          const data = JSON.parse(text)
+          throw new Error(data.message || "Código inválido")
+        } catch (parseErr) {
+          throw new Error(`Erro do servidor (${response.status}): Tente novamente`)
+        }
       }
+
+      console.log("[v0] Telefone validado com sucesso")
 
       toast({
         title: "Sucesso!",
@@ -118,26 +132,21 @@ export function PhoneValidationModal({
       })
 
       onSuccess(cleanPhone)
-      onClose()
-      setPhone("")
-      setVerificationCode("")
-      setStep("phone")
+      handleClose()
     } catch (err: any) {
+      console.error("[v0] Erro na verificação:", err)
       setError(err.message || "Erro ao validar telefone")
     } finally {
       setLoading(false)
     }
   }
 
-  const handleClose = () => {
-    if (!loading) {
-      onClose()
-      setPhone("")
-      setVerificationCode("")
-      setStep("phone")
-      setError("")
+  // Solicitar código ao abrir o modal
+  useEffect(() => {
+    if (isOpen && !error) {
+      requestVerificationCode()
     }
-  }
+  }, [isOpen])
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -145,9 +154,7 @@ export function PhoneValidationModal({
         <DialogHeader>
           <DialogTitle>Validar Telefone</DialogTitle>
           <DialogDescription>
-            {step === "phone"
-              ? "Informe seu número de telefone para validação"
-              : "Informe o código recebido por SMS"}
+            Informe o código de 6 dígitos enviado por SMS para {phoneNumber}
           </DialogDescription>
         </DialogHeader>
 
@@ -158,74 +165,34 @@ export function PhoneValidationModal({
           </div>
         )}
 
-        {step === "phone" ? (
-          <form onSubmit={handlePhoneSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Número de Telefone</Label>
-              <Input
-                id="phone"
-                placeholder="(11) 98765-4321"
-                value={phone}
-                onChange={handlePhoneChange}
-                disabled={loading}
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">Digite seu telefone com DDD (11 dígitos)</p>
-            </div>
-            <Button type="submit" disabled={loading || phone.replace(/\D/g, "").length !== 11}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando código...
-                </>
-              ) : (
-                "Enviar Código"
-              )}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerificationSubmit} className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="code">Código de Verificação</Label>
-              <Input
-                id="code"
-                placeholder="000000"
-                value={verificationCode}
-                onChange={(e) => {
-                  setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  setError("")
-                }}
-                disabled={loading}
-                maxLength={6}
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">Digite o código de 6 dígitos recebido por SMS</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setStep("phone")
-                  setVerificationCode("")
-                }}
-                disabled={loading}
-              >
-                Voltar
-              </Button>
-              <Button type="submit" disabled={loading || verificationCode.length !== 6} className="flex-1">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Verificando...
-                  </>
-                ) : (
-                  "Confirmar"
-                )}
-              </Button>
-            </div>
-          </form>
-        )}
+        <form onSubmit={handleVerificationSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="code">Código de Verificação</Label>
+            <Input
+              id="code"
+              placeholder="000000"
+              value={verificationCode}
+              onChange={(e) => {
+                setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                setError("")
+              }}
+              disabled={loading}
+              maxLength={6}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">Digite o código de 6 dígitos recebido por SMS</p>
+          </div>
+          <Button type="submit" disabled={loading || verificationCode.length !== 6} className="w-full">
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              "Confirmar"
+            )}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   )

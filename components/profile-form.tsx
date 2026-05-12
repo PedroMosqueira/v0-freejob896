@@ -296,6 +296,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
         onClose={() => setShowPhoneModal(false)}
         onSuccess={handlePhoneValidationSuccess}
         currentUserEmail={userEmail}
+        phoneNumber={phone}
       />
     </Card>
   )
