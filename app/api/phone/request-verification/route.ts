@@ -75,6 +75,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Log de validação das credenciais
+    console.log("[v0] ✓ Credenciais Twilio detectadas:")
+    console.log("[v0]   - TWILIO_ACCOUNT_SID: Configurado")
+    console.log("[v0]   - TWILIO_AUTH_TOKEN: Configurado")
+    console.log("[v0]   - TWILIO_PHONE_NUMBER:", twilioPhoneNumber)
+
     // Validar formato do número Twilio
     if (!twilioPhoneNumber.startsWith("+")) {
       console.error("[v0] ❌ ERRO: TWILIO_PHONE_NUMBER deve começar com +")
@@ -94,13 +100,19 @@ export async function POST(request: NextRequest) {
     try {
       const client = twilio(twilioAccountSid, twilioAuthToken)
       
-      // Formatar telefone para formato internacional (+55...)
-      const phoneInternational = "+55" + phone
+      // Garantir que o número só tem dígitos (sem formatação)
+      const phoneOnlyDigits = phone.replace(/\D/g, "")
+      
+      // Se o número já começa com 55, não adicionar novamente
+      let phoneInternational = phoneOnlyDigits.startsWith("55") 
+        ? "+" + phoneOnlyDigits 
+        : "+55" + phoneOnlyDigits
 
       console.log("[v0] 📱 Enviando SMS via Twilio:")
       console.log("[v0]   From:", twilioPhoneNumber)
       console.log("[v0]   To:", phoneInternational)
       console.log("[v0]   Código:", verificationCode)
+      console.log("[v0]   Phone original recebido:", phone)
       console.log("[v0] ⏳ Processando...")
 
       const message = await client.messages.create({
