@@ -6,6 +6,12 @@ export async function POST(request: NextRequest) {
   try {
     const { phone, email } = await request.json()
 
+    console.log("[v0] === API request-verification recebido ===")
+    console.log("[v0] Phone recebido:", phone)
+    console.log("[v0] Phone type:", typeof phone)
+    console.log("[v0] Phone length:", phone?.length)
+    console.log("[v0] Email:", email)
+
     if (!phone || !email) {
       return NextResponse.json(
         { message: "Telefone e email são obrigatórios" },
@@ -15,13 +21,14 @@ export async function POST(request: NextRequest) {
 
     // Validar formato de telefone (11-12 dígitos)
     if (!/^\d{11,12}$/.test(phone)) {
+      console.error("[v0] Telefone não tem 11-12 dígitos:", phone, "comprimento:", phone.length)
       return NextResponse.json(
         { message: "Telefone deve ter entre 11 e 12 dígitos" },
         { status: 400 }
       )
     }
 
-    console.log("[v0] Solicitando verificação para:", phone, "email:", email)
+    console.log("[v0] ✓ Telefone validado com sucesso")
 
     // Gerar código de 6 dígitos
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
