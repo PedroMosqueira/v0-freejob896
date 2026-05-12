@@ -50,15 +50,6 @@ export function PhoneValidationModal({
     try {
       const cleanPhone = phoneNumber.replace(/\D/g, "")
 
-      console.log("[v0] Phone Number recebido no modal:", phoneNumber)
-      console.log("[v0] Phone limpo (apenas dígitos):", cleanPhone)
-      console.log("[v0] Comprimento do telefone:", cleanPhone.length)
-      console.log("[v0] Enviando telefone para validação:", cleanPhone)
-
-      if (cleanPhone.length < 11) {
-        throw new Error(`Telefone incompleto: ${cleanPhone.length} dígitos (mínimo 11)`)
-      }
-
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,11 +59,8 @@ export function PhoneValidationModal({
         }),
       })
 
-      console.log("[v0] Resposta status:", response.status)
-
       if (!response.ok) {
         const text = await response.text()
-        console.log("[v0] Erro response:", text)
         try {
           const data = JSON.parse(text)
           throw new Error(data.message || "Erro ao enviar código de verificação")
@@ -81,15 +69,12 @@ export function PhoneValidationModal({
         }
       }
 
-      const data = await response.json()
-      console.log("[v0] Sucesso ao enviar código")
       setCodeSent(true)
       toast({
         title: "Código enviado",
         description: "Verifique seu SMS para o código de verificação.",
       })
     } catch (err: any) {
-      console.error("[v0] Erro:", err)
       setError(err.message || "Erro ao solicitar verificação")
     } finally {
       setLoading(false)
@@ -110,8 +95,6 @@ export function PhoneValidationModal({
 
       const cleanPhone = phoneNumber.replace(/\D/g, "")
 
-      console.log("[v0] Verificando código para telefone:", cleanPhone)
-
       const response = await fetch("/api/phone/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,11 +105,8 @@ export function PhoneValidationModal({
         }),
       })
 
-      console.log("[v0] Resposta verify status:", response.status)
-
       if (!response.ok) {
         const text = await response.text()
-        console.log("[v0] Erro verify response:", text)
         try {
           const data = JSON.parse(text)
           throw new Error(data.message || "Código inválido")
@@ -134,8 +114,6 @@ export function PhoneValidationModal({
           throw new Error(`Erro do servidor (${response.status}): Tente novamente`)
         }
       }
-
-      console.log("[v0] Telefone validado com sucesso")
 
       toast({
         title: "Sucesso!",
@@ -146,7 +124,6 @@ export function PhoneValidationModal({
       onSuccess(cleanPhone)
       handleClose()
     } catch (err: any) {
-      console.error("[v0] Erro na verificação:", err)
       setError(err.message || "Erro ao validar telefone")
     } finally {
       setLoading(false)
