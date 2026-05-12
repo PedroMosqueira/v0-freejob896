@@ -55,16 +55,17 @@ export async function POST(request: NextRequest) {
     const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
     const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
-    // Configuração esperada:
-    // TWILIO_ACCOUNT_SID: Seu Account SID (ex: ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
-    // TWILIO_AUTH_TOKEN: Seu Auth Token
-    // TWILIO_PHONE_NUMBER: Número Twilio com código do país (ex: +5511999999999)
+    // IMPORTANTE: Configuração do TWILIO_PHONE_NUMBER
+    // - Para SANDBOX (testes/desenvolvimento): Use +15555551234 (número de teste padrão Twilio)
+    // - Para PRODUÇÃO: Use um número Twilio válido que você comprou (ex: +5511999999999)
+    // O erro "is not a Twilio phone number or Short Code country mismatch" significa que o número
+    // configurado em TWILIO_PHONE_NUMBER não é um número Twilio válido
 
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      console.error("[v0] Credenciais Twilio não configuradas")
-      console.error("[v0] TWILIO_ACCOUNT_SID:", twilioAccountSid ? "✓" : "✗")
-      console.error("[v0] TWILIO_AUTH_TOKEN:", twilioAuthToken ? "✓" : "✗")
-      console.error("[v0] TWILIO_PHONE_NUMBER:", twilioPhoneNumber ? "✓" : "✗")
+      console.error("[v0] ⚠️  Credenciais Twilio não configuradas")
+      console.error("[v0] TWILIO_ACCOUNT_SID:", twilioAccountSid ? "✓ Configurado" : "✗ FALTANDO")
+      console.error("[v0] TWILIO_AUTH_TOKEN:", twilioAuthToken ? "✓ Configurado" : "✗ FALTANDO")
+      console.error("[v0] TWILIO_PHONE_NUMBER:", twilioPhoneNumber ? "✓ Configurado" : "✗ FALTANDO")
       console.log(`[v0] Código de verificação para ${phone}: ${verificationCode}`)
       
       return NextResponse.json({
@@ -74,17 +75,33 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Validar formato do número Twilio
+    if (!twilioPhoneNumber.startsWith("+")) {
+      console.error("[v0] ❌ ERRO: TWILIO_PHONE_NUMBER deve começar com +")
+      console.error("[v0] Formato esperado:")
+      console.error("[v0]   - Sandbox: +15555551234")
+      console.error("[v0]   - Produção: +5511999999999 (número Twilio comprado)")
+      
+      return NextResponse.json(
+        { 
+          message: "Configuração inválida do número Twilio. Deve começar com +",
+          error: "Invalid TWILIO_PHONE_NUMBER format"
+        },
+        { status: 500 }
+      )
+    }
+
     try {
       const client = twilio(twilioAccountSid, twilioAuthToken)
       
       // Formatar telefone para formato internacional (+55...)
       const phoneInternational = "+55" + phone
 
-      console.log("[v0] Configuração Twilio:")
-      console.log("[v0] - Account SID:", twilioAccountSid?.substring(0, 10) + "...")
-      console.log("[v0] - From Phone:", twilioPhoneNumber)
-      console.log("[v0] - To Phone:", phoneInternational)
-      console.log("[v0] - Código de verificação:", verificationCode)
+      console.log("[v0] 📱 Enviando SMS via Twilio:")
+      console.log("[v0]   From:", twilioPhoneNumber)
+      console.log("[v0]   To:", phoneInternational)
+      console.log("[v0]   Código:", verificationCode)
+      console.log("[v0] ⏳ Processando...")
 
       const message = await client.messages.create({
         body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
@@ -92,8 +109,9 @@ export async function POST(request: NextRequest) {
         to: phoneInternational,
       })
 
-      console.log("[v0] SMS enviado com sucesso:", message.sid)
-      console.log("[v0] Status da mensagem:", message.status)
+      console.log("[v0] ✅ SMS enviado com sucesso!")
+      console.log("[v0]   Message SID:", message.sid)
+      console.log("[v0]   Status:", message.status)
 
       return NextResponse.json({
         success: true,
@@ -101,17 +119,25 @@ export async function POST(request: NextRequest) {
         messageSid: message.sid,
       })
     } catch (twilioError: any) {
-      console.error("[v0] Erro ao enviar SMS com Twilio:")
-      console.error("[v0] - Erro completo:", twilioError)
-      console.error("[v0] - Código de erro:", twilioError.code)
-      console.error("[v0] - Status HTTP:", twilioError.status)
-      console.error("[v0] - Detalhes:", twilioError.details)
+      console.error("[v0] ❌ Erro ao enviar SMS com Twilio:")
+      console.error("[v0]   Mensagem:", twilioError.message)
+      console.error("[v0]   Código de erro:", twilioError.code)
+      
+      // Erro 21659 = Invalid 'From' phone number
+      if (twilioError.code === 21659) {
+        console.error("[v0] 🔴 PROBLEMA: O número em TWILIO_PHONE_NUMBER não é válido")
+        console.error("[v0] Solução:")
+        console.error("[v0]   1. Se estiver testando: Use +15555551234 (número de teste Twilio)")
+        console.error("[v0]   2. Se em produção: Compre um número Twilio válido no console.twilio.com")
+        console.error("[v0]   3. Após obter o número, configure TWILIO_PHONE_NUMBER com o novo valor")
+      }
       
       return NextResponse.json(
         { 
           message: "Erro ao enviar código por SMS. Verifique as credenciais Twilio.",
           error: twilioError.message,
-          code: twilioError.code
+          code: twilioError.code,
+          help: twilioError.code === 21659 ? "O número Twilio configurado é inválido. Verifique TWILIO_PHONE_NUMBER nos logs acima." : undefined
         },
         { status: 500 }
       )
