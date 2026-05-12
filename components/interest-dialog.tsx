@@ -357,6 +357,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         onClose={() => setShowPhoneModal(false)}
         onSuccess={handlePhoneValidationSuccess}
         currentUserEmail={currentUserEmail}
+        phoneNumber={phone || "(11) 9999-9999"}
       />
     </>
   )
