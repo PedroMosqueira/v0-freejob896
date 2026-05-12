@@ -89,51 +89,6 @@ export function PhoneValidationModal({
     }
   }
 
-  // Solicitar código de verificação ao abrir o modal
-  const requestVerificationCode = async () => {
-    setLoading(true)
-    setError("")
-
-    try {
-      const cleanPhone = phoneNumber.replace(/\D/g, "")
-
-      console.log("[v0] Enviando telefone para validação:", cleanPhone)
-
-      const response = await fetch("/api/phone/request-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          phone: cleanPhone,
-          email: currentUserEmail 
-        }),
-      })
-
-      console.log("[v0] Resposta status:", response.status)
-
-      if (!response.ok) {
-        const text = await response.text()
-        console.log("[v0] Erro response:", text)
-        try {
-          const data = JSON.parse(text)
-          throw new Error(data.message || "Erro ao enviar código de verificação")
-        } catch (parseErr) {
-          throw new Error(`Erro do servidor (${response.status}): Tente novamente`)
-        }
-      }
-
-      console.log("[v0] Sucesso ao enviar código")
-      toast({
-        title: "Código enviado",
-        description: "Verifique seu SMS para o código de verificação.",
-      })
-    } catch (err: any) {
-      console.error("[v0] Erro:", err)
-      setError(err.message || "Erro ao solicitar verificação")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleVerificationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
