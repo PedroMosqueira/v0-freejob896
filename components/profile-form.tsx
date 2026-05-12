@@ -49,12 +49,8 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
   const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, "")
-    console.log("[v0] formatPhone - cleaned:", cleaned, "length:", cleaned.length)
-    
     if (cleaned.length <= 2) return cleaned
     if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    // Aceita até 12 dígitos: 2 (DDD) + 8-9 (número)
-    // Formato: (XX) 9XXXX-XXXX ou (XX) XXXXX-XXXX
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`
   }
 
@@ -94,9 +90,6 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhone(value)
     setPhone(formatted)
-    console.log("[v0] Phone digitado:", value)
-    console.log("[v0] Phone formatado:", formatted)
-    console.log("[v0] Phone limpo (apenas dígitos):", formatted.replace(/\D/g, ""))
     if (errors.phone) {
       setErrors({ ...errors, phone: undefined })
     }
