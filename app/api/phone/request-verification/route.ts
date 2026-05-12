@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
       console.log("[v0]   Phone only digits:", phoneOnlyDigits)
       console.log("[v0]   Comprimento:", phoneOnlyDigits.length)
       
-      // Construir número internacional: sempre adiciona +
-      const phoneInternational = "+" + phoneOnlyDigits
+      // Construir número internacional: sempre adiciona +55
+      const phoneInternational = "+55" + phoneOnlyDigits
 
       console.log("[v0]   From:", twilioPhoneNumber)
       console.log("[v0]   To:", phoneInternational)
