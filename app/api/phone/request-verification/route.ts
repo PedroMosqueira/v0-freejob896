@@ -60,14 +60,17 @@ export async function POST(request: NextRequest) {
     try {
       const client = twilio(twilioAccountSid, twilioAuthToken)
       const phoneOnlyDigits = phone.replace(/\D/g, "")
-      const phoneInternational = phoneOnlyDigits.startsWith("55") 
-        ? "+" + phoneOnlyDigits 
-        : "+55" + phoneOnlyDigits
 
       console.log("[v0] Enviando SMS:")
+      console.log("[v0]   Phone raw recebido:", phone)
+      console.log("[v0]   Phone only digits:", phoneOnlyDigits)
+      console.log("[v0]   Comprimento:", phoneOnlyDigits.length)
+      
+      // Construir número internacional: sempre adiciona +
+      const phoneInternational = "+" + phoneOnlyDigits
+
       console.log("[v0]   From:", twilioPhoneNumber)
       console.log("[v0]   To:", phoneInternational)
-      console.log("[v0]   Phone only digits:", phoneOnlyDigits)
       console.log("[v0]   Código:", verificationCode)
 
       const message = await client.messages.create({
