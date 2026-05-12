@@ -6,6 +6,10 @@ export async function POST(request: NextRequest) {
   try {
     const { phone, email } = await request.json()
 
+    console.log("[v0] === API request-verification recebido ===")
+    console.log("[v0] Phone raw:", phone)
+    console.log("[v0] Email:", email)
+
     if (!phone || !email) {
       return NextResponse.json(
         { message: "Telefone e email são obrigatórios" },
@@ -33,6 +37,7 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
 
     if (updateError) {
+      console.error("[v0] Erro ao salvar código:", updateError)
       return NextResponse.json(
         { message: "Erro ao solicitar verificação" },
         { status: 500 }
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
     const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      console.log(`Código para ${phone}: ${verificationCode}`)
+      console.log(`[v0] Modo teste - Código para ${phone}: ${verificationCode}`)
       return NextResponse.json({
         success: true,
         message: "Código enviado",
@@ -59,11 +64,19 @@ export async function POST(request: NextRequest) {
         ? "+" + phoneOnlyDigits 
         : "+55" + phoneOnlyDigits
 
+      console.log("[v0] Enviando SMS:")
+      console.log("[v0]   From:", twilioPhoneNumber)
+      console.log("[v0]   To:", phoneInternational)
+      console.log("[v0]   Phone only digits:", phoneOnlyDigits)
+      console.log("[v0]   Código:", verificationCode)
+
       const message = await client.messages.create({
         body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
         from: twilioPhoneNumber,
         to: phoneInternational,
       })
+
+      console.log("[v0] SMS enviado com sucesso! SID:", message.sid)
 
       return NextResponse.json({
         success: true,
@@ -71,15 +84,21 @@ export async function POST(request: NextRequest) {
         messageSid: message.sid,
       })
     } catch (twilioError: any) {
+      console.error("[v0] Erro Twilio:")
+      console.error("[v0]   Mensagem:", twilioError.message)
+      console.error("[v0]   Código:", twilioError.code)
+      
       return NextResponse.json(
         { 
           message: "Erro ao enviar SMS",
-          error: twilioError.message
+          error: twilioError.message,
+          code: twilioError.code
         },
         { status: 500 }
       )
     }
   } catch (error) {
+    console.error("[v0] Erro geral:", error)
     return NextResponse.json(
       { message: "Erro ao processar requisição" },
       { status: 500 }
