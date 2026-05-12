@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useFormState } from "react-dom"
 import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
@@ -213,17 +212,19 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
         {/* Seção de Profissional */}
         <div className="border-t pt-6">
-          <div className="flex items-center space-x-2 mb-6">
-            <Checkbox
+          <div className="flex items-center space-x-3 mb-6">
+            <input
               id="isProfessional"
+              type="checkbox"
               checked={isProfessional}
-              onCheckedChange={(checked) => {
-                setIsProfessional(checked as boolean)
-                if (!checked) {
+              onChange={(e) => {
+                setIsProfessional(e.target.checked)
+                if (!e.target.checked) {
                   setPhoneValidated(false)
                   setErrors({})
                 }
               }}
+              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
             <Label htmlFor="isProfessional" className="font-semibold cursor-pointer">
               Sou um profissional
