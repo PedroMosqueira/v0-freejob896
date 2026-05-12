@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import twilio from "twilio"
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,14 +50,54 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Enviar SMS com o código via Twilio ou outro serviço
-    // Por enquanto, apenas logar o código para testes
-    console.log(`[v0] Código de verificação para ${phone}: ${verificationCode}`)
+    // Enviar SMS com Twilio
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
-    return NextResponse.json({
-      success: true,
-      message: "Código enviado por SMS",
-    })
+    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
+      console.error("[v0] Credenciais Twilio não configuradas")
+      console.log(`[v0] Código de verificação para ${phone}: ${verificationCode}`)
+      
+      return NextResponse.json({
+        success: true,
+        message: "Código enviado (modo teste - sem SMS real)",
+        code: verificationCode, // Apenas para teste
+      })
+    }
+
+    try {
+      const client = twilio(twilioAccountSid, twilioAuthToken)
+      
+      // Formatar telefone para formato internacional (+55...)
+      const phoneInternational = "+55" + phone
+
+      console.log("[v0] Enviando SMS para:", phoneInternational)
+
+      const message = await client.messages.create({
+        body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
+        from: twilioPhoneNumber,
+        to: phoneInternational,
+      })
+
+      console.log("[v0] SMS enviado com sucesso:", message.sid)
+
+      return NextResponse.json({
+        success: true,
+        message: "Código enviado por SMS",
+        messageSid: message.sid,
+      })
+    } catch (twilioError: any) {
+      console.error("[v0] Erro ao enviar SMS com Twilio:", twilioError)
+      
+      return NextResponse.json(
+        { 
+          message: "Erro ao enviar código por SMS. Tente novamente.",
+          error: twilioError.message 
+        },
+        { status: 500 }
+      )
+    }
   } catch (error) {
     console.error("[v0] Erro em request-verification:", error)
     return NextResponse.json(
