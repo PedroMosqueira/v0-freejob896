@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validar formato de telefone (11 dígitos)
-    if (!/^\d{11}$/.test(phone)) {
+    // Validar formato de telefone (11-12 dígitos)
+    if (!/^\d{11,12}$/.test(phone)) {
       return NextResponse.json(
-        { message: "Telefone deve ter exatamente 11 dígitos" },
+        { message: "Telefone deve ter entre 11 e 12 dígitos" },
         { status: 400 }
       )
     }

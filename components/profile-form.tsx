@@ -51,7 +51,8 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
     const cleaned = value.replace(/\D/g, "")
     if (cleaned.length <= 2) return cleaned
     if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+    // Aceita até 12 dígitos (11 normal + 1 dígito extra)
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 12)}`
   }
 
   const validateForm = (): boolean => {
