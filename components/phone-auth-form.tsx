@@ -34,7 +34,7 @@ export function PhoneAuthForm({ onSuccess }: PhoneAuthFormProps) {
     const cleaned = value.replace(/\D/g, "")
     if (cleaned.length <= 2) return cleaned
     if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 12)}`
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,8 +49,8 @@ export function PhoneAuthForm({ onSuccess }: PhoneAuthFormProps) {
 
     try {
       const cleanPhone = phone.replace(/\D/g, "")
-      if (cleanPhone.length !== 11) {
-        setError("Telefone deve ter 11 dígitos (com DDD)")
+      if (cleanPhone.length < 11 || cleanPhone.length > 12) {
+        setError("Telefone deve ter entre 11 e 12 dígitos (com DDD)")
         return
       }
 

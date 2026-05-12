@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const { phone } = await request.json()
     console.log("[v0] check-phone: Verificando telefone:", phone)
 
-    if (!phone || phone.length !== 11) {
+    if (!phone || phone.length < 11 || phone.length > 12) {
       console.error("[v0] Telefone inválido. Comprimento:", phone?.length)
       return NextResponse.json(
         { error: "Telefone inválido" },
