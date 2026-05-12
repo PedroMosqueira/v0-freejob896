@@ -17,8 +17,7 @@ interface ProfessionalDataFormProps {
 export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataFormProps) {
   const { toast } = useToast()
   const [isProfessional, setIsProfessional] = useState(profile.isProfessional || false)
-  const [cpf, setCpf] = useState(profile.cpf || "")
-  const [professionalPhone, setProfessionalPhone] = useState(profile.professionalPhone || "")
+  const [professionalPhone, setProfessionalPhone] = useState(profile.professionalPhone || profile.phone || "")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
@@ -30,48 +29,10 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
     setFreeInterestsRemaining(Math.max(0, 3 - freeUsed))
   }, [profile])
 
-  const isValidCPF = (cpf: string): boolean => {
-    if (cpf.length !== 11) return false
-    if (/^(\d)\1{10}$/.test(cpf)) return false
-
-    let sum = 0
-    let remainder
-
-    for (let i = 1; i <= 9; i++) {
-      sum += parseInt(cpf.substring(i - 1, i)) * (11 - i)
-    }
-
-    remainder = (sum * 10) % 11
-    if (remainder === 10 || remainder === 11) remainder = 0
-    if (remainder !== parseInt(cpf.substring(9, 10))) return false
-
-    sum = 0
-    for (let i = 1; i <= 10; i++) {
-      sum += parseInt(cpf.substring(i - 1, i)) * (12 - i)
-    }
-
-    remainder = (sum * 10) % 11
-    if (remainder === 10 || remainder === 11) remainder = 0
-    if (remainder !== parseInt(cpf.substring(10, 11))) return false
-
-    return true
-  }
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
     if (isProfessional) {
-      if (!cpf.trim()) {
-        newErrors.cpf = "CPF é obrigatório para profissionais"
-      } else {
-        const cleanCpf = cpf.replace(/\D/g, "")
-        if (cleanCpf.length !== 11) {
-          newErrors.cpf = "CPF deve ter 11 dígitos"
-        } else if (!isValidCPF(cleanCpf)) {
-          newErrors.cpf = "CPF inválido"
-        }
-      }
-
       if (!professionalPhone.trim()) {
         newErrors.professionalPhone = "Telefone é obrigatório para profissionais"
       } else if (!/^[\d\s\-\(\)]+$/.test(professionalPhone)) {
@@ -105,7 +66,6 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
         body: JSON.stringify({
           email: profile.email,
           isProfessional,
-          cpf: isProfessional ? cpf.replace(/\D/g, "") : null,
           professionalPhone: isProfessional ? professionalPhone : null,
         }),
       })
@@ -146,7 +106,6 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
             checked={isProfessional}
             onChange={(e) => {
               setIsProfessional(e.target.checked)
-              if (errors.cpf) setErrors({ ...errors, cpf: undefined })
               if (errors.professionalPhone) setErrors({ ...errors, professionalPhone: undefined })
             }}
             className="w-5 h-5 rounded cursor-pointer"
@@ -160,31 +119,8 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
         {isProfessional && (
           <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-4">
             <p className="text-xs text-amber-800 dark:text-amber-200 font-medium">
-              ✓ Preencha os dados abaixo para gerenciar suas propostas
+              ✓ Preencha seu telefone para gerenciar suas propostas
             </p>
-
-            <div className="grid gap-1">
-              <Label htmlFor="cpf" className="text-xs sm:text-sm">
-                CPF (sem pontos) *
-              </Label>
-              <Input
-                id="cpf"
-                placeholder="00000000000"
-                value={cpf}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "").slice(0, 11)
-                  setCpf(value)
-                  if (errors.cpf) {
-                    setErrors({ ...errors, cpf: undefined })
-                  }
-                }}
-                className={`text-xs sm:text-sm ${errors.cpf ? "border-red-500" : ""}`}
-                maxLength={11}
-              />
-              {errors.cpf && (
-                <p className="text-xs text-red-500">{errors.cpf}</p>
-              )}
-            </div>
 
             <div className="grid gap-1">
               <Label htmlFor="professionalPhone" className="text-xs sm:text-sm">
