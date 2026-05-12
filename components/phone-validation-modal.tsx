@@ -141,14 +141,6 @@ export function PhoneValidationModal({
     }
   }
 
-  const handleClose = () => {
-    if (!loading) {
-      setVerificationCode("")
-      setError("")
-      onClose()
-    }
-  }
-
   // Solicitar código ao abrir o modal
   useEffect(() => {
     if (isOpen && !error) {
