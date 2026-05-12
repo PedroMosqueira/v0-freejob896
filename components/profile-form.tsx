@@ -91,6 +91,9 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhone(value)
     setPhone(formatted)
+    console.log("[v0] Phone digitado:", value)
+    console.log("[v0] Phone formatado:", formatted)
+    console.log("[v0] Phone limpo (apenas dígitos):", formatted.replace(/\D/g, ""))
     if (errors.phone) {
       setErrors({ ...errors, phone: undefined })
     }

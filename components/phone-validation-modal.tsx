@@ -50,7 +50,14 @@ export function PhoneValidationModal({
     try {
       const cleanPhone = phoneNumber.replace(/\D/g, "")
 
+      console.log("[v0] Phone Number recebido no modal:", phoneNumber)
+      console.log("[v0] Phone limpo (apenas dígitos):", cleanPhone)
+      console.log("[v0] Comprimento do telefone:", cleanPhone.length)
       console.log("[v0] Enviando telefone para validação:", cleanPhone)
+
+      if (cleanPhone.length < 11) {
+        throw new Error(`Telefone incompleto: ${cleanPhone.length} dígitos (mínimo 11)`)
+      }
 
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
