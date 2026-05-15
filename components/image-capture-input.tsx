@@ -88,11 +88,15 @@ export function ImageCaptureInput({
         return
       }
       
-      // Criar novo FileList
+      // Criar novo FileList com os arquivos comprimidos
       const dataTransfer = new DataTransfer()
-      compressedFiles.forEach((file) => {
-        dataTransfer.items.add(file)
-      })
+      for (const file of compressedFiles) {
+        try {
+          dataTransfer.items.add(file)
+        } catch (error) {
+          console.error("[v0] Erro ao adicionar arquivo:", error)
+        }
+      }
 
       onCapture(dataTransfer.files)
     } catch (error) {
