@@ -215,8 +215,13 @@ export async function uploadProfileImage(
   formData: FormData,
 ): Promise<{ success: boolean; message: string; imageUrl?: string }> {
   try {
-    const session = await auth()
-    if (!session?.user?.email) {
+    const supabase = await createSupabaseServerClient()
+    
+    // Obter o usuário autenticado do Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user?.email) {
+      console.error("[v0] Auth error:", authError)
       return { success: false, message: "Você precisa estar autenticado" }
     }
 
@@ -235,10 +240,8 @@ export async function uploadProfileImage(
 
     console.log("[v0] Uploading image:", { size: `${(file.size / 1024 / 1024).toFixed(2)}MB`, type: file.type })
 
-    const supabase = await createSupabaseServerClient()
-
     const fileExt = file.name.split(".").pop()
-    const fileName = `${session.user.email}-${Date.now()}.${fileExt}`
+    const fileName = `${user.email}-${Date.now()}.${fileExt}`
     const filePath = `profile-images/${fileName}`
 
     console.log("[v0] Upload path:", filePath)
@@ -264,7 +267,7 @@ export async function uploadProfileImage(
     const { error: updateError } = await supabase
       .from("users")
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
-      .eq("email", session.user.email)
+      .eq("email", user.email)
 
     if (updateError) {
       console.error("[v0] Error updating profile image URL:", updateError)
