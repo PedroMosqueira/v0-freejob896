@@ -3,7 +3,7 @@
 import type { UserProfile } from "@/lib/user-profile"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Camera, CheckCircle, Briefcase, User } from "lucide-react"
+import { Camera, CheckCircle, Briefcase, User, Phone } from "lucide-react"
 import { useState } from "react"
 import { uploadProfileImage } from "@/lib/user-profile"
 import { useFormState } from "react-dom"
@@ -76,7 +76,14 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
 
         <p className="text-muted-foreground mb-3">{profile.email}</p>
 
-        {profile.bio && <p className="text-sm mb-3">{profile.bio}</p>}
+        {profile.phone && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+            <Phone className="h-4 w-4" />
+            <span>{profile.phone}</span>
+          </div>
+        )}
+
+        {profile.bio && <p className="text-sm mb-3 text-foreground">{profile.bio}</p>}
 
         <div className="flex flex-wrap gap-2 mb-3">
           {profile.isClient && (
@@ -101,12 +108,15 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
         </div>
 
         {profile.isProfessional && profile.skills && profile.skills.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {profile.skills.map((skill) => (
-              <Badge key={skill} variant="outline" className="text-xs">
-                {skill}
-              </Badge>
-            ))}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Especialização</p>
+            <div className="flex flex-wrap gap-2">
+              {profile.skills.map((skill) => (
+                <Badge key={skill} variant="outline" className="text-xs">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
 
