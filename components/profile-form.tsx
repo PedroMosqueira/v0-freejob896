@@ -11,6 +11,7 @@ import { useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { PhoneValidationModal } from "@/components/phone-validation-modal"
+import { Edit2, X } from "lucide-react"
 
 interface ProfileFormProps {
   profile: UserProfile
@@ -19,6 +20,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [state, formAction] = useFormState(updateUserProfile, null)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [fullName, setFullName] = useState(profile.fullName || "")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
@@ -167,9 +169,64 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
   return (
     <Card className="p-6 dark:bg-gray-800/50 dark:border-gray-700">
-      <h3 className="text-xl font-semibold mb-6 dark:text-gray-100">Informações do Perfil</h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold dark:text-gray-100">Informações do Perfil</h3>
+        {!isEditMode ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditMode(true)}
+            className="gap-2"
+          >
+            <Edit2 className="h-4 w-4" />
+            Editar
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditMode(false)}
+            className="gap-2"
+          >
+            <X className="h-4 w-4" />
+            Cancelar
+          </Button>
+        )}
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {!isEditMode && (
+        <div className="space-y-4 mb-6 p-4 bg-muted rounded-lg">
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground">Nome Completo</p>
+            <p className="text-lg">{fullName || "Não informado"}</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground">Cidade</p>
+            <p>{city || "Não informada"}</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-muted-foreground">Bio</p>
+            <p>{bio || "Não informada"}</p>
+          </div>
+          {isProfessional && (
+            <>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">Telefone</p>
+                <p>{phone || "Não informado"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">Habilidades</p>
+                <p>{skills || "Não informadas"}</p>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {isEditMode && (
+        <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="fullName">Nome Completo *</Label>
           <Input
@@ -291,6 +348,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
           {isSubmitting ? "Salvando..." : "Salvar Alterações"}
         </Button>
       </form>
+      )}
 
       <PhoneValidationModal
         isOpen={showPhoneModal}
