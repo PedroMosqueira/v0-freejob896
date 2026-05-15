@@ -241,19 +241,25 @@ export async function uploadProfileImage(
     const fileName = `${session.user.email}-${Date.now()}.${fileExt}`
     const filePath = `profile-images/${fileName}`
 
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(filePath, file, {
+    console.log("[v0] Upload path:", filePath)
+
+    const { error: uploadError, data: uploadData } = await supabase.storage.from("avatars").upload(filePath, file, {
       cacheControl: "3600",
       upsert: false,
     })
 
     if (uploadError) {
       console.error("[v0] Error uploading image:", uploadError)
-      return { success: false, message: "Erro ao fazer upload da imagem" }
+      return { success: false, message: `Erro ao fazer upload: ${uploadError.message}` }
     }
+
+    console.log("[v0] Upload data:", uploadData)
 
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(filePath)
 
     const imageUrl = urlData.publicUrl
+
+    console.log("[v0] Image URL:", imageUrl)
 
     const { error: updateError } = await supabase
       .from("users")
@@ -262,7 +268,7 @@ export async function uploadProfileImage(
 
     if (updateError) {
       console.error("[v0] Error updating profile image URL:", updateError)
-      return { success: false, message: "Erro ao atualizar foto de perfil" }
+      return { success: false, message: `Erro ao atualizar foto: ${updateError.message}` }
     }
 
     console.log("[v0] Profile image uploaded successfully:", imageUrl)
@@ -277,6 +283,6 @@ export async function uploadProfileImage(
     }
   } catch (error) {
     console.error("[v0] Unexpected error uploading image:", error)
-    return { success: false, message: "Erro inesperado ao fazer upload da imagem" }
+    return { success: false, message: `Erro inesperado: ${error instanceof Error ? error.message : "Desconhecido"}` }
   }
 }

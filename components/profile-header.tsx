@@ -28,6 +28,7 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
     const formData = new FormData()
     formData.append("file", file)
 
+    console.log("[v0] Starting file upload:", file.name)
     await formAction(formData)
     setIsUploading(false)
   }
@@ -69,6 +70,12 @@ export function ProfileHeader({ profile, isPublic = false }: ProfileHeaderProps)
       </div>
 
       <div className="flex-1">
+        {state?.message && (
+          <div className={`mb-3 p-3 rounded-lg text-sm ${state.success ? "bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400" : "bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400"}`}>
+            {state.message}
+          </div>
+        )}
+        
         <div className="flex items-center gap-2 mb-2">
           <h2 className="text-2xl font-bold">{profile.fullName || "Nome não informado"}</h2>
           {profile.verifiedAt && <CheckCircle className="h-5 w-5 text-green-600" />}
