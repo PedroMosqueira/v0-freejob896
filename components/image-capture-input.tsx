@@ -32,7 +32,13 @@ async function compressImage(file: File): Promise<File> {
     const compressedSize = compressed.size / 1024 / 1024
     console.log(`[v0] Comprimida: ${compressedSize.toFixed(2)}MB`)
     
-    return compressed
+    // Garantir que sempre retorna um File (não Blob)
+    if (compressed instanceof File) {
+      return compressed
+    }
+    
+    // Se for Blob, converter para File
+    return new File([compressed], file.name, { type: "image/jpeg" })
   } catch (error) {
     console.error("[v0] Erro na compressão:", error)
     return file
