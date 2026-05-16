@@ -731,36 +731,9 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   <Button
                     className="w-full bg-blue-500 text-white hover:bg-blue-600 h-9"
                     size="sm"
-                    onClick={async () => {
-                      if (!email) return
-
-                      setIsSendingInterest(true)
-                      try {
-                        // Create chat thread and send automatic message
-                        const thread = await startChat({
-                          needId: currentNeed.id,
-                          requesterEmail: currentNeed.requesterEmail,
-                          professionalEmail: email,
-                          customText: "Olá! Tenho interesse em realizar este serviço.",
-                        })
-
-                        if (thread) {
-                          // Create a simple interest_only proposal to track interest
-                          await addNeedProposal({
-                            needId: currentNeed.id,
-                            professionalEmail: email,
-                            type: "interest_only" as ProposalType,
-                          })
-
-                          await fetchProposals()
-                          onStatusUpdate?.()
-                        }
-                      } catch (error) {
-                        console.error("Erro ao demonstrar interesse:", error)
-                        alert("Erro ao demonstrar interesse. Tente novamente.")
-                      } finally {
-                        setIsSendingInterest(false)
-                      }
+                    onClick={() => {
+                      // Abrir o InterestDialog que tem validações de telefone e créditos
+                      setShowInterestDialog(true)
                     }}
                     disabled={isSendingInterest}
                   >
