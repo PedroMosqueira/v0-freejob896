@@ -37,11 +37,11 @@ export function UpgradePageContent() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
             <Sparkles className="h-4 w-4" />
-            <span>Plataforma 100% Gratuita no Lançamento</span>
+            <span>Plataforma 100% Gratuita</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Aproveite a plataforma gratuitamente</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Todos os recursos liberados. Planos Premium em breve!
+            Todos os recursos liberados sem taxas!
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export function UpgradePageContent() {
 
         {/* Benefits Section */}
         <div className="bg-card border border-border rounded-2xl p-8">
-          <h2 className="text-2xl font-bold mb-8 text-center">Por que o Freejob é gratuito?</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">Por que o Freejob é totalmente gratuito?</h2>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="text-center">
@@ -129,9 +129,9 @@ export function UpgradePageContent() {
               <div className="inline-flex items-center justify-center h-12 w-12 bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-xl mb-4">
                 <Shield className="h-6 w-6" />
               </div>
-              <h3 className="font-semibold mb-2">Taxa Justa</h3>
+              <h3 className="font-semibold mb-2">Sem Taxas</h3>
               <p className="text-sm text-muted-foreground">
-                Cobramos apenas 20% sobre transações realizadas na plataforma
+                Nenhuma taxa ou comissão sobre transações realizadas na plataforma
               </p>
             </div>
           </div>

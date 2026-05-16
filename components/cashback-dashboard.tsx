@@ -64,21 +64,15 @@ export function CashbackDashboard({ userEmail, userRole }: CashbackDashboardProp
         </div>
 
         {userRole === "professional" && (
-          <div className="space-y-3">
-            <div className="text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/20 p-3 rounded-lg">
-              Você ganha 30% da taxa de cada transação realizada na plataforma como comissão!
-            </div>
-
-            <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
-              <DollarSign className="mr-2 h-4 w-4" />
-              Solicitar Saque
-            </Button>
-          </div>
+          <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
+            <DollarSign className="mr-2 h-4 w-4" />
+            Solicitar Saque
+          </Button>
         )}
 
         {userRole === "client" && (
           <div className="text-sm text-muted-foreground">
-            Use seus créditos para pagar a taxa da plataforma em suas próximas contratações
+            Seus créditos estão disponíveis em suas próximas contratações
           </div>
         )}
       </div>
