@@ -460,10 +460,6 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                                       {formatCurrency(msg.metadata.bidAmount)}
                                     </span>
                                   </div>
-
-                                  <div className="bg-green-100 dark:bg-green-900 rounded p-2 text-xs text-green-700 dark:text-green-300">
-                                    Plataforma gratuita no primeiro ano! Sem taxas.
-                                  </div>
                                 </div>
 
                                 {msg.metadata?.status === "pending" && msg.email !== currentUserEmail && (
