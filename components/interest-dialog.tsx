@@ -4,14 +4,14 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
-import { AlertCircle, Loader2, Heart } from "lucide-react"
+import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
-import { PhoneValidationModal } from "@/components/phone-validation-modal"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
 
 interface InterestDialogProps {
@@ -31,7 +31,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
   const [isCheckingPermission, setIsCheckingPermission] = useState(true)
   const [phoneValidated, setPhoneValidated] = useState(false)
-  const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [userPhone, setUserPhone] = useState("")
+  const [phoneInput, setPhoneInput] = useState("")
+  const [verificationCode, setVerificationCode] = useState("")
+  const [codeSent, setCodeSent] = useState(false)
+  const [phoneValidationLoading, setPhoneValidationLoading] = useState(false)
+  const [phoneValidationError, setPhoneValidationError] = useState("")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Verificar permissão ao abrir o diálogo
@@ -48,13 +53,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+      setPhoneValidated(result.phoneVerified || false)
       
-      // Verificar se telefone está validado (OBRIGATÓRIO para todos)
-      const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json()
-        setPhoneValidated(profile.phoneValidated || false)
-      }
+      console.log("[v0] Phone verified status:", result.phoneVerified)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)
@@ -65,7 +66,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   const handlePhoneValidationSuccess = (phone: string) => {
     setPhoneValidated(true)
-    setShowPhoneModal(false)
+    setPhoneInput("")
+    setVerificationCode("")
+    setCodeSent(false)
     toast({
       title: "Telefone validado!",
       description: "Agora você pode manifestar interesse em serviços.",
@@ -73,13 +76,80 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     })
   }
 
+  const requestPhoneVerification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPhoneValidationError("")
+    setPhoneValidationLoading(true)
+
+    try {
+      const cleanPhone = phoneInput.replace(/\D/g, "")
+
+      if (cleanPhone.length < 10) {
+        throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
+      }
+
+      const response = await fetch("/api/phone/request-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          email: currentUserEmail,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || "Erro ao enviar código")
+      }
+
+      setCodeSent(true)
+      toast({
+        title: "Código enviado",
+        description: "Verifique seu SMS para o código de verificação.",
+      })
+    } catch (err: any) {
+      setPhoneValidationError(err.message || "Erro ao solicitar verificação")
+    } finally {
+      setPhoneValidationLoading(false)
+    }
+  }
+
+  const submitPhoneVerification = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPhoneValidationError("")
+    setPhoneValidationLoading(true)
+
+    try {
+      const cleanPhone = phoneInput.replace(/\D/g, "")
+
+      const response = await fetch("/api/phone/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          email: currentUserEmail,
+          code: verificationCode,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.message || "Código inválido")
+      }
+
+      handlePhoneValidationSuccess(cleanPhone)
+    } catch (err: any) {
+      setPhoneValidationError(err.message || "Erro ao verificar código")
+    } finally {
+      setPhoneValidationLoading(false)
+    }
+  }
+
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // PASSO 1: Validar telefone PRIMEIRO (OBRIGATÓRIO para todos)
+    // Se telefone não está validado, não faz nada (não enviar)
     if (!phoneValidated) {
-      console.log("[v0] Phone not validated - opening phone modal")
-      setShowPhoneModal(true)
       return
     }
 
@@ -169,60 +239,101 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
           </DialogHeader>
 
           <form onSubmit={handleManifestInterest} className="space-y-4">
-            <div>
-              <Label htmlFor="message">Mensagem (Opcional)</Label>
-              <Textarea
-                id="message"
-                placeholder="Deixe uma mensagem para o solicitante..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="mt-2"
-                rows={3}
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {!phoneValidated && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-                      Telefone não validado
-                    </p>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                      Você precisa validar seu telefone para manifestar interesse
-                    </p>
-                  </div>
+          <form onSubmit={phoneValidated ? handleManifestInterest : codeSent ? submitPhoneVerification : requestPhoneVerification} className="space-y-4">
+            {!phoneValidated && !codeSent && (
+              <>
+                <div>
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    disabled={phoneValidationLoading}
+                  />
                 </div>
-              </div>
+                {phoneValidationError && (
+                  <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {phoneValidated && isProfessional && (
-              <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Cada interesse manifesto consome 1 proposta
-                </p>
-              </div>
+            {!phoneValidated && codeSent && (
+              <>
+                <div>
+                  <Label htmlFor="code">Código de Verificação</Label>
+                  <Input
+                    id="code"
+                    type="text"
+                    placeholder="000000"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    maxLength={6}
+                    disabled={phoneValidationLoading}
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Código enviado para {phoneInput}
+                  </p>
+                </div>
+                {phoneValidationError && (
+                  <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {phoneValidated && isProfessional && !canExpress && (
-              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
-                      Propostas esgotadas
+            {phoneValidated && (
+              <>
+                <div>
+                  <Label htmlFor="message">Mensagem (Opcional)</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Deixe uma mensagem para o solicitante..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="mt-2"
+                    rows={3}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {isProfessional && (
+                  <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
                     </p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                      Adquira um plano para continuar manifestando interesse
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Cada interesse manifesto consome 1 proposta
                     </p>
                   </div>
-                </div>
-              </div>
+                )}
+
+                {phoneValidated && isProfessional && !canExpress && (
+                  <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                    <div className="flex gap-3">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+                          Propostas esgotadas
+                        </p>
+                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                          Adquira um plano para continuar manifestando interesse
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="flex gap-3">
@@ -231,16 +342,30 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 variant="outline"
                 onClick={onClose}
                 className="flex-1"
-                disabled={isSubmitting}
+                disabled={isSubmitting || phoneValidationLoading}
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !phoneValidated || (isProfessional && !canExpress)}
+                disabled={
+                  isSubmitting ||
+                  phoneValidationLoading ||
+                  (phoneValidated && (isProfessional && !canExpress))
+                }
                 className="flex-1 gap-2"
               >
-                {isSubmitting ? (
+                {phoneValidationLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verificando...
+                  </>
+                ) : !phoneValidated ? (
+                  <>
+                    <Phone className="h-4 w-4" />
+                    {codeSent ? "Verificar Código" : "Enviar Código"}
+                  </>
+                ) : isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Manifestando...
@@ -254,18 +379,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               </Button>
             </div>
           </form>
+          </form>
         </DialogContent>
       </Dialog>
-
-      <PhoneValidationModal
-        isOpen={showPhoneModal}
-        onClose={() => {
-          console.log("[v0] Phone modal closed")
-          setShowPhoneModal(false)
-        }}
-        onSuccess={handlePhoneValidationSuccess}
-        currentUserEmail={currentUserEmail}
-      />
 
       <UpgradePlansModal
         isOpen={showUpgradeModal}
