@@ -11,7 +11,7 @@ import {
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon, Heart, FileText } from "lucide-react"
+import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon, Heart, FileText, Zap } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
@@ -24,6 +24,7 @@ import { formatUserName } from "@/lib/format-user-name"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import InstallAppButton from "./install-app-button"
+import { canUserExpressInterest } from "@/lib/interest-manager"
 
 interface SiteHeaderProps {
   onSolicitarClick?: () => void
@@ -50,6 +51,8 @@ export function SiteHeader({
   const [displayName, setDisplayName] = useState<string>("")
   const [userProfile, setUserProfile] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [freeCredits, setFreeCredits] = useState(0)
+  const [isProfessional, setIsProfessional] = useState(false)
   const { theme, setTheme } = useTheme()
 
   const effectiveTheme = mounted
@@ -82,6 +85,11 @@ export function SiteHeader({
         } else {
           setDisplayName(email.split("@")[0])
         }
+
+        // Carregar créditos disponíveis
+        const result = await canUserExpressInterest(email)
+        setFreeCredits(result.freeInterestsRemaining || 0)
+        setIsProfessional(result.isProfessional || false)
       } catch (error) {
         console.error("Error loading user profile:", error)
         setDisplayName(email.split("@")[0])
@@ -290,11 +298,17 @@ export function SiteHeader({
                         <Heart className="h-4 w-4 mr-3" />
                         <span>Meus Interesses</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={onMinhasSolicitacoesClick} className="cursor-pointer">
-                        <FileText className="h-4 w-4 mr-3" />
-                        <span>Minhas Solicitações</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/planos" className="flex items-center gap-3 cursor-pointer">
+                        <Zap className="h-4 w-4" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">Planos</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{freeCredits} créditos livres</p>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)} className="cursor-pointer">
                         <Lock className="h-4 w-4 mr-3" />
                         <span>Alterar Senha</span>
@@ -347,10 +361,17 @@ export function SiteHeader({
                       <span>Tema: {effectiveTheme === "dark" ? "Claro" : "Escuro"}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)} className="cursor-pointer">
-                      <Lock className="h-4 w-4 mr-3" />
-                      <span>Alterar Senha</span>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/planos" className="flex items-center gap-3 cursor-pointer">
+                        <Zap className="h-4 w-4" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">Planos</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{freeCredits} créditos livres</p>
+                        </div>
+                      </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 dark:text-red-400">
                       <LogOut className="h-4 w-4 mr-3" />
                       <span>Sair</span>
