@@ -3,12 +3,13 @@ import { createClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, email, code } = await request.json()
+    const { phone, email, code, isProfessional } = await request.json()
 
     console.log("[v0] === API verify-code recebido ===")
     console.log("[v0] Phone:", phone)
     console.log("[v0] Email:", email)
     console.log("[v0] Code:", code)
+    console.log("[v0] isProfessional:", isProfessional)
 
     if (!phone || !email || !code) {
       return NextResponse.json(
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       .update({
         phone_verified: true,
         professional_phone: cleanPhone,
+        is_professional: isProfessional || false,
         phone_verification_code: null,
         phone_verification_expires_at: null,
       })

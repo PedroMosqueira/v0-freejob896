@@ -57,10 +57,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setIsCheckingPermission(true)
     try {
       const result = await canUserExpressInterest(currentUserEmail)
+      console.log("[v0] canUserExpressInterest result:", result)
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
+      setIsProfessionalCheckbox(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       setPhoneValidated(result.phoneVerified || false)
+      console.log("[v0] phoneVerified from DB:", result.phoneVerified)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)
@@ -159,6 +162,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
 
+      console.log("[v0] Verificando código para:", cleanPhone)
+
       const response = await fetch("/api/phone/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,16 +171,25 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
           phone: cleanPhone,
           email: currentUserEmail,
           code: verificationCode,
+          isProfessional: isProfessionalCheckbox,
         }),
       })
 
+      console.log("[v0] Resposta de verificação:", response.status)
+
       if (!response.ok) {
         const data = await response.json()
+        console.error("[v0] Erro de verificação:", data)
         throw new Error(data.message || `Erro ao verificar código (${response.status})`)
       }
+
+      const data = await response.json()
+      console.log("[v0] Verificação bem-sucedida:", data)
       
+      setIsProfessional(isProfessionalCheckbox)
       handlePhoneValidationSuccess(cleanPhone)
     } catch (err: any) {
+      console.error("[v0] Erro na verificação:", err)
       setPhoneValidationError(err.message || "Erro ao verificar código")
     } finally {
       setPhoneValidationLoading(false)
@@ -317,6 +331,19 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       </div>
                     </div>
                   )}
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <input
+                      id="professional-checkbox"
+                      type="checkbox"
+                      checked={isProfessionalCheckbox}
+                      onChange={(e) => setIsProfessionalCheckbox(e.target.checked)}
+                      className="w-4 h-4 rounded"
+                      disabled={phoneValidationLoading}
+                    />
+                    <Label htmlFor="professional-checkbox" className="cursor-pointer mb-0">
+                      Sou profissional
+                    </Label>
+                  </div>
                 </>
               )}
 
