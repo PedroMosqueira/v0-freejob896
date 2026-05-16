@@ -195,14 +195,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setPhoneValidationLoading(false)
     }
   }
-      
-      handlePhoneValidationSuccess(cleanPhone)
-    } catch (err: any) {
-      setPhoneValidationError(err.message || "Erro ao verificar código")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
 
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
