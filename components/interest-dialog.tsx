@@ -411,7 +411,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               </Button>
             </div>
           </form>
-          </form>
         </DialogContent>
       </Dialog>
 
