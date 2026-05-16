@@ -49,13 +49,11 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setIsProfessional(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       
-      // Verificar se telefone está validado
-      if (result.isProfessional) {
-        const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
-        if (profileResponse.ok) {
-          const profile = await profileResponse.json()
-          setPhoneValidated(profile.phoneValidated || false)
-        }
+      // Verificar se telefone está validado (OBRIGATÓRIO para todos)
+      const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json()
+        setPhoneValidated(profile.phoneValidated || false)
       }
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
@@ -78,16 +76,16 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // PASSO 1: Se é profissional, validar telefone PRIMEIRO
-    if (isProfessional && !phoneValidated) {
+    // PASSO 1: Validar telefone PRIMEIRO (OBRIGATÓRIO para todos)
+    if (!phoneValidated) {
       console.log("[v0] Phone not validated - opening phone modal")
       setShowPhoneModal(true)
       return
     }
 
-    // PASSO 2: Verificar se tem créditos depois de validar telefone
-    if (!canExpress) {
-      console.log("[v0] No credits - opening upgrade modal")
+    // PASSO 2: Se é profissional, verificar se tem créditos/plano
+    if (isProfessional && !canExpress) {
+      console.log("[v0] Professional without credits - opening upgrade modal")
       setShowUpgradeModal(true)
       return
     }
@@ -184,7 +182,23 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               />
             </div>
 
-            {isProfessional && (
+            {!phoneValidated && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                <div className="flex gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                      Telefone não validado
+                    </p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                      Você precisa validar seu telefone para manifestar interesse
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {phoneValidated && isProfessional && (
               <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
@@ -195,31 +209,15 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               </div>
             )}
 
-            {!phoneValidated && isProfessional && (
+            {phoneValidated && isProfessional && !canExpress && (
               <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                 <div className="flex gap-3">
                   <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
-                      Telefone não validado
+                      Propostas esgotadas
                     </p>
                     <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                      Valide seu telefone para manifestar interesse
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {!canExpress && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                <div className="flex gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-                      Sem propostas disponíveis
-                    </p>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">
                       Adquira um plano para continuar manifestando interesse
                     </p>
                   </div>
@@ -239,7 +237,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !phoneValidated || !canExpress}
+                disabled={isSubmitting || !phoneValidated || (isProfessional && !canExpress)}
                 className="flex-1 gap-2"
               >
                 {isSubmitting ? (
