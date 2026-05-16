@@ -12,6 +12,7 @@ import { AlertCircle, Loader2, Heart } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
 import { PhoneValidationModal } from "@/components/phone-validation-modal"
+import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
 
 interface InterestDialogProps {
   need: Need
@@ -31,6 +32,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [isCheckingPermission, setIsCheckingPermission] = useState(true)
   const [phoneValidated, setPhoneValidated] = useState(false)
   const [showPhoneModal, setShowPhoneModal] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   // Verificar permissão ao abrir o diálogo
   useEffect(() => {
@@ -76,24 +78,17 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    console.log("[v0] Manifest interest - Phone validated:", phoneValidated)
-    console.log("[v0] Manifest interest - Can express:", canExpress)
-    
-    // PASSO 1: Se é profissional, verificar se telefone está validado
+    // PASSO 1: Se é profissional, validar telefone PRIMEIRO
     if (isProfessional && !phoneValidated) {
       console.log("[v0] Phone not validated - opening phone modal")
       setShowPhoneModal(true)
       return
     }
 
-    // PASSO 2: Verificar se tem permissão para manifestar interesse
+    // PASSO 2: Verificar se tem créditos depois de validar telefone
     if (!canExpress) {
-      console.log("[v0] No permission to express interest")
-      toast({
-        title: "Propostas esgotadas",
-        description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar manifestando interesse.",
-        variant: "destructive",
-      })
+      console.log("[v0] No credits - opening upgrade modal")
+      setShowUpgradeModal(true)
       return
     }
 
@@ -266,9 +261,17 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
       <PhoneValidationModal
         isOpen={showPhoneModal}
-        onClose={() => setShowPhoneModal(false)}
-        currentUserEmail={currentUserEmail}
+        onClose={() => {
+          console.log("[v0] Phone modal closed")
+          setShowPhoneModal(false)
+        }}
         onSuccess={handlePhoneValidationSuccess}
+        currentUserEmail={currentUserEmail}
+      />
+
+      <UpgradePlansModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
       />
     </>
   )
