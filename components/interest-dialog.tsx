@@ -53,13 +53,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+      setPhoneValidated(result.phoneVerified || false)
       
-      // Verificar se telefone está validado (OBRIGATÓRIO para todos)
-      const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
-      if (profileResponse.ok) {
-        const profile = await profileResponse.json()
-        setPhoneValidated(profile.phoneValidated || false)
-      }
+      console.log("[v0] Phone verified status:", result.phoneVerified)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)

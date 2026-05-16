@@ -11,6 +11,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   freeInterestsUsed?: number
   freeInterestsRemaining?: number
   isProfessional?: boolean
+  phoneVerified?: boolean
 }> {
   try {
     const cookieStore = await cookies()
@@ -32,7 +33,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Buscar dados do usuário
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("is_professional, free_interests_count, total_interests_count")
+      .select("is_professional, free_interests_count, total_interests_count, phone_verified")
       .eq("email", userEmail)
       .single()
 
@@ -48,6 +49,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       return {
         canExpressInterest: true,
         isProfessional: false,
+        phoneVerified: user.phone_verified || false,
       }
     }
 
@@ -61,6 +63,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         isProfessional: true,
         freeInterestsUsed,
         freeInterestsRemaining,
+        phoneVerified: user.phone_verified || false,
       }
     }
 
@@ -70,6 +73,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       isProfessional: true,
       freeInterestsUsed: MAX_FREE_INTERESTS,
       freeInterestsRemaining: 0,
+      phoneVerified: user.phone_verified || false,
     }
   } catch (error) {
     console.error("Erro ao verificar permissão de interesse:", error)
