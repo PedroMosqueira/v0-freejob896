@@ -62,16 +62,22 @@ export async function POST(request: NextRequest) {
     // Código correto! Atualizar usuário para marcar telefone como validado
     const cleanPhone = phone.replace(/\D/g, "")
     
-    const { error: updateError } = await supabase
+    console.log("[v0] Atualizando usuário com:")
+    console.log("[v0] - phone_verified: true")
+    console.log("[v0] - professional_phone:", cleanPhone)
+    console.log("[v0] - is_professional:", isProfessional === true ? true : false)
+    
+    const { error: updateError, data: updateData } = await supabase
       .from("users")
       .update({
         phone_verified: true,
         professional_phone: cleanPhone,
-        is_professional: isProfessional || false,
+        is_professional: isProfessional === true ? true : false,
         phone_verification_code: null,
         phone_verification_expires_at: null,
       })
       .eq("email", email)
+      .select()
 
     if (updateError) {
       console.error("[v0] Erro ao atualizar usuário:", updateError)
@@ -81,7 +87,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[v0] Telefone validado com sucesso para:", email)
+    console.log("[v0] Usuário atualizado com sucesso:", updateData)
 
     return NextResponse.json({
       success: true,
