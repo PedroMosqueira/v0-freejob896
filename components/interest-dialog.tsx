@@ -74,11 +74,39 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setPhoneInput("")
     setVerificationCode("")
     setCodeSent(false)
-    toast({
-      title: "Telefone validado!",
-      description: "Agora você pode manifestar interesse em serviços.",
-      variant: "success",
-    })
+    // Verificar créditos após validar telefone
+    checkCreditsAfterPhoneValidation()
+  }
+
+  const checkCreditsAfterPhoneValidation = async () => {
+    try {
+      const result = await canUserExpressInterest(currentUserEmail)
+      setCanExpress(result.canExpressInterest)
+      setIsProfessional(result.isProfessional || false)
+      setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+      
+      // Se é profissional e não tem créditos, abre modal de planos
+      if (result.isProfessional && !result.canExpressInterest) {
+        toast({
+          title: "Telefone validado!",
+          description: "Agora escolha um plano para manifestar interesse.",
+        })
+        setShowUpgradeModal(true)
+      } else {
+        toast({
+          title: "Telefone validado!",
+          description: "Agora você pode manifestar interesse em serviços.",
+          variant: "success",
+        })
+      }
+    } catch (error) {
+      console.error("Erro ao verificar créditos:", error)
+      toast({
+        title: "Telefone validado!",
+        description: "Agora você pode manifestar interesse em serviços.",
+        variant: "success",
+      })
+    }
   }
 
   const requestPhoneVerification = async (e: React.FormEvent) => {
@@ -245,7 +273,25 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               <DialogDescription>{need.title}</DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={phoneValidated ? handleManifestInterest : codeSent ? submitPhoneVerification : requestPhoneVerification} className="space-y-4">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault()
+                
+                // Se telefone não validado
+                if (!phoneValidated) {
+                  if (codeSent) {
+                    submitPhoneVerification(e)
+                  } else {
+                    requestPhoneVerification(e)
+                  }
+                  return
+                }
+                
+                // Se telefone validado, verificar créditos e manifestar interesse
+                handleManifestInterest(e)
+              }} 
+              className="space-y-4"
+            >
               {!phoneValidated && !codeSent && (
                 <>
                   <div>
@@ -328,7 +374,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     </div>
                   )}
 
-                  {phoneValidated && isProfessional && !canExpress && (
+                  {isProfessional && !canExpress && (
                     <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                       <div className="flex gap-3">
                         <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
@@ -357,14 +403,15 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   Cancelar
                 </Button>
                 <Button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    phoneValidationLoading ||
-                    (phoneValidated && (isProfessional && !canExpress))
-                  }
-                  className="flex-1 gap-2"
-                >
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  phoneValidationLoading ||
+                  (!phoneValidated && phoneInput.length === 0) ||
+                  (phoneValidated && isProfessional && !canExpress)
+                }
+                className="flex-1 gap-2"
+              >
                   {phoneValidationLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
