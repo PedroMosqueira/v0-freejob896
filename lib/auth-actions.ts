@@ -192,7 +192,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
             .update({
               cpf: cpf?.toString() || null,
               professional_phone: professionalPhone?.toString() || null,
-              free_interests_count: 0, // Inicializa com 0 (tem direito a 3)
+              free_interests_count: 3, // Inicializa com 3 propostas gratuitas
               total_interests_count: 0,
             })
             .eq("id", data.user.id)
