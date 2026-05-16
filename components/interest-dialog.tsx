@@ -1,423 +1,962 @@
-"use client"
-
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
-import { useToast } from "@/hooks/use-toast"
-import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
-import { createNotificationViaAPI } from "@/lib/notifications-client"
-import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
-import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
-
-interface InterestDialogProps {
-  need: Need
-  isOpen: boolean
-  onClose: () => void
-  currentUserEmail: string
-  onActionSuccess: () => void
-}
-
-export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
-  const { toast } = useToast()
-  const [message, setMessage] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isProfessional, setIsProfessional] = useState(false)
-  const [canExpress, setCanExpress] = useState(true)
-  const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
-  const [isCheckingPermission, setIsCheckingPermission] = useState(true)
-  const [phoneValidated, setPhoneValidated] = useState(false)
-  const [userPhone, setUserPhone] = useState("")
-  const [phoneInput, setPhoneInput] = useState("")
-  const [verificationCode, setVerificationCode] = useState("")
-  const [codeSent, setCodeSent] = useState(false)
-  const [phoneValidationLoading, setPhoneValidationLoading] = useState(false)
-  const [phoneValidationError, setPhoneValidationError] = useState("")
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
-
-  // Verificar permissão ao abrir o diálogo
-  useEffect(() => {
-    if (isOpen && currentUserEmail) {
-      checkPermission()
-    }
-  }, [isOpen, currentUserEmail])
-
-  const checkPermission = async () => {
-    setIsCheckingPermission(true)
-    try {
-      const result = await canUserExpressInterest(currentUserEmail)
-      console.log("[v0] canUserExpressInterest result:", result)
-      setCanExpress(result.canExpressInterest)
-      setIsProfessional(result.isProfessional || false)
-      setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
-      setPhoneValidated(result.phoneVerified || false)
-      
-      console.log("[v0] Phone verified status from result:", result.phoneVerified)
-      console.log("[v0] phoneValidated state will be set to:", result.phoneVerified || false)
-    } catch (error) {
-      console.error("Erro ao verificar permissão:", error)
-      setCanExpress(false)
-    } finally {
-      setIsCheckingPermission(false)
-    }
-  }
-
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "")
-    if (cleaned.length <= 2) return cleaned
-    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
-  }
-    setPhoneValidated(true)
-    setPhoneInput("")
-    setVerificationCode("")
-    setCodeSent(false)
-    toast({
-      title: "Telefone validado!",
-      description: "Agora você pode manifestar interesse em serviços.",
-      variant: "success",
-    })
-  }
-
-  const requestPhoneVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    setPhoneValidationError("")
-    setPhoneValidationLoading(true)
-
-    try {
-      const cleanPhone = phoneInput.replace(/\D/g, "")
-
-      if (cleanPhone.length < 10) {
-        throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
-      }
-
-      console.log("[v0] Enviando requisição de verificação para:", cleanPhone)
-
-      const response = await fetch("/api/phone/request-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          email: currentUserEmail,
-        }),
-      })
-
-      console.log("[v0] Resposta da API:", response.status, response.statusText)
-      
-      if (!response.ok) {
-        const data = await response.json()
-        console.error("[v0] Erro da API:", data)
-        throw new Error(data.message || `Erro ao enviar código (${response.status})`)
-      }
-
-      const data = await response.json()
-      console.log("[v0] Sucesso:", data)
-
-      setCodeSent(true)
-      toast({
-        title: "Código enviado",
-        description: "Verifique seu SMS para o código de verificação.",
-      })
-    } catch (err: any) {
-      console.error("[v0] Erro na requisição:", err)
-      setPhoneValidationError(err.message || "Erro ao solicitar verificação")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
-
-  const submitPhoneVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    setPhoneValidationError("")
-    setPhoneValidationLoading(true)
-
-    try {
-      const cleanPhone = phoneInput.replace(/\D/g, "")
-
-      console.log("[v0] Verificando código para:", cleanPhone)
-
-      const response = await fetch("/api/phone/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          email: currentUserEmail,
-          code: verificationCode,
-        }),
-      })
-
-      console.log("[v0] Resposta de verificação:", response.status)
-
-      if (!response.ok) {
-        const data = await response.json()
-        console.error("[v0] Erro de verificação:", data)
-        throw new Error(data.message || `Erro ao verificar código (${response.status})`)
-      }
-
-      const data = await response.json()
-      console.log("[v0] Verificação bem-sucedida:", data)
-      
-      handlePhoneValidationSuccess(cleanPhone)
-    } catch (err: any) {
-      console.error("[v0] Erro na verificação:", err)
-      setPhoneValidationError(err.message || "Erro ao verificar código")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
-
-  const handleManifestInterest = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    // Se telefone não está validado, não faz nada (não enviar)
-    if (!phoneValidated) {
-      return
-    }
-
-    // PASSO 2: Se é profissional, verificar se tem créditos/plano
-    if (isProfessional && !canExpress) {
-      console.log("[v0] Professional without credits - opening upgrade modal")
-      setShowUpgradeModal(true)
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      // Criar proposta de interesse simples
-      await addNeedProposal({
-        needId: need.id,
-        professionalEmail: currentUserEmail,
-        type: "interest_only",
-        message: message || undefined,
-      })
-
-      // Incrementar contador de interesses
-      if (isProfessional) {
-        await incrementInterestCount(currentUserEmail)
-      }
-
-      // Notificar o solicitante
-      await createNotificationViaAPI(
-        need.requesterEmail,
-        "Novo interesse em seu serviço",
-        `Um profissional manifestou interesse em "${need.title}"`,
-        "interest",
-        need.id,
-      )
-
-      // Iniciar chat automático
-      await startChat({
-        needId: need.id,
-        requesterEmail: need.requesterEmail,
-        professionalEmail: currentUserEmail,
-        reason: "interest",
-        customText: message ? `Profissional manifestou interesse: "${message}"` : "Profissional manifestou interesse em seu serviço.",
-      })
-
-      toast({
-        title: "Interesse manifestado!",
-        description: "Seu interesse foi registrado. O chat foi iniciado para você conversar com o solicitante.",
-        variant: "success",
-      })
-
-      setMessage("")
-      onActionSuccess()
-      onClose()
-    } catch (error: any) {
-      console.error("Erro ao manifestar interesse:", error)
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao manifestar interesse. Tente novamente.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <>
-      {isCheckingPermission && (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-          <DialogContent className="sm:max-w-md">
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {!isCheckingPermission && (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Heart className="h-5 w-5 text-red-500" />
-                Tenho Interesse
-              </DialogTitle>
-              <DialogDescription>{need.title}</DialogDescription>
-            </DialogHeader>
-
-          <form onSubmit={phoneValidated ? handleManifestInterest : codeSent ? submitPhoneVerification : requestPhoneVerification} className="space-y-4">
-            {!phoneValidated && !codeSent && (
-              <>
-                <div>
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(11) 99999-9999"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
-                    disabled={phoneValidationLoading}
-                    className="text-base"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Digite seu telefone com DDD
-                  </p>
-                </div>
-                {phoneValidationError && (
-                  <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                    <div className="flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {!phoneValidated && codeSent && (
-              <>
-                <div>
-                  <Label htmlFor="code">Código de Verificação</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    placeholder="000000"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    maxLength={6}
-                    disabled={phoneValidationLoading}
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Código enviado para {phoneInput}
-                  </p>
-                </div>
-                {phoneValidationError && (
-                  <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                    <div className="flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {phoneValidated && (
-              <>
-                <div>
-                  <Label htmlFor="message">Mensagem (Opcional)</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Deixe uma mensagem para o solicitante..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="mt-2"
-                    rows={3}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                {isProfessional && (
-                  <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Cada interesse manifesto consome 1 proposta
-                    </p>
-                  </div>
-                )}
-
-                {phoneValidated && isProfessional && !canExpress && (
-                  <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                    <div className="flex gap-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
-                          Propostas esgotadas
-                        </p>
-                        <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
-                          Adquira um plano para continuar manifestando interesse
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-                disabled={isSubmitting || phoneValidationLoading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  phoneValidationLoading ||
-                  (phoneValidated && (isProfessional && !canExpress))
-                }
-                className="flex-1 gap-2"
-              >
-                {phoneValidationLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Verificando...
-                  </>
-                ) : !phoneValidated ? (
-                  <>
-                    <Phone className="h-4 w-4" />
-                    {codeSent ? "Verificar Código" : "Enviar Código"}
-                  </>
-                ) : isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Manifestando...
-                  </>
-                ) : (
-                  <>
-                    <Heart className="h-4 w-4" />
-                    Manifestar Interesse
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-      )}
-
-      <UpgradePlansModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-      />
-    </>
-  )
-}
+23:31:44.753 Running build in Washington, D.C., USA (East) – iad1
+23:31:44.753 Build machine configuration: 2 cores, 8 GB
+23:31:44.924 Cloning github.com/PedroMosqueira/v0-freejob896 (Branch: main, Commit: 51e003f)
+23:31:46.482 Cloning completed: 1.558s
+23:31:46.741 Restored build cache from previous deployment (DFp1NMgXGCiTPQT5h9jc4tpVGLzk)
+23:31:47.147 Running "vercel build"
+23:31:47.182 Vercel CLI 53.3.2
+23:31:47.569 Detected `pnpm-lock.yaml` 9 which may be generated by pnpm@9.x or pnpm@10.x
+23:31:47.570 Using pnpm@10.x based on project creation date
+23:31:47.570 To use pnpm@9.x, manually opt in using corepack (https://vercel.com/docs/deployments/configure-a-build#corepack)
+23:31:47.610 Installing dependencies...
+23:31:48.322 Lockfile is up to date, resolution step is skipped
+23:31:48.568 Already up to date
+23:31:49.153 
+23:31:49.178 ╭ Warning ─────────────────────────────────────────────────────────────────────╮
+23:31:49.179 │                                                                              │
+23:31:49.179 │   Ignored build scripts: unrs-resolver@1.11.1.                               │
+23:31:49.180 │   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+23:31:49.180 │   to run scripts.                                                            │
+23:31:49.180 │                                                                              │
+23:31:49.181 ╰──────────────────────────────────────────────────────────────────────────────╯
+23:31:49.186 Done in 1.5s using pnpm v10.28.0
+23:31:49.208 Detected Next.js version: 14.1.4
+23:31:49.235 Running "pnpm run build"
+23:31:49.655 
+23:31:49.655 > freejob-project@0.1.0 build /vercel/path0
+23:31:49.655 > next build
+23:31:49.656 
+23:31:50.586    ▲ Next.js 14.1.4
+23:31:50.587 
+23:31:50.617    Creating an optimized production build ...
+23:32:02.527 Failed to compile.
+23:32:02.528 
+23:32:02.530 ./components/interest-dialog.tsx
+23:32:02.530 Error: 
+23:32:02.531   x the name `InterestDialog` is defined multiple times
+23:32:02.531      ,-[/vercel/path0/components/interest-dialog.tsx:21:1]
+23:32:02.532   21 |   onActionSuccess: () => void
+23:32:02.532   22 | }
+23:32:02.533   23 | 
+23:32:02.533   24 | export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
+23:32:02.534      :                         ^^^^^^^|^^^^^^
+23:32:02.534      :                                `-- previous definition of `InterestDialog` here
+23:32:02.534   25 |   const { toast } = useToast()
+23:32:02.535   26 |   const [message, setMessage] = useState("")
+23:32:02.535   27 |   const [isSubmitting, setIsSubmitting] = useState(false)
+23:32:02.536   28 |   const [isProfessional, setIsProfessional] = useState(false)
+23:32:02.536   29 |   const [canExpress, setCanExpress] = useState(true)
+23:32:02.537   30 |   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
+23:32:02.537   31 |   const [isCheckingPermission, setIsCheckingPermission] = useState(true)
+23:32:02.537   32 |   const [phoneValidated, setPhoneValidated] = useState(false)
+23:32:02.538   33 |   const [showPhoneModal, setShowPhoneModal] = useState(false)
+23:32:02.538   34 | 
+23:32:02.539   35 |   // Verificar permissão ao abrir o diálogo
+23:32:02.539   36 |   useEffect(() => {
+23:32:02.539   37 |     if (isOpen && currentUserEmail) {
+23:32:02.540   38 |       checkPermission()
+23:32:02.540   39 |     }
+23:32:02.541   40 |   }, [isOpen, currentUserEmail])
+23:32:02.541   41 | 
+23:32:02.541   42 |   const checkPermission = async () => {
+23:32:02.541   43 |     setIsCheckingPermission(true)
+23:32:02.542   44 |     try {
+23:32:02.542   45 |       const result = await canUserExpressInterest(currentUserEmail)
+23:32:02.542   46 |       setCanExpress(result.canExpressInterest)
+23:32:02.543   47 |       setIsProfessional(result.isProfessional || false)
+23:32:02.543   48 |       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+23:32:02.543   49 |       
+23:32:02.544   50 |       // Verificar se telefone está validado
+23:32:02.544   51 |       if (result.isProfessional) {
+23:32:02.544   52 |         const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
+23:32:02.544   53 |         if (profileResponse.ok) {
+23:32:02.545   54 |           const profile = await profileResponse.json()
+23:32:02.545   55 |           setPhoneValidated(profile.phoneValidated || false)
+23:32:02.545   56 |         }
+23:32:02.545   57 |       }
+23:32:02.554   58 |     } catch (error) {
+23:32:02.555   59 |       console.error("Erro ao verificar permissão:", error)
+23:32:02.555   60 |       setCanExpress(false)
+23:32:02.555   61 |     } finally {
+23:32:02.556   62 |       setIsCheckingPermission(false)
+23:32:02.556   63 |     }
+23:32:02.556   64 |   }
+23:32:02.560   65 | 
+23:32:02.561   66 |   const handlePhoneValidationSuccess = (phone: string) => {
+23:32:02.561   67 |     setPhoneValidated(true)
+23:32:02.562   68 |     setShowPhoneModal(false)
+23:32:02.562   69 |     toast({
+23:32:02.562   70 |       title: "Telefone validado!",
+23:32:02.562   71 |       description: "Agora você pode manifestar interesse em serviços.",
+23:32:02.562   72 |       variant: "success",
+23:32:02.563   73 |     })
+23:32:02.563   74 |   }
+23:32:02.563   75 | 
+23:32:02.563   76 |   const handleManifestInterest = async (e: React.FormEvent) => {
+23:32:02.564   77 |     e.preventDefault()
+23:32:02.564   78 |     
+23:32:02.564   79 |     console.log("[v0] Manifest interest - Phone validated:", phoneValidated)
+23:32:02.565   80 |     console.log("[v0] Manifest interest - Can express:", canExpress)
+23:32:02.565   81 |     
+23:32:02.565   82 |     // PASSO 1: Se é profissional, verificar se telefone está validado
+23:32:02.565   83 |     if (isProfessional && !phoneValidated) {
+23:32:02.566   84 |       console.log("[v0] Phone not validated - opening phone modal")
+23:32:02.566   85 |       setShowPhoneModal(true)
+23:32:02.566   86 |       return
+23:32:02.566   87 |     }
+23:32:02.567   88 | 
+23:32:02.567   89 |     // PASSO 2: Verificar se tem permissão para manifestar interesse
+23:32:02.567   90 |     if (!canExpress) {
+23:32:02.567   91 |       console.log("[v0] No permission to express interest")
+23:32:02.568   92 |       toast({
+23:32:02.568   93 |         title: "Propostas esgotadas",
+23:32:02.568   94 |         description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar manifestando interesse.",
+23:32:02.568   95 |         variant: "destructive",
+23:32:02.569   96 |       })
+23:32:02.569   97 |       return
+23:32:02.569   98 |     }
+23:32:02.569   99 | 
+23:32:02.570  100 |     setIsSubmitting(true)
+23:32:02.570  101 |     try {
+23:32:02.570  102 |       // Criar proposta de interesse simples
+23:32:02.570  103 |       await addNeedProposal({
+23:32:02.571  104 |         needId: need.id,
+23:32:02.571  105 |         professionalEmail: currentUserEmail,
+23:32:02.571  106 |         type: "interest_only",
+23:32:02.571  107 |         message: message || undefined,
+23:32:02.572  108 |       })
+23:32:02.572  109 | 
+23:32:02.572  110 |       // Incrementar contador de interesses
+23:32:02.573  111 |       if (isProfessional) {
+23:32:02.573  112 |         await incrementInterestCount(currentUserEmail)
+23:32:02.573  113 |       }
+23:32:02.574  114 | 
+23:32:02.574  115 |       // Notificar o solicitante
+23:32:02.574  116 |       await createNotificationViaAPI(
+23:32:02.575  117 |         need.requesterEmail,
+23:32:02.575  118 |         "Novo interesse em seu serviço",
+23:32:02.575  119 |         `Um profissional manifestou interesse em "${need.title}"`,
+23:32:02.576  120 |         "interest",
+23:32:02.576  121 |         need.id,
+23:32:02.576  122 |       )
+23:32:02.577  123 | 
+23:32:02.577  124 |       // Iniciar chat automático
+23:32:02.577  125 |       await startChat({
+23:32:02.577  126 |         needId: need.id,
+23:32:02.577  127 |         requesterEmail: need.requesterEmail,
+23:32:02.577  128 |         professionalEmail: currentUserEmail,
+23:32:02.578  129 |         reason: "interest",
+23:32:02.578  130 |         customText: message ? `Profissional manifestou interesse: "${message}"` : "Profissional manifestou interesse em seu serviço.",
+23:32:02.578  131 |       })
+23:32:02.578  132 | 
+23:32:02.579  133 |       toast({
+23:32:02.579  134 |         title: "Interesse manifestado!",
+23:32:02.579  135 |         description: "Seu interesse foi registrado. O chat foi iniciado para você conversar com o solicitante.",
+23:32:02.579  136 |         variant: "success",
+23:32:02.579  137 |       })
+23:32:02.579  138 | 
+23:32:02.580  139 |       setMessage("")
+23:32:02.580  140 |       onActionSuccess()
+23:32:02.580  141 |       onClose()
+23:32:02.580  142 |     } catch (error: any) {
+23:32:02.580  143 |       console.error("Erro ao manifestar interesse:", error)
+23:32:02.581  144 |       toast({
+23:32:02.581  145 |         title: "Erro",
+23:32:02.581  146 |         description: error.message || "Erro ao manifestar interesse. Tente novamente.",
+23:32:02.581  147 |         variant: "destructive",
+23:32:02.581  148 |       })
+23:32:02.582  149 |     } finally {
+23:32:02.582  150 |       setIsSubmitting(false)
+23:32:02.582  151 |     }
+23:32:02.582  152 |   }
+23:32:02.582  153 | 
+23:32:02.582  154 |   if (isCheckingPermission) {
+23:32:02.583  155 |     return (
+23:32:02.583  156 |       <Dialog open={isOpen} onOpenChange={onClose}>
+23:32:02.583  157 |         <DialogContent className="sm:max-w-md">
+23:32:02.583  158 |           <div className="flex items-center justify-center py-8">
+23:32:02.583  159 |             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+23:32:02.584  160 |           </div>
+23:32:02.584  161 |         </DialogContent>
+23:32:02.585  162 |       </Dialog>
+23:32:02.585  163 |     )
+23:32:02.586  164 |   }
+23:32:02.586  165 | 
+23:32:02.586  166 |   return (
+23:32:02.587  167 |     <>
+23:32:02.587  168 |       <Dialog open={isOpen} onOpenChange={onClose}>
+23:32:02.587  169 |         <DialogContent className="sm:max-w-md">
+23:32:02.588  170 |           <DialogHeader>
+23:32:02.588  171 |             <DialogTitle className="flex items-center gap-2">
+23:32:02.588  172 |               <Heart className="h-5 w-5 text-red-500" />
+23:32:02.589  173 |               Tenho Interesse
+23:32:02.589  174 |             </DialogTitle>
+23:32:02.589  175 |             <DialogDescription>{need.title}</DialogDescription>
+23:32:02.590  176 |           </DialogHeader>
+23:32:02.590  177 | 
+23:32:02.590  178 |           <form onSubmit={handleManifestInterest} className="space-y-4">
+23:32:02.591  179 |             <div>
+23:32:02.591  180 |               <Label htmlFor="message">Mensagem (Opcional)</Label>
+23:32:02.592  181 |               <Textarea
+23:32:02.592  182 |                 id="message"
+23:32:02.592  183 |                 placeholder="Deixe uma mensagem para o solicitante..."
+23:32:02.592  184 |                 value={message}
+23:32:02.593  185 |                 onChange={(e) => setMessage(e.target.value)}
+23:32:02.593  186 |                 className="mt-2"
+23:32:02.594  187 |                 rows={3}
+23:32:02.594  188 |                 disabled={isSubmitting}
+23:32:02.594  189 |               />
+23:32:02.595  190 |             </div>
+23:32:02.595  191 | 
+23:32:02.595  192 |             {isProfessional && (
+23:32:02.596  193 |               <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
+23:32:02.596  194 |                 <p className="text-sm text-gray-700 dark:text-gray-300">
+23:32:02.596  195 |                   <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
+23:32:02.597  196 |                 </p>
+23:32:02.597  197 |                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+23:32:02.598  198 |                   Cada interesse manifesto consome 1 proposta
+23:32:02.598  199 |                 </p>
+23:32:02.598  200 |               </div>
+23:32:02.599  201 |             )}
+23:32:02.599  202 | 
+23:32:02.599  203 |             {!phoneValidated && isProfessional && (
+23:32:02.600  204 |               <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+23:32:02.600  205 |                 <div className="flex gap-3">
+23:32:02.601  206 |                   <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+23:32:02.602  207 |                   <div>
+23:32:02.602  208 |                     <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+23:32:02.602  209 |                       Telefone não validado
+23:32:02.603  210 |                     </p>
+23:32:02.603  211 |                     <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+23:32:02.603  212 |                       Valide seu telefone para manifestar interesse
+23:32:02.604  213 |                     </p>
+23:32:02.604  214 |                   </div>
+23:32:02.605  215 |                 </div>
+23:32:02.605  216 |               </div>
+23:32:02.605  217 |             )}
+23:32:02.606  218 | 
+23:32:02.606  219 |             {!canExpress && (
+23:32:02.606  220 |               <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+23:32:02.607  221 |                 <div className="flex gap-3">
+23:32:02.607  222 |                   <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+23:32:02.607  223 |                   <div>
+23:32:02.608  224 |                     <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+23:32:02.608  225 |                       Sem propostas disponíveis
+23:32:02.608  226 |                     </p>
+23:32:02.609  227 |                     <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+23:32:02.609  228 |                       Adquira um plano para continuar manifestando interesse
+23:32:02.609  229 |                     </p>
+23:32:02.610  230 |                   </div>
+23:32:02.610  231 |                 </div>
+23:32:02.610  232 |               </div>
+23:32:02.611  233 |             )}
+23:32:02.611  234 | 
+23:32:02.611  235 |             <div className="flex gap-3">
+23:32:02.612  236 |               <Button
+23:32:02.612  237 |                 type="button"
+23:32:02.612  238 |                 variant="outline"
+23:32:02.613  239 |                 onClick={onClose}
+23:32:02.613  240 |                 className="flex-1"
+23:32:02.613  241 |                 disabled={isSubmitting}
+23:32:02.614  242 |               >
+23:32:02.621  243 |                 Cancelar
+23:32:02.622  244 |               </Button>
+23:32:02.622  245 |               <Button
+23:32:02.622  246 |                 type="submit"
+23:32:02.623  247 |                 disabled={isSubmitting || !phoneValidated || !canExpress}
+23:32:02.623  248 |                 className="flex-1 gap-2"
+23:32:02.623  249 |               >
+23:32:02.624  250 |                 {isSubmitting ? (
+23:32:02.624  251 |                   <>
+23:32:02.625  252 |                     <Loader2 className="h-4 w-4 animate-spin" />
+23:32:02.625  253 |                     Manifestando...
+23:32:02.625  254 |                   </>
+23:32:02.626  255 |                 ) : (
+23:32:02.626  256 |                   <>
+23:32:02.626  257 |                     <Heart className="h-4 w-4" />
+23:32:02.627  258 |                     Manifestar Interesse
+23:32:02.627  259 |                   </>
+23:32:02.627  260 |                 )}
+23:32:02.628  261 |               </Button>
+23:32:02.628  262 |             </div>
+23:32:02.628  263 |           </form>
+23:32:02.629  264 |         </DialogContent>
+23:32:02.629  265 |       </Dialog>
+23:32:02.629  266 | 
+23:32:02.630  267 |       <PhoneValidationModal
+23:32:02.630  268 |         isOpen={showPhoneModal}
+23:32:02.630  269 |         onClose={() => setShowPhoneModal(false)}
+23:32:02.631  270 |         currentUserEmail={currentUserEmail}
+23:32:02.631  271 |         onSuccess={handlePhoneValidationSuccess}
+23:32:02.631  272 |       />
+23:32:02.632  273 |     </>
+23:32:02.632  274 |   )
+23:32:02.632  275 | }
+23:32:02.633  276 | 
+23:32:02.633  277 | interface InterestDialogProps {
+23:32:02.633  278 |   need: Need
+23:32:02.634  279 |   isOpen: boolean
+23:32:02.634  280 |   onClose: () => void
+23:32:02.634  281 |   currentUserEmail: string
+23:32:02.635  282 |   onActionSuccess: () => void
+23:32:02.635  283 | }
+23:32:02.636  284 | 
+23:32:02.636  285 | export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
+23:32:02.636      :                         ^^^^^^^|^^^^^^
+23:32:02.637      :                                `-- `InterestDialog` redefined here
+23:32:02.637  286 |   const { toast } = useToast()
+23:32:02.638  287 |   const [visitDate, setVisitDate] = useState("")
+23:32:02.638  288 |   const [visitMessage, setVisitMessage] = useState("")
+23:32:02.639      `----
+23:32:02.639 
+23:32:02.639   x the name `default` is exported multiple times
+23:32:02.640      ,-[/vercel/path0/components/interest-dialog.tsx:21:1]
+23:32:02.640   21 |       onActionSuccess: () => void
+23:32:02.641   22 |     }
+23:32:02.641   23 |     
+23:32:02.641   24 | ,-> export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
+23:32:02.642   25 | |     const { toast } = useToast()
+23:32:02.642   26 | |     const [message, setMessage] = useState("")
+23:32:02.643   27 | |     const [isSubmitting, setIsSubmitting] = useState(false)
+23:32:02.643   28 | |     const [isProfessional, setIsProfessional] = useState(false)
+23:32:02.643   29 | |     const [canExpress, setCanExpress] = useState(true)
+23:32:02.644   30 | |     const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
+23:32:02.644   31 | |     const [isCheckingPermission, setIsCheckingPermission] = useState(true)
+23:32:02.645   32 | |     const [phoneValidated, setPhoneValidated] = useState(false)
+23:32:02.645   33 | |     const [showPhoneModal, setShowPhoneModal] = useState(false)
+23:32:02.645   34 | |   
+23:32:02.646   35 | |     // Verificar permissão ao abrir o diálogo
+23:32:02.646   36 | |     useEffect(() => {
+23:32:02.647   37 | |       if (isOpen && currentUserEmail) {
+23:32:02.647   38 | |         checkPermission()
+23:32:02.647   39 | |       }
+23:32:02.648   40 | |     }, [isOpen, currentUserEmail])
+23:32:02.648   41 | |   
+23:32:02.648   42 | |     const checkPermission = async () => {
+23:32:02.649   43 | |       setIsCheckingPermission(true)
+23:32:02.649   44 | |       try {
+23:32:02.650   45 | |         const result = await canUserExpressInterest(currentUserEmail)
+23:32:02.650   46 | |         setCanExpress(result.canExpressInterest)
+23:32:02.650   47 | |         setIsProfessional(result.isProfessional || false)
+23:32:02.651   48 | |         setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+23:32:02.651   49 | |         
+23:32:02.652   50 | |         // Verificar se telefone está validado
+23:32:02.652   51 | |         if (result.isProfessional) {
+23:32:02.653   52 | |           const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
+23:32:02.653   53 | |           if (profileResponse.ok) {
+23:32:02.653   54 | |             const profile = await profileResponse.json()
+23:32:02.654   55 | |             setPhoneValidated(profile.phoneValidated || false)
+23:32:02.654   56 | |           }
+23:32:02.655   57 | |         }
+23:32:02.655   58 | |       } catch (error) {
+23:32:02.655   59 | |         console.error("Erro ao verificar permissão:", error)
+23:32:02.656   60 | |         setCanExpress(false)
+23:32:02.656   61 | |       } finally {
+23:32:02.657   62 | |         setIsCheckingPermission(false)
+23:32:02.657   63 | |       }
+23:32:02.657   64 | |     }
+23:32:02.658   65 | |   
+23:32:02.658   66 | |     const handlePhoneValidationSuccess = (phone: string) => {
+23:32:02.658   67 | |       setPhoneValidated(true)
+23:32:02.659   68 | |       setShowPhoneModal(false)
+23:32:02.661   69 | |       toast({
+23:32:02.662   70 | |         title: "Telefone validado!",
+23:32:02.662   71 | |         description: "Agora você pode manifestar interesse em serviços.",
+23:32:02.663   72 | |         variant: "success",
+23:32:02.663   73 | |       })
+23:32:02.663   74 | |     }
+23:32:02.664   75 | |   
+23:32:02.664   76 | |     const handleManifestInterest = async (e: React.FormEvent) => {
+23:32:02.665   77 | |       e.preventDefault()
+23:32:02.665   78 | |       
+23:32:02.665   79 | |       console.log("[v0] Manifest interest - Phone validated:", phoneValidated)
+23:32:02.666   80 | |       console.log("[v0] Manifest interest - Can express:", canExpress)
+23:32:02.666   81 | |       
+23:32:02.666   82 | |       // PASSO 1: Se é profissional, verificar se telefone está validado
+23:32:02.667   83 | |       if (isProfessional && !phoneValidated) {
+23:32:02.667   84 | |         console.log("[v0] Phone not validated - opening phone modal")
+23:32:02.667   85 | |         setShowPhoneModal(true)
+23:32:02.668   86 | |         return
+23:32:02.668   87 | |       }
+23:32:02.668   88 | |   
+23:32:02.669   89 | |       // PASSO 2: Verificar se tem permissão para manifestar interesse
+23:32:02.669   90 | |       if (!canExpress) {
+23:32:02.669   91 | |         console.log("[v0] No permission to express interest")
+23:32:02.670   92 | |         toast({
+23:32:02.670   93 | |           title: "Propostas esgotadas",
+23:32:02.670   94 | |           description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar manifestando interesse.",
+23:32:02.671   95 | |           variant: "destructive",
+23:32:02.671   96 | |         })
+23:32:02.671   97 | |         return
+23:32:02.672   98 | |       }
+23:32:02.672   99 | |   
+23:32:02.672  100 | |       setIsSubmitting(true)
+23:32:02.673  101 | |       try {
+23:32:02.673  102 | |         // Criar proposta de interesse simples
+23:32:02.673  103 | |         await addNeedProposal({
+23:32:02.674  104 | |           needId: need.id,
+23:32:02.674  105 | |           professionalEmail: currentUserEmail,
+23:32:02.675  106 | |           type: "interest_only",
+23:32:02.675  107 | |           message: message || undefined,
+23:32:02.675  108 | |         })
+23:32:02.676  109 | |   
+23:32:02.676  110 | |         // Incrementar contador de interesses
+23:32:02.677  111 | |         if (isProfessional) {
+23:32:02.677  112 | |           await incrementInterestCount(currentUserEmail)
+23:32:02.677  113 | |         }
+23:32:02.678  114 | |   
+23:32:02.678  115 | |         // Notificar o solicitante
+23:32:02.678  116 | |         await createNotificationViaAPI(
+23:32:02.679  117 | |           need.requesterEmail,
+23:32:02.679  118 | |           "Novo interesse em seu serviço",
+23:32:02.680  119 | |           `Um profissional manifestou interesse em "${need.title}"`,
+23:32:02.680  120 | |           "interest",
+23:32:02.681  121 | |           need.id,
+23:32:02.681  122 | |         )
+23:32:02.681  123 | |   
+23:32:02.682  124 | |         // Iniciar chat automático
+23:32:02.682  125 | |         await startChat({
+23:32:02.683  126 | |           needId: need.id,
+23:32:02.683  127 | |           requesterEmail: need.requesterEmail,
+23:32:02.683  128 | |           professionalEmail: currentUserEmail,
+23:32:02.684  129 | |           reason: "interest",
+23:32:02.684  130 | |           customText: message ? `Profissional manifestou interesse: "${message}"` : "Profissional manifestou interesse em seu serviço.",
+23:32:02.684  131 | |         })
+23:32:02.685  132 | |   
+23:32:02.685  133 | |         toast({
+23:32:02.686  134 | |           title: "Interesse manifestado!",
+23:32:02.686  135 | |           description: "Seu interesse foi registrado. O chat foi iniciado para você conversar com o solicitante.",
+23:32:02.686  136 | |           variant: "success",
+23:32:02.687  137 | |         })
+23:32:02.687  138 | |   
+23:32:02.687  139 | |         setMessage("")
+23:32:02.688  140 | |         onActionSuccess()
+23:32:02.688  141 | |         onClose()
+23:32:02.688  142 | |       } catch (error: any) {
+23:32:02.689  143 | |         console.error("Erro ao manifestar interesse:", error)
+23:32:02.689  144 | |         toast({
+23:32:02.690  145 | |           title: "Erro",
+23:32:02.690  146 | |           description: error.message || "Erro ao manifestar interesse. Tente novamente.",
+23:32:02.690  147 | |           variant: "destructive",
+23:32:02.691  148 | |         })
+23:32:02.691  149 | |       } finally {
+23:32:02.691  150 | |         setIsSubmitting(false)
+23:32:02.692  151 | |       }
+23:32:02.692  152 | |     }
+23:32:02.692  153 | |   
+23:32:02.693  154 | |     if (isCheckingPermission) {
+23:32:02.693  155 | |       return (
+23:32:02.694  156 | |         <Dialog open={isOpen} onOpenChange={onClose}>
+23:32:02.694  157 | |           <DialogContent className="sm:max-w-md">
+23:32:02.694  158 | |             <div className="flex items-center justify-center py-8">
+23:32:02.695  159 | |               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+23:32:02.695  160 | |             </div>
+23:32:02.695  161 | |           </DialogContent>
+23:32:02.696  162 | |         </Dialog>
+23:32:02.696  163 | |       )
+23:32:02.697  164 | |     }
+23:32:02.697  165 | |   
+23:32:02.697  166 | |     return (
+23:32:02.698  167 | |       <>
+23:32:02.698  168 | |         <Dialog open={isOpen} onOpenChange={onClose}>
+23:32:02.698  169 | |           <DialogContent className="sm:max-w-md">
+23:32:02.699  170 | |             <DialogHeader>
+23:32:02.699  171 | |               <DialogTitle className="flex items-center gap-2">
+23:32:02.700  172 | |                 <Heart className="h-5 w-5 text-red-500" />
+23:32:02.700  173 | |                 Tenho Interesse
+23:32:02.700  174 | |               </DialogTitle>
+23:32:02.701  175 | |               <DialogDescription>{need.title}</DialogDescription>
+23:32:02.701  176 | |             </DialogHeader>
+23:32:02.701  177 | |   
+23:32:02.702  178 | |             <form onSubmit={handleManifestInterest} className="space-y-4">
+23:32:02.710  179 | |               <div>
+23:32:02.710  180 | |                 <Label htmlFor="message">Mensagem (Opcional)</Label>
+23:32:02.710  181 | |                 <Textarea
+23:32:02.710  182 | |                   id="message"
+23:32:02.710  183 | |                   placeholder="Deixe uma mensagem para o solicitante..."
+23:32:02.711  184 | |                   value={message}
+23:32:02.711  185 | |                   onChange={(e) => setMessage(e.target.value)}
+23:32:02.711  186 | |                   className="mt-2"
+23:32:02.711  187 | |                   rows={3}
+23:32:02.711  188 | |                   disabled={isSubmitting}
+23:32:02.712  189 | |                 />
+23:32:02.712  190 | |               </div>
+23:32:02.712  191 | |   
+23:32:02.712  192 | |               {isProfessional && (
+23:32:02.712  193 | |                 <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
+23:32:02.712  194 | |                   <p className="text-sm text-gray-700 dark:text-gray-300">
+23:32:02.713  195 | |                     <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
+23:32:02.713  196 | |                   </p>
+23:32:02.713  197 | |                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+23:32:02.713  198 | |                     Cada interesse manifesto consome 1 proposta
+23:32:02.713  199 | |                   </p>
+23:32:02.714  200 | |                 </div>
+23:32:02.714  201 | |               )}
+23:32:02.714  202 | |   
+23:32:02.714  203 | |               {!phoneValidated && isProfessional && (
+23:32:02.715  204 | |                 <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+23:32:02.715  205 | |                   <div className="flex gap-3">
+23:32:02.715  206 | |                     <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+23:32:02.716  207 | |                     <div>
+23:32:02.716  208 | |                       <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+23:32:02.716  209 | |                         Telefone não validado
+23:32:02.716  210 | |                       </p>
+23:32:02.716  211 | |                       <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+23:32:02.716  212 | |                         Valide seu telefone para manifestar interesse
+23:32:02.717  213 | |                       </p>
+23:32:02.717  214 | |                     </div>
+23:32:02.717  215 | |                   </div>
+23:32:02.717  216 | |                 </div>
+23:32:02.717  217 | |               )}
+23:32:02.717  218 | |   
+23:32:02.718  219 | |               {!canExpress && (
+23:32:02.718  220 | |                 <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
+23:32:02.718  221 | |                   <div className="flex gap-3">
+23:32:02.718  222 | |                     <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+23:32:02.719  223 | |                     <div>
+23:32:02.719  224 | |                       <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+23:32:02.719  225 | |                         Sem propostas disponíveis
+23:32:02.719  226 | |                       </p>
+23:32:02.720  227 | |                       <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+23:32:02.720  228 | |                         Adquira um plano para continuar manifestando interesse
+23:32:02.720  229 | |                       </p>
+23:32:02.720  230 | |                     </div>
+23:32:02.721  231 | |                   </div>
+23:32:02.721  232 | |                 </div>
+23:32:02.721  233 | |               )}
+23:32:02.721  234 | |   
+23:32:02.722  235 | |               <div className="flex gap-3">
+23:32:02.722  236 | |                 <Button
+23:32:02.722  237 | |                   type="button"
+23:32:02.722  238 | |                   variant="outline"
+23:32:02.723  239 | |                   onClick={onClose}
+23:32:02.723  240 | |                   className="flex-1"
+23:32:02.723  241 | |                   disabled={isSubmitting}
+23:32:02.723  242 | |                 >
+23:32:02.723  243 | |                   Cancelar
+23:32:02.724  244 | |                 </Button>
+23:32:02.724  245 | |                 <Button
+23:32:02.724  246 | |                   type="submit"
+23:32:02.724  247 | |                   disabled={isSubmitting || !phoneValidated || !canExpress}
+23:32:02.725  248 | |                   className="flex-1 gap-2"
+23:32:02.725  249 | |                 >
+23:32:02.734  250 | |                   {isSubmitting ? (
+23:32:02.735  251 | |                     <>
+23:32:02.735  252 | |                       <Loader2 className="h-4 w-4 animate-spin" />
+23:32:02.735  253 | |                       Manifestando...
+23:32:02.736  254 | |                     </>
+23:32:02.736  255 | |                   ) : (
+23:32:02.736  256 | |                     <>
+23:32:02.736  257 | |                       <Heart className="h-4 w-4" />
+23:32:02.737  258 | |                       Manifestar Interesse
+23:32:02.737  259 | |                     </>
+23:32:02.737  260 | |                   )}
+23:32:02.737  261 | |                 </Button>
+23:32:02.738  262 | |               </div>
+23:32:02.738  263 | |             </form>
+23:32:02.738  264 | |           </DialogContent>
+23:32:02.738  265 | |         </Dialog>
+23:32:02.739  266 | |   
+23:32:02.739  267 | |         <PhoneValidationModal
+23:32:02.739  268 | |           isOpen={showPhoneModal}
+23:32:02.739  269 | |           onClose={() => setShowPhoneModal(false)}
+23:32:02.740  270 | |           currentUserEmail={currentUserEmail}
+23:32:02.740  271 | |           onSuccess={handlePhoneValidationSuccess}
+23:32:02.740  272 | |         />
+23:32:02.740  273 | |       </>
+23:32:02.741  274 | |     )
+23:32:02.741  275 | |-> }
+23:32:02.741      : `---- previous exported here
+23:32:02.741  276 |     
+23:32:02.741  277 |     interface InterestDialogProps {
+23:32:02.742  278 |       need: Need
+23:32:02.742  279 |       isOpen: boolean
+23:32:02.742  280 |       onClose: () => void
+23:32:02.742  281 |       currentUserEmail: string
+23:32:02.742  282 |       onActionSuccess: () => void
+23:32:02.743  283 |     }
+23:32:02.743  284 |     
+23:32:02.743  285 | ,-> export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
+23:32:02.743  286 | |     const { toast } = useToast()
+23:32:02.744  287 | |     const [visitDate, setVisitDate] = useState("")
+23:32:02.744  288 | |     const [visitMessage, setVisitMessage] = useState("")
+23:32:02.744  289 | |     const [acceptMessage, setAcceptMessage] = useState("")
+23:32:02.744  290 | |     const [bidAmount, setBidAmount] = useState("")
+23:32:02.745  291 | |     const [isSubmitting, setIsSubmitting] = useState(false)
+23:32:02.745  292 | |     const [isProfessional, setIsProfessional] = useState(false)
+23:32:02.745  293 | |     const [canExpress, setCanExpress] = useState(true)
+23:32:02.746  294 | |     const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
+23:32:02.746  295 | |     const [isCheckingPermission, setIsCheckingPermission] = useState(true)
+23:32:02.746  296 | |     const [phoneValidated, setPhoneValidated] = useState(false)
+23:32:02.746  297 | |     const [showPhoneModal, setShowPhoneModal] = useState(false)
+23:32:02.747  298 | |   
+23:32:02.747  299 | |     const bidValue = Number.parseFloat(bidAmount) || 0
+23:32:02.747  300 | |   
+23:32:02.747  301 | |     // Verificar permissão ao abrir o diálogo
+23:32:02.748  302 | |     useEffect(() => {
+23:32:02.748  303 | |       if (isOpen && currentUserEmail) {
+23:32:02.748  304 | |         checkPermission()
+23:32:02.748  305 | |       }
+23:32:02.748  306 | |     }, [isOpen, currentUserEmail])
+23:32:02.749  307 | |   
+23:32:02.749  308 | |     const checkPermission = async () => {
+23:32:02.749  309 | |       setIsCheckingPermission(true)
+23:32:02.749  310 | |       try {
+23:32:02.750  311 | |         const result = await canUserExpressInterest(currentUserEmail)
+23:32:02.750  312 | |         setCanExpress(result.canExpressInterest)
+23:32:02.750  313 | |         setIsProfessional(result.isProfessional || false)
+23:32:02.750  314 | |         setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+23:32:02.751  315 | |         
+23:32:02.751  316 | |         // Verificar se telefone está validado
+23:32:02.751  317 | |         if (result.isProfessional) {
+23:32:02.751  318 | |           const profileResponse = await fetch(`/api/user/profile?email=${encodeURIComponent(currentUserEmail)}`)
+23:32:02.752  319 | |           if (profileResponse.ok) {
+23:32:02.752  320 | |             const profile = await profileResponse.json()
+23:32:02.752  321 | |             setPhoneValidated(profile.phoneValidated || false)
+23:32:02.752  322 | |           }
+23:32:02.755  323 | |         }
+23:32:02.755  324 | |       } catch (error) {
+23:32:02.755  325 | |         console.error("Erro ao verificar permissão:", error)
+23:32:02.756  326 | |         setCanExpress(false)
+23:32:02.756  327 | |       } finally {
+23:32:02.756  328 | |         setIsCheckingPermission(false)
+23:32:02.756  329 | |       }
+23:32:02.757  330 | |     }
+23:32:02.757  331 | |   
+23:32:02.757  332 | |     const handlePhoneValidationSuccess = (phone: string) => {
+23:32:02.758  333 | |       setPhoneValidated(true)
+23:32:02.758  334 | |       setShowPhoneModal(false)
+23:32:02.758  335 | |       toast({
+23:32:02.758  336 | |         title: "Telefone validado!",
+23:32:02.758  337 | |         description: "Agora você pode manifestar interesse em serviços.",
+23:32:02.758  338 | |         variant: "success",
+23:32:02.759  339 | |       })
+23:32:02.759  340 | |     }
+23:32:02.759  341 | |   
+23:32:02.759  342 | |     const handleProposeVisit = async (e: React.FormEvent) => {
+23:32:02.759  343 | |       e.preventDefault()
+23:32:02.759  344 | |       
+23:32:02.766  345 | |       console.log("[v0] Propose visit - Phone validated:", phoneValidated)
+23:32:02.766  346 | |       console.log("[v0] Propose visit - Can express:", canExpress)
+23:32:02.766  347 | |       
+23:32:02.767  348 | |       // Verificar se telefone está validado
+23:32:02.767  349 | |       if (isProfessional && !phoneValidated) {
+23:32:02.767  350 | |         console.log("[v0] Phone not validated - opening phone modal")
+23:32:02.767  351 | |         setShowPhoneModal(true)
+23:32:02.767  352 | |         return // IMPORTANTE: Interromper execução
+23:32:02.767  353 | |       }
+23:32:02.767  354 | |   
+23:32:02.768  355 | |       // Verificar se tem permissão para manifestar interesse
+23:32:02.768  356 | |       if (!canExpress) {
+23:32:02.768  357 | |         console.log("[v0] No permission to express interest - should show upgrade modal")
+23:32:02.768  358 | |         toast({
+23:32:02.768  359 | |           title: "Propostas esgotadas",
+23:32:02.768  360 | |           description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar.",
+23:32:02.768  361 | |           variant: "destructive",
+23:32:02.768  362 | |         })
+23:32:02.769  363 | |         return
+23:32:02.769  364 | |       }
+23:32:02.769  365 | |   
+23:32:02.769  366 | |       if (!visitDate) {
+23:32:02.769  367 | |         toast({
+23:32:02.769  368 | |           title: "Data da visita obrigatória",
+23:32:02.769  369 | |           description: "Por favor, informe a data e hora da visita.",
+23:32:02.769  370 | |           variant: "destructive",
+23:32:02.770  371 | |         })
+23:32:02.770  372 | |         return
+23:32:02.770  373 | |       }
+23:32:02.770  374 | |   
+23:32:02.770  375 | |       setIsSubmitting(true)
+23:32:02.770  376 | |       try {
+23:32:02.770  377 | |         await addNeedProposal({
+23:32:02.770  378 | |           needId: need.id,
+23:32:02.770  379 | |           professionalEmail: currentUserEmail,
+23:32:02.770  380 | |           type: "visit_proposal",
+23:32:02.771  381 | |           whenISO: new Date(visitDate).toISOString(),
+23:32:02.771  382 | |           message: visitMessage || undefined,
+23:32:02.771  383 | |         })
+23:32:02.771  384 | |   
+23:32:02.771  385 | |         // Incrementar contador de interesses
+23:32:02.771  386 | |         if (isProfessional) {
+23:32:02.771  387 | |           await incrementInterestCount(currentUserEmail)
+23:32:02.771  388 | |         }
+23:32:02.772  389 | |   
+23:32:02.772  390 | |         await createNotificationViaAPI(
+23:32:02.772  391 | |           need.requesterEmail,
+23:32:02.772  392 | |           "Proposta de visita recebida",
+23:32:02.772  393 | |           `Um profissional propôs uma visita para "${need.title}"`,
+23:32:02.772  394 | |           "proposal",
+23:32:02.772  395 | |           need.id,
+23:32:02.782  396 | |         )
+23:32:02.783  397 | |   
+23:32:02.783  398 | |         await startChat({
+23:32:02.783  399 | |           needId: need.id,
+23:32:02.784  400 | |           requesterEmail: need.requesterEmail,
+23:32:02.784  401 | |           professionalEmail: currentUserEmail,
+23:32:02.784  402 | |           reason: "visit",
+23:32:02.785  403 | |           customText: visitMessage ? `Profissional propôs visita: "${visitMessage}"` : undefined,
+23:32:02.785  404 | |         })
+23:32:02.785  405 | |   
+23:32:02.786  406 | |         toast({
+23:32:02.786  407 | |           title: "Proposta de visita enviada!",
+23:32:02.786  408 | |           description:
+23:32:02.787  409 | |             "Sua proposta de visita foi enviada ao solicitante. O chat foi iniciado para combinar os detalhes.",
+23:32:02.787  410 | |           variant: "success",
+23:32:02.787  411 | |         })
+23:32:02.788  412 | |         onActionSuccess()
+23:32:02.788  413 | |         onClose()
+23:32:02.788  414 | |       } catch (error: any) {
+23:32:02.789  415 | |         console.error("Failed to propose visit or start chat:", error)
+23:32:02.789  416 | |         toast({
+23:32:02.789  417 | |           title: "Erro ao propor visita",
+23:32:02.790  418 | |           description: error.message || "Ocorreu um erro ao enviar sua proposta.",
+23:32:02.790  419 | |           variant: "destructive",
+23:32:02.790  420 | |         })
+23:32:02.790  421 | |       } finally {
+23:32:02.790  422 | |         setIsSubmitting(false)
+23:32:02.791  423 | |       }
+23:32:02.791  424 | |     }
+23:32:02.791  425 | |   
+23:32:02.791  426 | |     const handleAcceptDirect = async (e: React.FormEvent) => {
+23:32:02.792  427 | |       e.preventDefault()
+23:32:02.792  428 | |   
+23:32:02.792  429 | |       console.log("[v0] Accept direct - Phone validated:", phoneValidated)
+23:32:02.793  430 | |       console.log("[v0] Accept direct - Can express:", canExpress)
+23:32:02.793  431 | |   
+23:32:02.793  432 | |       // Verificar se telefone está validado
+23:32:02.793  433 | |       if (isProfessional && !phoneValidated) {
+23:32:02.794  434 | |         console.log("[v0] Phone not validated - opening phone modal")
+23:32:02.794  435 | |         setShowPhoneModal(true)
+23:32:02.794  436 | |         return // IMPORTANTE: Interromper execução
+23:32:02.795  437 | |       }
+23:32:02.795  438 | |   
+23:32:02.795  439 | |       // Verificar se tem permissão para manifestar interesse
+23:32:02.795  440 | |       if (!canExpress) {
+23:32:02.796  441 | |         console.log("[v0] No permission to express interest")
+23:32:02.796  442 | |         toast({
+23:32:02.796  443 | |           title: "Propostas esgotadas",
+23:32:02.796  444 | |           description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar.",
+23:32:02.797  445 | |           variant: "destructive",
+23:32:02.797  446 | |         })
+23:32:02.797  447 | |         return
+23:32:02.798  448 | |       }
+23:32:02.798  449 | |   
+23:32:02.798  450 | |       if (bidValue < MINIMUM_BID_AMOUNT) {
+23:32:02.798  451 | |         toast({
+23:32:02.798  452 | |           title: "Valor inválido",
+23:32:02.799  453 | |           description: `O valor mínimo do lance é ${formatCurrency(MINIMUM_BID_AMOUNT)}`,
+23:32:02.799  454 | |           variant: "destructive",
+23:32:02.799  455 | |         })
+23:32:02.800  456 | |         return
+23:32:02.800  457 | |       }
+23:32:02.800  458 | |   
+23:32:02.800  459 | |       setIsSubmitting(true)
+23:32:02.801  460 | |       try {
+23:32:02.801  461 | |         await addNeedProposal({
+23:32:02.801  462 | |           needId: need.id,
+23:32:02.801  463 | |           professionalEmail: currentUserEmail,
+23:32:02.802  464 | |           type: "direct_acceptance",
+23:32:02.802  465 | |           message: acceptMessage || undefined,
+23:32:02.802  466 | |           bidAmount: bidValue,
+23:32:02.803  467 | |         })
+23:32:02.803  468 | |   
+23:32:02.803  469 | |         await createNotificationViaAPI(
+23:32:02.803  470 | |           need.requesterEmail,
+23:32:02.804  471 | |           "Proposta de aceitação direta",
+23:32:02.804  472 | |           `Um profissional aceitou diretamente seu serviço "${need.title}" por ${formatCurrency(bidValue)}`,
+23:32:02.804  473 | |           "proposal",
+23:32:02.805  474 | |           need.id,
+23:32:02.805  475 | |         )
+23:32:02.805  476 | |   
+23:32:02.805  477 | |         await startChat({
+23:32:02.806  478 | |           needId: need.id,
+23:32:02.806  479 | |           requesterEmail: need.requesterEmail,
+23:32:02.806  480 | |           professionalEmail: currentUserEmail,
+23:32:02.807  481 | |           reason: "direct",
+23:32:02.807  482 | |           customText: acceptMessage ? `Profissional aceitou o serviço: "${acceptMessage}"` : undefined,
+23:32:02.807  483 | |         })
+23:32:02.807  484 | |   
+23:32:02.808  485 | |         toast({
+23:32:02.808  486 | |           title: "Proposta de aceitação direta enviada!",
+23:32:02.808  487 | |           description:
+23:32:02.808  488 | |             "Sua proposta de aceitação direta foi enviada ao solicitante. O chat foi iniciado para combinar os detalhes.",
+23:32:02.809  489 | |           variant: "success",
+23:32:02.809  490 | |         })
+23:32:02.809  491 | |         onActionSuccess()
+23:32:02.809  492 | |         onClose()
+23:32:02.810  493 | |       } catch (error: any) {
+23:32:02.810  494 | |         console.error("Failed to accept direct or start chat:", error)
+23:32:02.810  495 | |         toast({
+23:32:02.810  496 | |           title: "Erro ao aceitar serviço",
+23:32:02.810  497 | |           description: error.message || "Ocorreu um erro ao enviar sua proposta de aceitação.",
+23:32:02.811  498 | |           variant: "destructive",
+23:32:02.811  499 | |         })
+23:32:02.811  500 | |       } finally {
+23:32:02.811  501 | |         setIsSubmitting(false)
+23:32:02.811  502 | |       }
+23:32:02.811  503 | |     }
+23:32:02.812  504 | |   
+23:32:02.812  505 | |     return (
+23:32:02.812  506 | |       <>
+23:32:02.812  507 | |         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+23:32:02.812  508 | |           <DialogContent className="sm:max-w-[425px]">
+23:32:02.813  509 | |             <DialogHeader>
+23:32:02.813  510 | |               <DialogTitle>Tenho Interesse em: {need.title}</DialogTitle>
+23:32:02.813  511 | |               <DialogDescription>Escolha como você gostaria de demonstrar interesse neste serviço.</DialogDescription>
+23:32:02.813  512 | |             </DialogHeader>
+23:32:02.813  513 | |   
+23:32:02.814  514 | |             {/* Alerta se profissional sem telefone validado */}
+23:32:02.814  515 | |             {isProfessional && !phoneValidated && (
+23:32:02.814  516 | |               <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex gap-3">
+23:32:02.816  517 | |                 <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+23:32:02.816  518 | |                 <div className="text-sm text-amber-700 dark:text-amber-300">
+23:32:02.817  519 | |                   <p className="font-semibold mb-1">Telefone não validado</p>
+23:32:02.817  520 | |                   <p>Você precisa validar seu telefone para manifestar interesse em serviços.</p>
+23:32:02.817  521 | |                 </div>
+23:32:02.818  522 | |               </div>
+23:32:02.818  523 | |             )}
+23:32:02.818  524 | |   
+23:32:02.819  525 | |             {/* Alerta se profissional sem permissão */}
+23:32:02.819  526 | |             {isProfessional && !canExpress && phoneValidated && (
+23:32:02.819  527 | |               <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+23:32:02.826  528 | |                 <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+23:32:02.827  529 | |                 <div className="text-sm text-red-700 dark:text-red-300">
+23:32:02.827  530 | |                   <p className="font-semibold mb-1">Propostas gratuitas esgotadas</p>
+23:32:02.829  531 | |                   <p>Você usou suas 3 propostas gratuitas. Para continuar, será necessário um plano de assinatura.</p>
+23:32:02.830  532 | |                 </div>
+23:32:02.830  533 | |               </div>
+23:32:02.830  534 | |             )}
+23:32:02.831  535 | |   
+23:32:02.831  536 | |             {/* Indicador de propostas gratuitas restantes */}
+23:32:02.831  537 | |             {isProfessional && canExpress && phoneValidated && freeInterestsRemaining > 0 && (
+23:32:02.831  538 | |               <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg flex gap-3">
+23:32:02.832  539 | |                 <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+23:32:02.832  540 | |                 <div className="text-sm text-amber-700 dark:text-amber-300">
+23:32:02.832  541 | |                   <p>
+23:32:02.832  542 | |                     <strong>Propostas gratuitas:</strong> {freeInterestsRemaining} restant{freeInterestsRemaining === 1 ? "e" : "es"}
+23:32:02.833  543 | |                   </p>
+23:32:02.833  544 | |                 </div>
+23:32:02.833  545 | |               </div>
+23:32:02.834  546 | |             )}
+23:32:02.834  547 | |   
+23:32:02.834  548 | |             <Tabs
+23:32:02.834  549 | |               defaultValue="propor-visita"
+23:32:02.834  550 | |               className="w-full"
+23:32:02.834  551 | |               disabled={isCheckingPermission || !canExpress}
+23:32:02.835  552 | |             >
+23:32:02.835  553 | |               <TabsList className="grid w-full grid-cols-2">
+23:32:02.835  554 | |                 <TabsTrigger value="propor-visita" disabled={!canExpress}>
+23:32:02.836  555 | |                   Propor Visita
+23:32:02.836  556 | |                 </TabsTrigger>
+23:32:02.836  557 | |                 <TabsTrigger value="aceitar-direto" disabled={!canExpress}>
+23:32:02.838  558 | |                   Aceitar Direto
+23:32:02.838  559 | |                 </TabsTrigger>
+23:32:02.839  560 | |               </TabsList>
+23:32:02.839  561 | |               <TabsContent value="propor-visita" className="mt-4">
+23:32:02.839  562 | |                 <form onSubmit={handleProposeVisit} className="grid gap-4">
+23:32:02.839  563 | |                   <div className="grid gap-2">
+23:32:02.840  564 | |                     <Label htmlFor="visit-date">Data e Hora da Visita</Label>
+23:32:02.840  565 | |                     <Input
+23:32:02.840  566 | |                       id="visit-date"
+23:32:02.840  567 | |                       type="datetime-local"
+23:32:02.841  568 | |                       value={visitDate}
+23:32:02.841  569 | |                       onChange={(e) => setVisitDate(e.target.value)}
+23:32:02.844  570 | |                       required
+23:32:02.844  571 | |                     />
+23:32:02.844  572 | |                   </div>
+23:32:02.845  573 | |                   <div className="grid gap-2">
+23:32:02.845  574 | |                     <Label htmlFor="visit-message">Mensagem (opcional)</Label>
+23:32:02.845  575 | |                     <Textarea
+23:32:02.846  576 | |                       id="visit-message"
+23:32:02.846  577 | |                       placeholder="Ex: Posso ir amanhã de manhã para avaliar o local."
+23:32:02.846  578 | |                       value={visitMessage}
+23:32:02.846  579 | |                       onChange={(e) => setVisitMessage(e.target.value)}
+23:32:02.847  580 | |                     />
+23:32:02.847  581 | |                   </div>
+23:32:02.847  582 | |                   <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+23:32:02.847  583 | |                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+23:32:02.848  584 | |                     <p>
+23:32:02.848  585 | |                       Após a visita, você poderá definir o valor do serviço e enviar uma proposta formal ao solicitante.
+23:32:02.848  586 | |                     </p>
+23:32:02.848  587 | |                   </div>
+23:32:02.849  588 | |                   <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-600/90" disabled={isSubmitting}>
+23:32:02.849  589 | |                     {isSubmitting ? "Enviando Proposta..." : "Enviar Proposta de Visita"}
+23:32:02.849  590 | |                   </Button>
+23:32:02.850  591 | |                 </form>
+23:32:02.850  592 | |               </TabsContent>
+23:32:02.850  593 | |               <TabsContent value="aceitar-direto" className="mt-4">
+23:32:02.850  594 | |                 <form onSubmit={handleAcceptDirect} className="grid gap-4">
+23:32:02.851  595 | |                   <div className="grid gap-2">
+23:32:02.851  596 | |                     <Label htmlFor="bid-amount">Valor do Serviço</Label>
+23:32:02.851  597 | |                     <Input
+23:32:02.851  598 | |                       id="bid-amount"
+23:32:02.852  599 | |                       type="number"
+23:32:02.852  600 | |                       step="0.01"
+23:32:02.852  601 | |                       min={MINIMUM_BID_AMOUNT}
+23:32:02.853  602 | |                       placeholder={`Mínimo: ${formatCurrency(MINIMUM_BID_AMOUNT)}`}
+23:32:02.853  603 | |                       value={bidAmount}
+23:32:02.853  604 | |                       onChange={(e) => setBidAmount(e.target.value)}
+23:32:02.853  605 | |                       required
+23:32:02.854  606 | |                     />
+23:32:02.854  607 | |                     {bidValue >= MINIMUM_BID_AMOUNT && (
+23:32:02.854  608 | |                       <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded space-y-1 text-xs">
+23:32:02.855  609 | |                         <div className="flex justify-between font-semibold">
+23:32:02.855  610 | |                           <span>Valor do lance:</span>
+23:32:02.855  611 | |                           <span className="text-blue-600 dark:text-blue-400">{formatCurrency(bidValue)}</span>
+23:32:02.855  612 | |                         </div>
+23:32:02.856  613 | |                       </div>
+23:32:02.856  614 | |                     )}
+23:32:02.856  615 | |                   </div>
+23:32:02.856  616 | |                   <div className="grid gap-2">
+23:32:02.857  617 | |                     <Label htmlFor="accept-message">Mensagem (opcional)</Label>
+23:32:02.857  618 | |                     <Textarea
+23:32:02.857  619 | |                       id="accept-message"
+23:32:02.858  620 | |                       placeholder="Ex: Aceito o serviço! Podemos combinar os detalhes no chat."
+23:32:02.858  621 | |                       value={acceptMessage}
+23:32:02.858  622 | |                       onChange={(e) => setAcceptMessage(e.target.value)}
+23:32:02.858  623 | |                     />
+23:32:02.859  624 | |                   </div>
+23:32:02.859  625 | |                   <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg text-xs text-amber-700 dark:text-amber-300">
+23:32:02.859  626 | |                     <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+23:32:02.859  627 | |                     <p>Você receberá {bidValue > 0 && formatCurrency(bidValue)} ao completar o serviço.</p>
+23:32:02.860  628 | |                   </div>
+23:32:02.860  629 | |                   <Button
+23:32:02.860  630 | |                     type="submit"
+23:32:02.860  631 | |                     className="w-full bg-blue-600 hover:bg-blue-600/90"
+23:32:02.861  632 | |                     disabled={isSubmitting || bidValue < MINIMUM_BID_AMOUNT}
+23:32:02.861  633 | |                   >
+23:32:02.861  634 | |                     {isSubmitting ? "Enviando Aceitação..." : "Aceitar Serviço Direto"}
+23:32:02.861  635 | |                   </Button>
+23:32:02.862  636 | |                 </form>
+23:32:02.862  637 | |               </TabsContent>
+23:32:02.862  638 | |             </Tabs>
+23:32:02.862  639 | |           </DialogContent>
+23:32:02.863  640 | |         </Dialog>
+23:32:02.863  641 | |   
+23:32:02.863  642 | |         <PhoneValidationModal
+23:32:02.863  643 | |           isOpen={showPhoneModal}
+23:32:02.864  644 | |           onClose={() => {
+23:32:02.864  645 | |             console.log("[v0] Phone modal closed")
+23:32:02.864  646 | |             setShowPhoneModal(false)
+23:32:02.864  647 | |           }}
+23:32:02.865  648 | |           onSuccess={handlePhoneValidationSuccess}
+23:32:02.865  649 | |           currentUserEmail={currentUserEmail}
+23:32:02.865  650 | |         />
+23:32:02.866  651 | |       </>
+23:32:02.866  652 | |     )
+23:32:02.866  653 | |-> }
+23:32:02.867      : `---- exported more than once
+23:32:02.867      `----
+23:32:02.867 
+23:32:02.867 Error: 
+23:32:02.868   > Exported identifiers must be unique
+23:32:02.868 
+23:32:02.868 Import trace for requested module:
+23:32:02.868 ./components/interest-dialog.tsx
+23:32:02.870 ./components/search-requests.tsx
+23:32:02.871 ./app/page.tsx
+23:32:02.871 
+23:32:02.896 
+23:32:02.896 > Build failed because of webpack errors
+23:32:02.899  ELIFECYCLE  Command failed with exit code 1.
+23:32:02.966 Error: Command "pnpm run build" exited with 1
