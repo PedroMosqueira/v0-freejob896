@@ -85,9 +85,24 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleProposeVisit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log("[v0] Propose visit - Phone validated:", phoneValidated)
+    console.log("[v0] Propose visit - Can express:", canExpress)
+    
     // Verificar se telefone está validado
     if (isProfessional && !phoneValidated) {
+      console.log("[v0] Phone not validated - opening phone modal")
       setShowPhoneModal(true)
+      return // IMPORTANTE: Interromper execução
+    }
+
+    // Verificar se tem permissão para manifestar interesse
+    if (!canExpress) {
+      console.log("[v0] No permission to express interest - should show upgrade modal")
+      toast({
+        title: "Propostas esgotadas",
+        description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -154,9 +169,24 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleAcceptDirect = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log("[v0] Accept direct - Phone validated:", phoneValidated)
+    console.log("[v0] Accept direct - Can express:", canExpress)
+
     // Verificar se telefone está validado
     if (isProfessional && !phoneValidated) {
+      console.log("[v0] Phone not validated - opening phone modal")
       setShowPhoneModal(true)
+      return // IMPORTANTE: Interromper execução
+    }
+
+    // Verificar se tem permissão para manifestar interesse
+    if (!canExpress) {
+      console.log("[v0] No permission to express interest")
+      toast({
+        title: "Propostas esgotadas",
+        description: "Você usou suas 3 propostas gratuitas. Adquira um plano para continuar.",
+        variant: "destructive",
+      })
       return
     }
 
@@ -354,10 +384,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
       <PhoneValidationModal
         isOpen={showPhoneModal}
-        onClose={() => setShowPhoneModal(false)}
+        onClose={() => {
+          console.log("[v0] Phone modal closed")
+          setShowPhoneModal(false)
+        }}
         onSuccess={handlePhoneValidationSuccess}
         currentUserEmail={currentUserEmail}
-        phoneNumber={phone || "(11) 9999-9999"}
       />
     </>
   )
