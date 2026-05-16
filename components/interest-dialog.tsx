@@ -37,6 +37,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [phoneValidationLoading, setPhoneValidationLoading] = useState(false)
   const [phoneValidationError, setPhoneValidationError] = useState("")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [isProfessionalCheckbox, setIsProfessionalCheckbox] = useState(false)
 
   // Format phone input with DDD parentheses
   const formatPhoneInput = (value: string) => {
