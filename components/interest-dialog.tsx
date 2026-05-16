@@ -50,12 +50,14 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setIsCheckingPermission(true)
     try {
       const result = await canUserExpressInterest(currentUserEmail)
+      console.log("[v0] canUserExpressInterest result:", result)
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       setPhoneValidated(result.phoneVerified || false)
       
-      console.log("[v0] Phone verified status:", result.phoneVerified)
+      console.log("[v0] Phone verified status from result:", result.phoneVerified)
+      console.log("[v0] phoneValidated state will be set to:", result.phoneVerified || false)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)
@@ -64,7 +66,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }
 
-  const handlePhoneValidationSuccess = (phone: string) => {
+  const formatPhoneInput = (value: string) => {
+    const cleaned = value.replace(/\D/g, "")
+    if (cleaned.length <= 2) return cleaned
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
+  }
     setPhoneValidated(true)
     setPhoneInput("")
     setVerificationCode("")
@@ -78,6 +85,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   const requestPhoneVerification = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     setPhoneValidationError("")
     setPhoneValidationLoading(true)
 
@@ -88,6 +97,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
       }
 
+      console.log("[v0] Enviando requisição de verificação para:", cleanPhone)
+
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,10 +108,16 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         }),
       })
 
+      console.log("[v0] Resposta da API:", response.status, response.statusText)
+      
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.message || "Erro ao enviar código")
+        console.error("[v0] Erro da API:", data)
+        throw new Error(data.message || `Erro ao enviar código (${response.status})`)
       }
+
+      const data = await response.json()
+      console.log("[v0] Sucesso:", data)
 
       setCodeSent(true)
       toast({
@@ -108,6 +125,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         description: "Verifique seu SMS para o código de verificação.",
       })
     } catch (err: any) {
+      console.error("[v0] Erro na requisição:", err)
       setPhoneValidationError(err.message || "Erro ao solicitar verificação")
     } finally {
       setPhoneValidationLoading(false)
@@ -116,11 +134,15 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   const submitPhoneVerification = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     setPhoneValidationError("")
     setPhoneValidationLoading(true)
 
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
+
+      console.log("[v0] Verificando código para:", cleanPhone)
 
       const response = await fetch("/api/phone/verify-code", {
         method: "POST",
@@ -132,13 +154,20 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         }),
       })
 
+      console.log("[v0] Resposta de verificação:", response.status)
+
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.message || "Código inválido")
+        console.error("[v0] Erro de verificação:", data)
+        throw new Error(data.message || `Erro ao verificar código (${response.status})`)
       }
 
+      const data = await response.json()
+      console.log("[v0] Verificação bem-sucedida:", data)
+      
       handlePhoneValidationSuccess(cleanPhone)
     } catch (err: any) {
+      console.error("[v0] Erro na verificação:", err)
       setPhoneValidationError(err.message || "Erro ao verificar código")
     } finally {
       setPhoneValidationLoading(false)
@@ -238,7 +267,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
             <DialogDescription>{need.title}</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleManifestInterest} className="space-y-4">
           <form onSubmit={phoneValidated ? handleManifestInterest : codeSent ? submitPhoneVerification : requestPhoneVerification} className="space-y-4">
             {!phoneValidated && !codeSent && (
               <>
@@ -249,9 +277,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     type="tel"
                     placeholder="(11) 99999-9999"
                     value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
                     disabled={phoneValidationLoading}
+                    className="text-base"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Digite seu telefone com DDD
+                  </p>
                 </div>
                 {phoneValidationError && (
                   <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
