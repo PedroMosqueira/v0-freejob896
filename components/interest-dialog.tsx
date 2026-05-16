@@ -410,7 +410,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
           </form>
         </DialogContent>
       </Dialog>
-      )}
+      ) : null}
 
       <UpgradePlansModal
         isOpen={showUpgradeModal}
