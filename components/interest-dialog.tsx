@@ -245,7 +245,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   return (
     <>
-      {isCheckingPermission ? (
+      {isCheckingPermission && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="sm:max-w-md">
             <div className="flex items-center justify-center py-8">
@@ -253,7 +253,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
             </div>
           </DialogContent>
         </Dialog>
-      ) : (
+      )}
+      
+      {!isCheckingPermission && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
