@@ -96,10 +96,6 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
                   <span className="text-gray-600 dark:text-gray-400">Valor do serviço:</span>
                   <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(amount)}</span>
                 </div>
-
-                <div className="bg-green-100 dark:bg-green-900 rounded p-2 text-xs text-green-700 dark:text-green-300">
-                  Plataforma gratuita no primeiro ano! Sem taxas ou comissoes.
-                </div>
               </div>
             </div>
           )}
