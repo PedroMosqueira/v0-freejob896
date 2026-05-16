@@ -243,29 +243,26 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }
 
-  if (isCheckingPermission) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
-
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-500" />
-              Tenho Interesse
-            </DialogTitle>
-            <DialogDescription>{need.title}</DialogDescription>
-          </DialogHeader>
+      {isCheckingPermission ? (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="sm:max-w-md">
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500" />
+                Tenho Interesse
+              </DialogTitle>
+              <DialogDescription>{need.title}</DialogDescription>
+            </DialogHeader>
 
           <form onSubmit={phoneValidated ? handleManifestInterest : codeSent ? submitPhoneVerification : requestPhoneVerification} className="space-y-4">
             {!phoneValidated && !codeSent && (
@@ -413,6 +410,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
           </form>
         </DialogContent>
       </Dialog>
+      )}
 
       <UpgradePlansModal
         isOpen={showUpgradeModal}
