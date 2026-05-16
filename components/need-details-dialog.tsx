@@ -315,7 +315,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       await fetchProposals()
       onStatusUpdate?.()
       
-      // Plataforma gratuita no primeiro ano - sem cobranca de pagamento
       alert("Proposta aceita com sucesso! Entre em contato com o profissional para combinar os detalhes.")
     } catch (error) {
       console.error("Erro ao aceitar proposta:", error)
