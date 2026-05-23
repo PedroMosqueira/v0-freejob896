@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { sendPushToUser } from "@/lib/push-notifications-server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +41,27 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] ✅ API: Notification created successfully:", data.id)
+
+    // Send push notification if user has subscriptions
+    try {
+      const pushResult = await sendPushToUser(recipientEmail, {
+        title,
+        body: message,
+        data: {
+          needId,
+          proposalId,
+          type,
+        },
+      })
+      
+      if (pushResult.sent > 0) {
+        console.log(`[v0] 📱 Push sent to ${pushResult.sent} device(s)`)
+      }
+    } catch (pushError) {
+      console.warn("[v0] ⚠️ Failed to send push notification:", pushError)
+      // Don't fail the request if push fails, just warn
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error("[v0] ❌ API: Exception creating notification:", error)
