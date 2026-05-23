@@ -296,59 +296,64 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                 Preencha as informações abaixo para ativar sua conta como profissional
               </p>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="country">País</Label>
-                </div>
-                <select
-                  id="country"
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  disabled={phoneValidated}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {COUNTRIES.map((country) => (
-                    <option key={`${country.code}-${country.name}`} value={country.code}>
-                      {country.name} ({country.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="phone">Telefone para Contato *</Label>
-                  {phoneValidated && (
-                    <span className="text-xs text-green-600 font-semibold">✓ Validado</span>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    id="phone"
-                    placeholder="(55) 98127-3461"
-                    value={phone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    disabled={phoneValidated}
-                    maxLength={20}
-                    className={`${errors.phone ? "border-red-500" : ""}`}
-                  />
-                  {!phoneValidated && phone.trim() && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowPhoneModal(true)}
-                      className="whitespace-nowrap"
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="country" className="font-semibold">País *</Label>
+                    <select
+                      id="country"
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      disabled={phoneValidated}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Validar
-                    </Button>
+                      {COUNTRIES.map((country) => (
+                        <option key={`${country.code}-${country.name}`} value={country.code}>
+                          {country.name} ({country.code})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Selecione o país do seu número de telefone
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="phone" className="font-semibold">Telefone para Contato *</Label>
+                    {phoneValidated && (
+                      <span className="text-xs text-green-600 font-semibold">✓ Validado</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="phone"
+                      placeholder="(55) 98127-3461"
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      disabled={phoneValidated}
+                      maxLength={20}
+                      className={`${errors.phone ? "border-red-500" : ""}`}
+                    />
+                    {!phoneValidated && phone.trim() && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowPhoneModal(true)}
+                        className="whitespace-nowrap"
+                      >
+                        Validar
+                      </Button>
+                    )}
+                  </div>
+                  {errors.phone && (
+                    <p className="text-sm text-red-500">{errors.phone}</p>
+                  )}
+                  {errors.phoneValidation && (
+                    <p className="text-sm text-red-500">{errors.phoneValidation}</p>
                   )}
                 </div>
-                {errors.phone && (
-                  <p className="text-sm text-red-500">{errors.phone}</p>
-                )}
-                {errors.phoneValidation && (
-                  <p className="text-sm text-red-500">{errors.phoneValidation}</p>
-                )}
               </div>
 
               <div className="space-y-2">
