@@ -284,11 +284,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }
 
-    // Se é profissional, verificar se tem cr������ditos/plano
-    if (isProfessional && !canExpress) {
-      setShowUpgradeModal(true)
-      return
-    }
+  // Se é profissional, verificar se tem créditos/plano
 
     setIsSubmitting(true)
     try {
