@@ -284,62 +284,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }
 
-  // Se é profissional, verificar se tem créditos/plano
-
-    setIsSubmitting(true)
-    try {
-      // Criar proposta de interesse simples
-      await addNeedProposal({
-        needId: need.id,
-        professionalEmail: currentUserEmail,
-        type: "interest_only",
-        message: message || undefined,
-      })
-
-      // Incrementar contador de interesses
-      if (isProfessional) {
-        await incrementInterestCount(currentUserEmail)
-      }
-
-      // Notificar o solicitante
-      await createNotificationViaAPI(
-        need.requesterEmail,
-        "Novo interesse em seu serviço",
-        `Um profissional manifestou interesse em "${need.title}"`,
-        "proposal",
-        need.id,
-      )
-
-      // Iniciar chat automático
-      await startChat({
-        needId: need.id,
-        requesterEmail: need.requesterEmail,
-        professionalEmail: currentUserEmail,
-        reason: "interest",
-        customText: message ? `Profissional manifestou interesse: "${message}"` : "Profissional manifestou interesse em seu serviço.",
-      })
-
-      toast({
-        title: "Interesse manifestado!",
-        description: "Seu interesse foi registrado. O chat foi iniciado para você conversar com o solicitante.",
-        variant: "success",
-      })
-
-      setMessage("")
-      onActionSuccess()
-      onClose()
-    } catch (error: any) {
-      console.error("Erro ao manifestar interesse:", error)
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao manifestar interesse. Tente novamente.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   return (
     <>
       {isCheckingPermission && (
