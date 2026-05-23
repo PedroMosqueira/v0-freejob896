@@ -339,7 +339,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="98127-3461"
+                        placeholder="11 99123-4567"
                         value={phoneInput}
                         onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
                         disabled={phoneValidationLoading}
