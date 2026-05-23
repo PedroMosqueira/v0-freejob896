@@ -21,9 +21,10 @@ export async function sendWhatsAppMessage(
   try {
     const zApiToken = process.env.Z_API_TOKEN
     const zApiInstanceId = process.env.Z_API_INSTANCE_ID
+    const zApiClientToken = process.env.Z_API_CLIENT_TOKEN
 
-    if (!zApiToken || !zApiInstanceId) {
-      console.error("[v0] Z-API: Token ou InstanceID não configurados")
+    if (!zApiToken || !zApiInstanceId || !zApiClientToken) {
+      console.error("[v0] Z-API: Credenciais incompletas - Token:", !!zApiToken, "InstanceID:", !!zApiInstanceId, "ClientToken:", !!zApiClientToken)
       return {
         success: false,
         error: "Z-API credentials not configured",
@@ -35,12 +36,12 @@ export async function sendWhatsAppMessage(
 
     // Endpoint correto conforme documentação: /send-text
     const url = `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-text`
-    console.log("[v0] Z-API: URL:", url)
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Client-Token": zApiClientToken,
       },
       body: JSON.stringify({
         phone: formattedPhone,
