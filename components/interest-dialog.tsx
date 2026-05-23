@@ -208,9 +208,25 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem cr������ditos/plano
-    if (isProfessional && !canExpress) {
-      setShowUpgradeModal(true)
+    // Revalidar permissão antes de manifestar interesse (créditos podem ter mudado)
+    const permissionCheck = await canUserExpressInterest(currentUserEmail)
+    
+    // Se é profissional, verificar se tem créditos/plano
+    if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest) {
+      if (permissionCheck.needsUpgrade) {
+        toast({
+          title: "Créditos insuficientes",
+          description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
+          variant: "destructive",
+        })
+        setShowUpgradeModal(true)
+      } else if (permissionCheck.needsPhoneValidation) {
+        toast({
+          title: "Validação necessária",
+          description: "Por favor, valide seu telefone primeiro.",
+          variant: "destructive",
+        })
+      }
       return
     }
 
@@ -225,7 +241,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       })
 
       // Incrementar contador de interesses
-      if (isProfessional) {
+      if (permissionCheck.isProfessional) {
         await incrementInterestCount(currentUserEmail)
       }
 

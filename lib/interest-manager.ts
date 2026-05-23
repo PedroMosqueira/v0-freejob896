@@ -12,6 +12,9 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   freeInterestsRemaining?: number
   isProfessional?: boolean
   phoneVerified?: boolean
+  hasActiveSubscription?: boolean
+  needsPhoneValidation?: boolean
+  needsUpgrade?: boolean
 }> {
   try {
     const cookieStore = await cookies()
@@ -44,12 +47,23 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
     }
 
+    // Verificar se tem telefone validado
+    if (!user.phone_verified) {
+      return {
+        canExpressInterest: false,
+        reason: "Você precisa validar seu telefone primeiro",
+        needsPhoneValidation: true,
+        isProfessional: user.is_professional || false,
+        phoneVerified: false,
+      }
+    }
+
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
       return {
         canExpressInterest: true,
         isProfessional: false,
-        phoneVerified: user.phone_verified || false,
+        phoneVerified: true,
       }
     }
 
@@ -63,17 +77,41 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         isProfessional: true,
         freeInterestsUsed,
         freeInterestsRemaining,
-        phoneVerified: user.phone_verified || false,
+        phoneVerified: true,
+        hasActiveSubscription: false,
+      }
+    }
+
+    // Se usou todas as propostas gratuitas, verificar se tem plano ativo
+    const { data: subscription, error: subError } = await supabase
+      .from("user_subscriptions")
+      .select("id, status")
+      .eq("user_id", userEmail)
+      .eq("status", "active")
+      .single()
+
+    const hasActiveSubscription = !subError && subscription
+
+    if (hasActiveSubscription) {
+      return {
+        canExpressInterest: true,
+        isProfessional: true,
+        freeInterestsUsed: MAX_FREE_INTERESTS,
+        freeInterestsRemaining: 0,
+        phoneVerified: true,
+        hasActiveSubscription: true,
       }
     }
 
     return {
       canExpressInterest: false,
       reason: "Você usou suas 3 propostas gratuitas. Para continuar, é necessário um plano de assinatura.",
+      needsUpgrade: true,
       isProfessional: true,
       freeInterestsUsed: MAX_FREE_INTERESTS,
       freeInterestsRemaining: 0,
-      phoneVerified: user.phone_verified || false,
+      phoneVerified: true,
+      hasActiveSubscription: false,
     }
   } catch (error) {
     console.error("Erro ao verificar permissão de interesse:", error)
