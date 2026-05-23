@@ -117,16 +117,19 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     e.preventDefault()
     e.stopPropagation()
     
+    console.log("[v0] requestPhoneVerification called")
     setPhoneValidationError("")
     setPhoneValidationLoading(true)
 
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
+      console.log("[v0] Phone clean:", cleanPhone)
 
       if (cleanPhone.length < 10) {
         throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
       }
 
+      console.log("[v0] Sending request to /api/phone/request-verification")
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,17 +139,23 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         }),
       })
       
+      console.log("[v0] Response status:", response.status)
       if (!response.ok) {
         const data = await response.json()
+        console.error("[v0] API Error:", data)
         throw new Error(data.message || `Erro ao enviar código (${response.status})`)
       }
 
+      const data = await response.json()
+      console.log("[v0] API Success:", data)
+      
       setCodeSent(true)
       toast({
         title: "Código enviado",
         description: "Verifique seu WhatsApp para o código de verificação.",
       })
     } catch (err: any) {
+      console.error("[v0] Error in requestPhoneVerification:", err)
       setPhoneValidationError(err.message || "Erro ao solicitar verificação")
     } finally {
       setPhoneValidationLoading(false)
@@ -205,7 +214,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem cr��ditos/plano
+    // Se é profissional, verificar se tem cr����ditos/plano
     if (isProfessional && !canExpress) {
       setShowUpgradeModal(true)
       return
