@@ -323,7 +323,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                     <div className="flex-1 flex gap-2">
                       <Input
                         id="phone"
-                        placeholder="98127-3461"
+                        placeholder="11 99123-4567"
                         value={phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         disabled={phoneValidated}

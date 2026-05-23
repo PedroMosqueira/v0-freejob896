@@ -354,6 +354,51 @@ function SearchRequests({
         <AffiliateSidebar />
       </AdWrapper>
 
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">{getTitle()}</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setShowMyRequests(false)
+              setShowMyProfessionalServices(false)
+            }}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              !showMyRequests && !showMyProfessionalServices
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => {
+              setShowMyRequests(true)
+              setShowMyProfessionalServices(false)
+            }}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              showMyRequests
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            Minhas Solicitações
+          </button>
+          <button
+            onClick={() => {
+              setShowMyRequests(false)
+              setShowMyProfessionalServices(true)
+            }}
+            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+              showMyProfessionalServices
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
+          >
+            Meus Serviços
+          </button>
+        </div>
+      </div>
+
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
           {/* Mobile Filter Sheet */}
