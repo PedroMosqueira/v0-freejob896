@@ -181,6 +181,25 @@ export function PhoneValidationModal({
           </div>
         )}
 
+        {!codeSent && !error && (
+          <div className="grid gap-2">
+            <Label htmlFor="country-initial">País</Label>
+            <select
+              id="country-initial"
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              disabled={loading}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {COUNTRIES.map((country) => (
+                <option key={`${country.code}-${country.name}`} value={country.code}>
+                  {country.name} ({country.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {codeSent && (
           <form onSubmit={handleVerificationSubmit} className="grid gap-4">
             <div className="grid gap-2">

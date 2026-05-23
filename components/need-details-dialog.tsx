@@ -673,13 +673,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                     <AvatarFallback className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
                       {requesterProfile?.name
                         ? requesterProfile.name.charAt(0).toUpperCase()
-                        : currentNeed.requesterEmail.charAt(0).toUpperCase()}
+                        : currentNeed.requesterEmail?.charAt(0).toUpperCase() || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="truncate text-gray-700 dark:text-gray-300 font-medium hover:underline">
                     {requesterProfile?.name
                       ? requesterProfile.name.split(" ")[0]
-                      : currentNeed.requesterEmail.split("@")[0]}
+                      : currentNeed.requesterEmail?.split("@")[0] || "Usuário"}
                   </span>
                 </Link>
                 <div className="flex items-center gap-1.5 text-gray-600 dark:text-gray-400">
