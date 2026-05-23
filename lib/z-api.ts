@@ -74,19 +74,38 @@ function formatPhoneForWhatsApp(phone: string): string {
   // Remove caracteres não numéricos
   const cleaned = phone.replace(/\D/g, "")
 
+  // Se já começa com 55, retorna como está
+  if (cleaned.startsWith("55")) {
+    console.log("[v0] Phone já tem código de país: " + cleaned)
+    return cleaned
+  }
+
   // Se tem 11 dígitos (começa com 0), assume que é número Brasil com 0
   if (cleaned.length === 11 && cleaned.startsWith("0")) {
+    console.log("[v0] Phone formato com 0: " + cleaned + " -> " + ("55" + cleaned.substring(1)))
     return "55" + cleaned.substring(1)
   }
 
   // Se tem 10 dígitos, adiciona 55 (Brasil)
   if (cleaned.length === 10) {
+    console.log("[v0] Phone formato 10 dígitos: " + cleaned + " -> " + ("55" + cleaned))
     return "55" + cleaned
   }
 
   // Se tem 11 dígitos sem o 0, já é DDD + 9XXXXXXXX
   if (cleaned.length === 11) {
+    console.log("[v0] Phone formato 11 dígitos: " + cleaned + " -> " + ("55" + cleaned))
     return "55" + cleaned
+  }
+
+  // Fallback: retorna como está
+  console.log("[v0] Phone formato desconhecido: " + cleaned)
+  return cleaned
+}
+
+export function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
   }
 
   // Se já tem país code, retorna como está
