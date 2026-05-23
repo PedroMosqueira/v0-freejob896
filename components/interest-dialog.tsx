@@ -24,6 +24,7 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
+  console.log("[v0] InterestDialog mounted with email:", currentUserEmail)
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
@@ -57,6 +58,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
+      console.log("[v0] checkPermission called with email:", currentUserEmail)
+      console.log("[v0] Email is empty?", !currentUserEmail)
+      
       const result = await canUserExpressInterest(currentUserEmail)
       console.log("[v0] canUserExpressInterest result:", result)
       setCanExpress(result.canExpressInterest)
@@ -205,7 +209,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem créditos/plano
+    // Se é profissional, verificar se tem cr��ditos/plano
     if (isProfessional && !canExpress) {
       setShowUpgradeModal(true)
       return
@@ -270,6 +274,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       {isCheckingPermission && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Verificando...</DialogTitle>
+              <DialogDescription>
+                Estamos verificando suas permissões
+              </DialogDescription>
+            </DialogHeader>
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
             </div>
