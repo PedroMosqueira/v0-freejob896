@@ -15,7 +15,8 @@ export interface ZAPIResponse {
 
 export async function sendWhatsAppMessage(
   phone: string,
-  message: string
+  message: string,
+  countryCode: string = "+55"
 ): Promise<ZAPIResponse> {
   try {
     const zApiToken = process.env.Z_API_TOKEN
@@ -29,7 +30,7 @@ export async function sendWhatsAppMessage(
       }
     }
 
-    const formattedPhone = formatPhoneForWhatsApp(phone)
+    const formattedPhone = formatPhoneForWhatsApp(phone, countryCode)
     console.log("[v0] Z-API: Enviando para", formattedPhone)
 
     const response = await fetch(
@@ -70,7 +71,7 @@ export async function sendWhatsAppMessage(
   }
 }
 
-function formatPhoneForWhatsApp(phone: string): string {
+function formatPhoneForWhatsApp(phone: string, countryCode: string = "+55"): string {
   // Remove caracteres não numéricos
   const cleaned = phone.replace(/\D/g, "")
 
@@ -86,16 +87,19 @@ function formatPhoneForWhatsApp(phone: string): string {
     return "55" + cleaned.substring(1)
   }
 
-  // Se tem 10 dígitos, adiciona 55 (Brasil)
+  // Remove o + do countryCode se houver
+  const code = countryCode.replace("+", "")
+
+  // Se tem 10 dígitos, adiciona o código do país
   if (cleaned.length === 10) {
-    console.log("[v0] Phone formato 10 dígitos: " + cleaned + " -> " + ("55" + cleaned))
-    return "55" + cleaned
+    console.log("[v0] Phone formato 10 dígitos: " + cleaned + " -> " + (code + cleaned))
+    return code + cleaned
   }
 
   // Se tem 11 dígitos sem o 0, já é DDD + 9XXXXXXXX
   if (cleaned.length === 11) {
-    console.log("[v0] Phone formato 11 dígitos: " + cleaned + " -> " + ("55" + cleaned))
-    return "55" + cleaned
+    console.log("[v0] Phone formato 11 dígitos: " + cleaned + " -> " + (code + cleaned))
+    return code + cleaned
   }
 
   // Fallback: retorna como está

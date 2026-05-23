@@ -13,6 +13,7 @@ import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
+import { COUNTRIES } from "@/lib/countries"
 
 interface InterestDialogProps {
   need: Need
@@ -38,6 +39,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [phoneValidationError, setPhoneValidationError] = useState("")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [isProfessionalCheckbox, setIsProfessionalCheckbox] = useState(false)
+  const [countryCode, setCountryCode] = useState("+55")
 
   // Format phone input with DDD parentheses
   const formatPhoneInput = (value: string) => {
@@ -117,36 +119,50 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     e.preventDefault()
     e.stopPropagation()
     
+    console.log("[v0] requestPhoneVerification called!")
+    console.log("[v0] phoneInput:", phoneInput)
+    console.log("[v0] countryCode:", countryCode)
+    console.log("[v0] currentUserEmail:", currentUserEmail)
+    
     setPhoneValidationError("")
     setPhoneValidationLoading(true)
 
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
+      console.log("[v0] cleanPhone:", cleanPhone)
 
       if (cleanPhone.length < 10) {
         throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
       }
 
+      console.log("[v0] Enviando para /api/phone/request-verification")
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone: cleanPhone,
           email: currentUserEmail,
+          countryCode: countryCode,
         }),
       })
       
+      console.log("[v0] Response status:", response.status)
       if (!response.ok) {
         const data = await response.json()
+        console.error("[v0] API Error:", data)
         throw new Error(data.message || `Erro ao enviar código (${response.status})`)
       }
 
+      const data = await response.json()
+      console.log("[v0] API Success:", data)
+      
       setCodeSent(true)
       toast({
         title: "Código enviado",
         description: "Verifique seu WhatsApp para o código de verificação.",
       })
     } catch (err: any) {
+      console.error("[v0] Error in requestPhoneVerification:", err.message)
       setPhoneValidationError(err.message || "Erro ao solicitar verificação")
     } finally {
       setPhoneValidationLoading(false)
@@ -205,7 +221,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem cr����ditos/plano
+    // Se é profissional, verificar se tem cr������ditos/plano
     if (isProfessional && !canExpress) {
       setShowUpgradeModal(true)
       return
@@ -315,6 +331,22 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
             >
               {!phoneValidated && !codeSent && (
                 <>
+                  <div>
+                    <Label htmlFor="country">País</Label>
+                    <select
+                      id="country"
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      disabled={phoneValidationLoading}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {COUNTRIES.map((country) => (
+                        <option key={`${country.code}-${country.name}`} value={country.code}>
+                          {country.name} ({country.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <Label htmlFor="phone">Telefone</Label>
                     <Input
