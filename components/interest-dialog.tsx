@@ -13,6 +13,7 @@ import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
+import { COUNTRIES } from "@/lib/countries"
 
 interface InterestDialogProps {
   need: Need
@@ -38,6 +39,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [phoneValidationError, setPhoneValidationError] = useState("")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [isProfessionalCheckbox, setIsProfessionalCheckbox] = useState(false)
+  const [countryCode, setCountryCode] = useState("+55")
 
   // Format phone input with DDD parentheses
   const formatPhoneInput = (value: string) => {
@@ -133,6 +135,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         body: JSON.stringify({
           phone: cleanPhone,
           email: currentUserEmail,
+          countryCode: countryCode,
         }),
       })
       
@@ -205,7 +208,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem cr����ditos/plano
+    // Se é profissional, verificar se tem cr������ditos/plano
     if (isProfessional && !canExpress) {
       setShowUpgradeModal(true)
       return
@@ -315,6 +318,22 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
             >
               {!phoneValidated && !codeSent && (
                 <>
+                  <div>
+                    <Label htmlFor="country">País</Label>
+                    <select
+                      id="country"
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      disabled={phoneValidationLoading}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {COUNTRIES.map((country) => (
+                        <option key={`${country.code}-${country.name}`} value={country.code}>
+                          {country.name} ({country.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <Label htmlFor="phone">Telefone</Label>
                     <Input

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Loader2, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { COUNTRIES } from "@/lib/countries"
 
 type ValidationStep = "verification"
 
@@ -29,6 +30,7 @@ export function PhoneValidationModal({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [codeSent, setCodeSent] = useState(false)
+  const [countryCode, setCountryCode] = useState("+55")
   const { toast } = useToast()
 
   // Limpar estado ao abrir/fechar
@@ -59,7 +61,8 @@ export function PhoneValidationModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           phone: cleanPhone,
-          email: currentUserEmail 
+          email: currentUserEmail,
+          countryCode: countryCode
         }),
       })
 
@@ -180,6 +183,22 @@ export function PhoneValidationModal({
 
         {codeSent && (
           <form onSubmit={handleVerificationSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="country">País</Label>
+              <select
+                id="country"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {COUNTRIES.map((country) => (
+                  <option key={`${country.code}-${country.name}`} value={country.code}>
+                    {country.name} ({country.code})
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="code">Código de Verificação</Label>
               <Input

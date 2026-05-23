@@ -4,10 +4,11 @@ import { sendWhatsAppMessage, generateVerificationCode, getVerificationMessage }
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, email } = await request.json()
+    const { phone, email, countryCode } = await request.json()
 
     console.log("[v0] === API request-verification recebido ===")
     console.log("[v0] Phone raw:", phone)
+    console.log("[v0] Country code:", countryCode || "+55")
     console.log("[v0] Email:", email)
 
     if (!phone || !email) {
@@ -48,9 +49,10 @@ export async function POST(request: NextRequest) {
     const message = getVerificationMessage(verificationCode)
     console.log("[v0] Enviando mensagem Z-API:")
     console.log("[v0]   Telefone:", phone)
+    console.log("[v0]   Código de país:", countryCode || "+55")
     console.log("[v0]   Mensagem preview:", message.substring(0, 50))
     
-    const result = await sendWhatsAppMessage(phone, message)
+    const result = await sendWhatsAppMessage(phone, message, countryCode || "+55")
 
     console.log("[v0] Resultado Z-API:", {
       success: result.success,
