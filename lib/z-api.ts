@@ -23,6 +23,11 @@ export async function sendWhatsAppMessage(
     const zApiInstanceId = process.env.Z_API_INSTANCE_ID
     const zApiClientToken = process.env.Z_API_CLIENT_TOKEN
 
+    console.log("[v0] === Z-API Debug Info ===")
+    console.log("[v0] Token existe:", !!zApiToken)
+    console.log("[v0] InstanceID existe:", !!zApiInstanceId)
+    console.log("[v0] ClientToken existe:", !!zApiClientToken)
+
     if (!zApiToken || !zApiInstanceId || !zApiClientToken) {
       console.error("[v0] Z-API: Credenciais não configuradas")
       return {
@@ -32,40 +37,53 @@ export async function sendWhatsAppMessage(
     }
 
     const formattedPhone = formatPhoneForWhatsApp(phone, countryCode)
-    console.log("[v0] Z-API: Enviando para", formattedPhone)
+    console.log("[v0] Z-API: Phone formatado:", formattedPhone)
+    console.log("[v0] Z-API: Mensagem length:", message.length)
 
-    const response = await fetch(
-      `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Client-Token": zApiClientToken,
-        },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message: message,
-        }),
-      }
-    )
+    const url = `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`
+    console.log("[v0] Z-API: URL:", url.substring(0, 80) + "...")
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Client-Token": zApiClientToken,
+      },
+      body: JSON.stringify({
+        phone: formattedPhone,
+        message: message,
+      }),
+    })
+
+    console.log("[v0] Z-API: Response Status:", response.status)
+    console.log("[v0] Z-API: Response Headers:", {
+      contentType: response.headers.get("content-type"),
+      contentLength: response.headers.get("content-length"),
+    })
 
     const data = await response.json()
+    console.log("[v0] Z-API: Response Body:", JSON.stringify(data).substring(0, 200))
 
     if (!response.ok) {
-      console.error("[v0] Z-API Error:", response.status, data)
+      console.error("[v0] Z-API: ❌ ERRO na resposta", {
+        status: response.status,
+        error: data.error || data.message,
+        fullResponse: data,
+      })
       return {
         success: false,
-        error: data.message || `Erro Z-API: ${response.status}`,
+        error: data.message || data.error || `Erro Z-API: ${response.status}`,
       }
     }
 
-    console.log("[v0] Z-API: Mensagem enviada com sucesso!")
+    console.log("[v0] Z-API: ✅ Mensagem enviada com sucesso!")
     return {
       success: true,
       id: data.messageId || data.id,
     }
   } catch (error: any) {
-    console.error("[v0] Z-API Exception:", error.message)
+    console.error("[v0] Z-API: ❌ EXCEPTION -", error.message)
+    console.error("[v0] Z-API: Stack:", error.stack?.substring(0, 100))
     return {
       success: false,
       error: error.message,
