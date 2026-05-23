@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { sendWhatsAppMessage, generateVerificationCode, getVerificationMessage } from "@/lib/z-api"
+import { ensureUserExists } from "@/lib/ensure-user-exists"
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Garantir que o usuário existe no banco de dados
+    console.log("[v0] Verificando/criando usuário...")
+    await ensureUserExists(email)
 
     // Gerar código de 6 dígitos
     const verificationCode = generateVerificationCode()

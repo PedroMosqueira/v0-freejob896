@@ -21,8 +21,9 @@ export async function sendWhatsAppMessage(
   try {
     const zApiToken = process.env.Z_API_TOKEN
     const zApiInstanceId = process.env.Z_API_INSTANCE_ID
+    const zApiClientToken = process.env.Z_API_CLIENT_TOKEN
 
-    if (!zApiToken || !zApiInstanceId) {
+    if (!zApiToken || !zApiInstanceId || !zApiClientToken) {
       console.error("[v0] Z-API: Credenciais não configuradas")
       return {
         success: false,
@@ -39,6 +40,7 @@ export async function sendWhatsAppMessage(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Client-Token": zApiClientToken,
         },
         body: JSON.stringify({
           phone: formattedPhone,
