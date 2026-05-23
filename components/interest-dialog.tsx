@@ -24,7 +24,6 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
-  console.log("[v0] InterestDialog mounted with email:", currentUserEmail)
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
@@ -58,9 +57,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
-      console.log("[v0] checkPermission called with email:", currentUserEmail)
-      console.log("[v0] Email is empty?", !currentUserEmail)
-      
       const result = await canUserExpressInterest(currentUserEmail)
       console.log("[v0] canUserExpressInterest result:", result)
       setCanExpress(result.canExpressInterest)
