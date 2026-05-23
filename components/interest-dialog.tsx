@@ -318,33 +318,34 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
             >
               {!phoneValidated && !codeSent && (
                 <>
-                  <div>
-                    <Label htmlFor="country">País</Label>
-                    <select
-                      id="country"
-                      value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                      disabled={phoneValidationLoading}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      {COUNTRIES.map((country) => (
-                        <option key={`${country.code}-${country.name}`} value={country.code}>
-                          {country.name} ({country.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Telefone</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="(11) 99999-9999"
-                      value={phoneInput}
-                      onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
-                      disabled={phoneValidationLoading}
-                      className="text-base"
-                    />
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-shrink-0">
+                        <select
+                          id="country"
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                          disabled={phoneValidationLoading}
+                          className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
+                        >
+                          {COUNTRIES.map((country) => (
+                            <option key={`${country.code}-${country.name}`} value={country.code}>
+                              {country.flag} {country.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="98127-3461"
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
+                        disabled={phoneValidationLoading}
+                        className="text-base flex-1"
+                      />
+                    </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                       Digite seu telefone com DDD
                     </p>
