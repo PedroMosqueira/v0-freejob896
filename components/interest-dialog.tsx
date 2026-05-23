@@ -234,7 +234,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         need.requesterEmail,
         "Novo interesse em seu serviço",
         `Um profissional manifestou interesse em "${need.title}"`,
-        "interest",
+        "proposal",
         need.id,
       )
 
