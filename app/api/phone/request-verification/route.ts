@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import twilio from "twilio"
+import { sendWhatsAppMessage, generateVerificationCode, getVerificationMessage } from "@/lib/z-api"
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Gerar código de 6 dígitos
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
+    const verificationCode = generateVerificationCode()
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
 
     // Criar cliente Supabase
@@ -44,66 +44,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID
-    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
-    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
+    // Enviar via Z-API WhatsApp
+    const message = getVerificationMessage(verificationCode)
+    const result = await sendWhatsAppMessage(phone, message)
 
-    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      console.log(`[v0] Modo teste - Código para ${phone}: ${verificationCode}`)
-      return NextResponse.json({
-        success: true,
-        message: "Código enviado",
-        code: verificationCode,
-      })
-    }
-
-    try {
-      const client = twilio(twilioAccountSid, twilioAuthToken)
-      const phoneOnlyDigits = phone.replace(/\D/g, "")
-
-      console.log("[v0] Enviando SMS:")
-      console.log("[v0]   Phone raw recebido:", phone)
-      console.log("[v0]   Phone only digits:", phoneOnlyDigits)
-      console.log("[v0]   Comprimento:", phoneOnlyDigits.length)
-      
-      // Construir número internacional: sempre adiciona +55
-      const phoneInternational = "+55" + phoneOnlyDigits
-
-      console.log("[v0]   From:", twilioPhoneNumber)
-      console.log("[v0]   To:", phoneInternational)
-      console.log("[v0]   Código:", verificationCode)
-
-      const message = await client.messages.create({
-        body: `Seu código de verificação FreeJob é: ${verificationCode}. Válido por 10 minutos.`,
-        from: twilioPhoneNumber,
-        to: phoneInternational,
-      })
-
-      console.log("[v0] SMS enviado com sucesso! SID:", message.sid)
-
-      return NextResponse.json({
-        success: true,
-        message: "Código enviado por SMS",
-        messageSid: message.sid,
-      })
-    } catch (twilioError: any) {
-      console.error("[v0] Erro Twilio:")
-      console.error("[v0]   Mensagem:", twilioError.message)
-      console.error("[v0]   Código:", twilioError.code)
-      
+    if (!result.success) {
+      console.error("[v0] Erro ao enviar via Z-API:", result.error)
       return NextResponse.json(
-        { 
-          message: "Erro ao enviar SMS",
-          error: twilioError.message,
-          code: twilioError.code
-        },
+        { message: result.error || "Erro ao enviar código" },
         { status: 500 }
       )
     }
+
+    console.log("[v0] Mensagem WhatsApp enviada com sucesso! ID:", result.id)
+
+    return NextResponse.json({
+      success: true,
+      message: "Código enviado por WhatsApp",
+      messageId: result.id,
+    })
   } catch (error) {
     console.error("[v0] Erro geral:", error)
     return NextResponse.json(
-      { message: "Erro ao processar requisição" },
+      { message: "Erro interno ao solicitar verificação" },
       { status: 500 }
     )
   }
