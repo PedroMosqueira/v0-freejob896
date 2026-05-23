@@ -262,19 +262,11 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
     try {
       const supabase = createSupabaseBrowserClient()
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("name, profileImageUrl")
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("full_name, profile_image_url")
         .eq("email", currentNeed.requesterEmail)
         .single()
-
-      if (error) {
-        console.error("[v0] Error fetching requester profile:", error)
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("full_name, profile_image_url")
-          .eq("email", currentNeed.requesterEmail)
-          .single()
 
         if (userError) {
           console.error("[v0] Error fetching from users table:", userError)
@@ -285,10 +277,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           name: userData?.full_name || null,
           profileImageUrl: userData?.profile_image_url || null,
         })
-        return
-      }
-
-      setRequesterProfile(data)
     } catch (error) {
       console.error("[v0] Error fetching requester profile:", error)
     }

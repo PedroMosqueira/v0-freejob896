@@ -21,6 +21,10 @@ export async function sendWhatsAppMessage(
     const zApiToken = process.env.Z_API_TOKEN
     const zApiInstanceId = process.env.Z_API_INSTANCE_ID
 
+    console.log("[v0] === Z-API sendWhatsAppMessage ===")
+    console.log("[v0] Token configurado:", !!zApiToken)
+    console.log("[v0] Instance ID configurado:", !!zApiInstanceId)
+
     if (!zApiToken || !zApiInstanceId) {
       console.error("[v0] Z-API credentials not configured")
       throw new Error("Z-API credentials not configured")
@@ -29,26 +33,29 @@ export async function sendWhatsAppMessage(
     // Formatar telefone para formato internacional (55 + DDD + 9XXXXXXXX)
     const formattedPhone = formatPhoneForWhatsApp(phone)
 
-    console.log("[v0] Enviando mensagem WhatsApp para:", formattedPhone)
-    console.log("[v0] Mensagem:", message)
+    console.log("[v0] Enviando para Z-API:")
+    console.log("[v0]   Phone original:", phone)
+    console.log("[v0]   Phone formatado:", formattedPhone)
+    console.log("[v0]   Mensagem:", message.substring(0, 50) + "...")
 
-    const response = await fetch(
-      `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phone: formattedPhone,
-          message: message,
-        }),
-      }
-    )
+    const url = `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`
+    console.log("[v0]   URL:", url)
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone: formattedPhone,
+        message: message,
+      }),
+    })
+
+    console.log("[v0] Z-API Response Status:", response.status, response.statusText)
 
     const data = await response.json()
-
-    console.log("[v0] Z-API Response:", data)
+    console.log("[v0] Z-API Response Data:", JSON.stringify(data).substring(0, 200))
 
     if (!response.ok) {
       console.error("[v0] Z-API Error:", data)
