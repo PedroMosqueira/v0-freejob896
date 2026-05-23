@@ -17,6 +17,7 @@ interface PhoneValidationModalProps {
   onSuccess: (phone: string) => void
   currentUserEmail: string
   phoneNumber: string
+  countryCode?: string
 }
 
 export function PhoneValidationModal({
@@ -25,12 +26,13 @@ export function PhoneValidationModal({
   onSuccess,
   currentUserEmail,
   phoneNumber,
+  countryCode: initialCountryCode = "+55",
 }: PhoneValidationModalProps) {
   const [verificationCode, setVerificationCode] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [codeSent, setCodeSent] = useState(false)
-  const [countryCode, setCountryCode] = useState("+55")
+  const [countryCode, setCountryCode] = useState(initialCountryCode)
   const { toast } = useToast()
 
   // Limpar estado ao abrir/fechar
