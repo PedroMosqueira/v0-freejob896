@@ -46,17 +46,27 @@ export async function POST(request: NextRequest) {
 
     // Enviar via Z-API WhatsApp
     const message = getVerificationMessage(verificationCode)
+    console.log("[v0] Enviando mensagem Z-API:")
+    console.log("[v0]   Telefone:", phone)
+    console.log("[v0]   Mensagem preview:", message.substring(0, 50))
+    
     const result = await sendWhatsAppMessage(phone, message)
 
+    console.log("[v0] Resultado Z-API:", {
+      success: result.success,
+      error: result.error || null,
+      id: result.id || null,
+    })
+
     if (!result.success) {
-      console.error("[v0] Erro ao enviar via Z-API:", result.error)
+      console.error("[v0] FALHA ao enviar via Z-API:", result.error)
       return NextResponse.json(
         { message: result.error || "Erro ao enviar código" },
         { status: 500 }
       )
     }
 
-    console.log("[v0] Mensagem WhatsApp enviada com sucesso! ID:", result.id)
+    console.log("[v0] ✓ Mensagem WhatsApp enviada com sucesso! ID:", result.id)
 
     return NextResponse.json({
       success: true,
