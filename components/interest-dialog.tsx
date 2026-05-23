@@ -144,7 +144,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setCodeSent(true)
       toast({
         title: "Código enviado",
-        description: "Verifique seu SMS para o código de verificação.",
+        description: "Verifique seu WhatsApp para o código de verificação.",
       })
     } catch (err: any) {
       setPhoneValidationError(err.message || "Erro ao solicitar verificação")
@@ -362,7 +362,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       disabled={phoneValidationLoading}
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Código enviado para {phoneInput}
+                      Código enviado para {phoneInput} via WhatsApp
                     </p>
                   </div>
                   {phoneValidationError && (
