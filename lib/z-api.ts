@@ -106,20 +106,6 @@ function formatPhoneForWhatsApp(phone: string): string {
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()
 }
-  }
-
-  // Se já tem país code, retorna como está
-  if (cleaned.startsWith("55")) {
-    return cleaned
-  }
-
-  // Fallback: adiciona 55
-  return "55" + cleaned
-}
-
-export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
 
 export function getVerificationMessage(code: string): string {
   return `Seu código de verificação FreeJob é: ${code}\n\nEste código expira em 10 minutos.`
