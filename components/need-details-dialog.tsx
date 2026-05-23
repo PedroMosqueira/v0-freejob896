@@ -86,7 +86,7 @@ interface NeedDetailsDialogProps {
 }
 
 export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdate }: NeedDetailsDialogProps) {
-  const { email } = useAuth()
+  const { email, isLoading: authLoading } = useAuth()
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
@@ -1289,7 +1289,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
         />
       )}
 
-      {showInterestDialog && email && (
+      {showInterestDialog && email && !authLoading && (
         <InterestDialog
           need={currentNeed}
           isOpen={showInterestDialog}
