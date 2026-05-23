@@ -119,23 +119,16 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     e.preventDefault()
     e.stopPropagation()
     
-    console.log("[v0] requestPhoneVerification called!")
-    console.log("[v0] phoneInput:", phoneInput)
-    console.log("[v0] countryCode:", countryCode)
-    console.log("[v0] currentUserEmail:", currentUserEmail)
-    
     setPhoneValidationError("")
     setPhoneValidationLoading(true)
 
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
-      console.log("[v0] cleanPhone:", cleanPhone)
 
       if (cleanPhone.length < 10) {
         throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
       }
 
-      console.log("[v0] Enviando para /api/phone/request-verification")
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,23 +139,17 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         }),
       })
       
-      console.log("[v0] Response status:", response.status)
       if (!response.ok) {
         const data = await response.json()
-        console.error("[v0] API Error:", data)
         throw new Error(data.message || `Erro ao enviar código (${response.status})`)
       }
 
-      const data = await response.json()
-      console.log("[v0] API Success:", data)
-      
       setCodeSent(true)
       toast({
         title: "Código enviado",
         description: "Verifique seu WhatsApp para o código de verificação.",
       })
     } catch (err: any) {
-      console.error("[v0] Error in requestPhoneVerification:", err.message)
       setPhoneValidationError(err.message || "Erro ao solicitar verificação")
     } finally {
       setPhoneValidationLoading(false)
