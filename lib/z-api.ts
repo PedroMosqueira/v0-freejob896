@@ -21,60 +21,51 @@ export async function sendWhatsAppMessage(
     const zApiToken = process.env.Z_API_TOKEN
     const zApiInstanceId = process.env.Z_API_INSTANCE_ID
 
-    console.log("[v0] === Z-API sendWhatsAppMessage ===")
-    console.log("[v0] Token configurado:", !!zApiToken)
-    console.log("[v0] Instance ID configurado:", !!zApiInstanceId)
-
     if (!zApiToken || !zApiInstanceId) {
-      console.error("[v0] Z-API credentials not configured")
-      throw new Error("Z-API credentials not configured")
-    }
-
-    // Formatar telefone para formato internacional (55 + DDD + 9XXXXXXXX)
-    const formattedPhone = formatPhoneForWhatsApp(phone)
-
-    console.log("[v0] Enviando para Z-API:")
-    console.log("[v0]   Phone original:", phone)
-    console.log("[v0]   Phone formatado:", formattedPhone)
-    console.log("[v0]   Mensagem:", message.substring(0, 50) + "...")
-
-    const url = `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`
-    console.log("[v0]   URL:", url)
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone: formattedPhone,
-        message: message,
-      }),
-    })
-
-    console.log("[v0] Z-API Response Status:", response.status, response.statusText)
-
-    const data = await response.json()
-    console.log("[v0] Z-API Response Data:", JSON.stringify(data).substring(0, 200))
-
-    if (!response.ok) {
-      console.error("[v0] Z-API Error:", data)
+      console.error("[v0] Z-API: Credenciais não configuradas")
       return {
         success: false,
-        error: data.message || "Erro ao enviar mensagem",
+        error: "Z-API credentials not configured",
       }
     }
 
+    const formattedPhone = formatPhoneForWhatsApp(phone)
+    console.log("[v0] Z-API: Enviando para", formattedPhone)
+
+    const response = await fetch(
+      `https://api.z-api.io/instances/${zApiInstanceId}/token/${zApiToken}/send-message`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: formattedPhone,
+          message: message,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error("[v0] Z-API Error:", response.status, data)
+      return {
+        success: false,
+        error: data.message || `Erro Z-API: ${response.status}`,
+      }
+    }
+
+    console.log("[v0] Z-API: Mensagem enviada com sucesso!")
     return {
       success: true,
       id: data.messageId || data.id,
-      message: "Mensagem enviada com sucesso",
     }
   } catch (error: any) {
-    console.error("[v0] Erro ao enviar via Z-API:", error)
+    console.error("[v0] Z-API Exception:", error.message)
     return {
       success: false,
-      error: error.message || "Erro ao enviar mensagem",
+      error: error.message,
     }
   }
 }

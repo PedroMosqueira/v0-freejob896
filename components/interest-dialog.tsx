@@ -205,7 +205,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       return
     }
 
-    // Se é profissional, verificar se tem créditos/plano
+    // Se é profissional, verificar se tem cr��ditos/plano
     if (isProfessional && !canExpress) {
       setShowUpgradeModal(true)
       return
@@ -270,6 +270,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       {isCheckingPermission && (
         <Dialog open={isOpen} onOpenChange={onClose}>
           <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Verificando...</DialogTitle>
+              <DialogDescription>
+                Estamos verificando suas permissões
+              </DialogDescription>
+            </DialogHeader>
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
             </div>
