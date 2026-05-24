@@ -213,21 +213,6 @@ export async function updateUserProfile(
   }
 }
 
-    if (error) {
-      console.error("Erro ao atualizar perfil:", error)
-      return { success: false, message: "Erro ao atualizar perfil" }
-    }
-
-    revalidatePath("/profile")
-    revalidatePath("/profile/[email]", "page")
-
-    return { success: true, message: "Perfil atualizado com sucesso!" }
-  } catch (error) {
-    console.error("Erro inesperado ao atualizar perfil:", error)
-    return { success: false, message: "Erro inesperado ao atualizar perfil" }
-  }
-}
-
 export async function uploadProfileImage(
   prevState: { success: boolean; message: string; imageUrl?: string } | null,
   formData: FormData,
