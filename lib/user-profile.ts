@@ -166,7 +166,6 @@ export async function updateUserProfile(
 
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
-    const phone = formData.get("phone") as string
     const bio = formData.get("bio") as string
     const city = formData.get("city") as string
     const isClient = formData.get("isClient") === "true"
@@ -183,11 +182,12 @@ export async function updateUserProfile(
 
     const fullName = `${firstName || ""} ${lastName || ""}`.trim()
 
+    // NÃO incluir phone ou phone_verified aqui
+    // Telefone será validado e salvo apenas pelo endpoint /api/phone/verify
     const updateData = {
       first_name: firstName || null,
       last_name: lastName || null,
       full_name: fullName || null,
-      phone: phone || null,
       bio: bio || null,
       city: city || null,
       is_client: isClient,
@@ -197,6 +197,21 @@ export async function updateUserProfile(
     }
 
     const { data, error } = await supabase.from("users").update(updateData).eq("email", session.user.email).select()
+
+    if (error) {
+      console.error("Erro ao atualizar perfil:", error)
+      return { success: false, message: "Erro ao atualizar perfil" }
+    }
+
+    revalidatePath("/profile")
+    revalidatePath("/profile/[email]", "page")
+
+    return { success: true, message: "Perfil atualizado com sucesso!" }
+  } catch (error) {
+    console.error("Erro inesperado ao atualizar perfil:", error)
+    return { success: false, message: "Erro inesperado ao atualizar perfil" }
+  }
+}
 
     if (error) {
       console.error("Erro ao atualizar perfil:", error)
