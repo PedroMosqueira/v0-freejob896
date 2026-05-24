@@ -36,7 +36,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Buscar dados do usuário
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("is_professional, free_interests_count, total_interests_count, phone_verified")
+      .select("is_professional, free_interests_remaining, total_interests_sent, phone_verified")
       .eq("email", userEmail)
       .single()
 
@@ -68,14 +68,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
-    const freeInterestsUsed = user.free_interests_count || 0
-    const freeInterestsRemaining = MAX_FREE_INTERESTS - freeInterestsUsed
+    const freeInterestsRemaining = user.free_interests_remaining || 3
 
     if (freeInterestsRemaining > 0) {
       return {
         canExpressInterest: true,
         isProfessional: true,
-        freeInterestsUsed,
+        freeInterestsUsed: 3 - freeInterestsRemaining,
         freeInterestsRemaining,
         phoneVerified: true,
         hasActiveSubscription: false,
@@ -96,7 +95,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       return {
         canExpressInterest: true,
         isProfessional: true,
-        freeInterestsUsed: MAX_FREE_INTERESTS,
+        freeInterestsUsed: 3,
         freeInterestsRemaining: 0,
         phoneVerified: true,
         hasActiveSubscription: true,
@@ -108,7 +107,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       reason: "Você usou suas 3 propostas gratuitas. Para continuar, é necessário um plano de assinatura.",
       needsUpgrade: true,
       isProfessional: true,
-      freeInterestsUsed: MAX_FREE_INTERESTS,
+      freeInterestsUsed: 3,
       freeInterestsRemaining: 0,
       phoneVerified: true,
       hasActiveSubscription: false,
@@ -148,7 +147,7 @@ export async function incrementInterestCount(userEmail: string): Promise<{
     // Buscar dados do usuário
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("is_professional, free_interests_count, total_interests_count")
+      .select("is_professional, free_interests_remaining, total_interests_sent")
       .eq("email", userEmail)
       .single()
 
@@ -159,20 +158,20 @@ export async function incrementInterestCount(userEmail: string): Promise<{
       }
     }
 
-    const currentFreeCount = user.free_interests_count || 0
-    const currentTotalCount = user.total_interests_count || 0
+    const currentFreeRemaining = user.free_interests_remaining || 3
+    const currentTotalSent = user.total_interests_sent || 0
 
-    // DECREMENTAR contador de créditos gratuitos (não incrementar!)
-    let newFreeCount = currentFreeCount
-    if (user.is_professional && currentFreeCount < MAX_FREE_INTERESTS) {
-      newFreeCount = currentFreeCount - 1  // DECREMENTAR, não incrementar
+    // DECREMENTAR contador de créditos gratuitos
+    let newFreeRemaining = currentFreeRemaining
+    if (user.is_professional && currentFreeRemaining > 0) {
+      newFreeRemaining = currentFreeRemaining - 1  // DECREMENTAR
     }
 
     const { error: updateError } = await supabase
       .from("users")
       .update({
-        free_interests_count: newFreeCount,
-        total_interests_count: currentTotalCount + 1,
+        free_interests_remaining: newFreeRemaining,
+        total_interests_sent: currentTotalSent + 1,
       })
       .eq("email", userEmail)
 
@@ -186,8 +185,8 @@ export async function incrementInterestCount(userEmail: string): Promise<{
 
     return {
       success: true,
-      freeInterestsUsed: newFreeCount,
-      freeInterestsRemaining: Math.max(0, MAX_FREE_INTERESTS - newFreeCount),
+      freeInterestsUsed: 3 - newFreeRemaining,
+      freeInterestsRemaining: newFreeRemaining,
     }
   } catch (error) {
     console.error("Erro ao incrementar contador de interesses:", error)
