@@ -54,10 +54,6 @@ export function PhoneValidationModal({
     try {
       const cleanPhone = phoneNumber.replace(/\D/g, "")
 
-      console.log("[v0] Modal - Phone recebido:", phoneNumber)
-      console.log("[v0] Modal - Phone limpo:", cleanPhone)
-      console.log("[v0] Modal - Comprimento:", cleanPhone.length)
-
       const response = await fetch("/api/phone/request-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,11 +64,8 @@ export function PhoneValidationModal({
         }),
       })
 
-      console.log("[v0] Modal - Resposta status:", response.status)
-
       if (!response.ok) {
         const text = await response.text()
-        console.log("[v0] Modal - Erro response:", text)
         try {
           const data = JSON.parse(text)
           throw new Error(data.message || "Erro ao enviar código de verificação")
@@ -81,14 +74,12 @@ export function PhoneValidationModal({
         }
       }
 
-      console.log("[v0] Modal - Código enviado com sucesso")
       setCodeSent(true)
       toast({
         title: "Código enviado",
-        description: "Verifique seu SMS para o código de verificação.",
+        description: "Verifique seu WhatsApp para o código de verificação.",
       })
     } catch (err: any) {
-      console.error("[v0] Modal - Erro:", err)
       setError(err.message || "Erro ao solicitar verificação")
     } finally {
       setLoading(false)
@@ -164,7 +155,7 @@ export function PhoneValidationModal({
           <DialogTitle>Validar Telefone</DialogTitle>
           <DialogDescription>
             {codeSent 
-              ? `Informe o código de 6 dígitos enviado por SMS para ${phoneNumber}`
+              ? `Informe o código de 6 dígitos enviado por WhatsApp para ${phoneNumber}`
               : "Enviando código de verificação..."}
           </DialogDescription>
         </DialogHeader>
@@ -235,7 +226,7 @@ export function PhoneValidationModal({
                 autoFocus
                 className="text-center text-2xl tracking-widest font-mono"
               />
-              <p className="text-xs text-muted-foreground">Digite o código de 6 dígitos recebido por SMS</p>
+              <p className="text-xs text-muted-foreground">Digite o código de 6 dígitos recebido por WhatsApp</p>
             </div>
             <Button type="submit" disabled={loading || verificationCode.length !== 6} className="w-full">
               {loading ? (

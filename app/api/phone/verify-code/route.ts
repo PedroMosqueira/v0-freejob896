@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { grantFreeCreditsIfFirstTime } from "@/lib/phone-credits"
 
 export async function POST(request: NextRequest) {
   try {
     const { phone, email, code, isProfessional } = await request.json()
-
-    console.log("[v0] === API verify-code recebido ===")
-    console.log("[v0] Phone:", phone)
-    console.log("[v0] Email:", email)
-    console.log("[v0] Code:", code)
-    console.log("[v0] isProfessional:", isProfessional)
 
     if (!phone || !email || !code) {
       return NextResponse.json(
@@ -31,7 +26,6 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || !user) {
-      console.error("[v0] Erro ao buscar usuário:", userError)
       return NextResponse.json(
         { message: "Usuário não encontrado" },
         { status: 404 }
@@ -43,7 +37,6 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(user.phone_verification_expires_at)
 
     if (now > expiresAt) {
-      console.log("[v0] Código expirado")
       return NextResponse.json(
         { message: "Código expirado. Solicite um novo código." },
         { status: 400 }
@@ -52,7 +45,6 @@ export async function POST(request: NextRequest) {
 
     // Verificar se código está correto
     if (user.phone_verification_code !== code) {
-      console.log("[v0] Código incorreto. Esperado:", user.phone_verification_code, "Recebido:", code)
       return NextResponse.json(
         { message: "Código incorreto" },
         { status: 400 }
@@ -62,12 +54,7 @@ export async function POST(request: NextRequest) {
     // Código correto! Atualizar usuário para marcar telefone como validado
     const cleanPhone = phone.replace(/\D/g, "")
     
-    console.log("[v0] Atualizando usuário com:")
-    console.log("[v0] - phone_verified: true")
-    console.log("[v0] - professional_phone:", cleanPhone)
-    console.log("[v0] - is_professional:", isProfessional === true ? true : false)
-    
-    const { error: updateError, data: updateData } = await supabase
+    const { error: updateError } = await supabase
       .from("users")
       .update({
         phone_verified: true,
@@ -80,22 +67,29 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (updateError) {
-      console.error("[v0] Erro ao atualizar usuário:", updateError)
       return NextResponse.json(
         { message: "Erro ao validar telefone" },
         { status: 500 }
       )
     }
 
-    console.log("[v0] Usuário atualizado com sucesso:", updateData)
+    // Grant free credits if this is the first phone validation for a professional
+    let creditsGranted = false
+    if (isProfessional === true) {
+      const creditResult = await grantFreeCreditsIfFirstTime(email)
+      creditsGranted = creditResult.creditsGranted
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Telefone validado com sucesso!",
+      message: creditsGranted 
+        ? "Telefone validado! Você recebeu 3 propostas gratuitas."
+        : "Telefone validado com sucesso!",
       phone: cleanPhone,
+      creditsGranted,
     })
   } catch (error) {
-    console.error("[v0] Erro geral:", error)
+    console.error("[v0] Erro ao verificar código:", error)
     return NextResponse.json(
       { message: "Erro ao processar requisição" },
       { status: 500 }
