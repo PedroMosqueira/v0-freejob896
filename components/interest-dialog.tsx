@@ -66,7 +66,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setIsProfessionalCheckbox(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       setPhoneValidated(result.phoneVerified || false)
-      console.log("[v0] phoneVerified from DB:", result.phoneVerified)
+      console.log("[v0] phoneVerified from DB:", result.phoneVerified, "Setting phoneValidated to:", result.phoneVerified || false)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)

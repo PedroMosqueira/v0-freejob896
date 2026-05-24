@@ -23,11 +23,10 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
 
   useEffect(() => {
-    // Calcular propostas gratuitas restantes
-    const totalInterests = profile.totalInterestsCount || 0
-    const freeUsed = Math.min(totalInterests, 3)
+    // Usar o contador correto de propostas gratuitas utilizadas
+    const freeUsed = profile.freeInterestsCount || 0
     setFreeInterestsRemaining(Math.max(0, 3 - freeUsed))
-  }, [profile])
+  }, [profile.freeInterestsCount])
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
