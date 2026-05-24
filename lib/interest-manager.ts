@@ -40,6 +40,14 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .eq("email", userEmail)
       .single()
 
+    console.log("[v0] canUserExpressInterest - User data:", { 
+      email: userEmail, 
+      phone_verified: user?.phone_verified, 
+      free_interests_count: user?.free_interests_count,
+      is_professional: user?.is_professional,
+      error: userError 
+    })
+
     if (userError || !user) {
       return {
         canExpressInterest: false,
@@ -49,6 +57,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
+      console.log("[v0] Phone not verified for:", userEmail)
       return {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
