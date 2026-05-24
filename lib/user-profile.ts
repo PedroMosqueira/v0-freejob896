@@ -25,7 +25,7 @@ export interface UserProfile {
   verifiedAt?: string
   createdAt: string
   updatedAt?: string
-  freeInterestsCount: number
+  freeInterestsRemaining: number
 }
 
 export async function getUserProfile(email: string): Promise<UserProfile | null> {
@@ -92,7 +92,7 @@ export async function getUserProfile(email: string): Promise<UserProfile | null>
     verifiedAt: data.verified_at,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    freeInterestsCount: data.free_interests_count || 0,
+    freeInterestsRemaining: data.free_interests_remaining || 3,
   }
 }
 
@@ -137,7 +137,7 @@ export async function getUserProfiles(emails: string[]): Promise<Record<string, 
       verifiedAt: user.verified_at,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
-      freeInterestsCount: user.free_interests_count || 0,
+      freeInterestsRemaining: user.free_interests_remaining || 3,
     }
   }
 
