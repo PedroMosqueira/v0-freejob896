@@ -162,10 +162,10 @@ export async function incrementInterestCount(userEmail: string): Promise<{
     const currentFreeCount = user.free_interests_count || 0
     const currentTotalCount = user.total_interests_count || 0
 
-    // Incrementar contadores
+    // DECREMENTAR contador de créditos gratuitos (não incrementar!)
     let newFreeCount = currentFreeCount
     if (user.is_professional && currentFreeCount < MAX_FREE_INTERESTS) {
-      newFreeCount = currentFreeCount + 1
+      newFreeCount = currentFreeCount - 1  // DECREMENTAR, não incrementar
     }
 
     const { error: updateError } = await supabase
