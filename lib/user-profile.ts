@@ -166,7 +166,6 @@ export async function updateUserProfile(
 
     const firstName = formData.get("firstName") as string
     const lastName = formData.get("lastName") as string
-    const phone = formData.get("phone") as string
     const bio = formData.get("bio") as string
     const city = formData.get("city") as string
     const isClient = formData.get("isClient") === "true"
@@ -183,11 +182,12 @@ export async function updateUserProfile(
 
     const fullName = `${firstName || ""} ${lastName || ""}`.trim()
 
+    // NÃO incluir phone ou phone_verified aqui
+    // Telefone será validado e salvo apenas pelo endpoint /api/phone/verify
     const updateData = {
       first_name: firstName || null,
       last_name: lastName || null,
       full_name: fullName || null,
-      phone: phone || null,
       bio: bio || null,
       city: city || null,
       is_client: isClient,

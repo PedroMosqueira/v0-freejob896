@@ -127,7 +127,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
       formData.append("fullName", fullName)
       formData.append("firstName", firstName)
       formData.append("lastName", lastName)
-      formData.append("phone", phone)
+      // NÃO incluir telefone aqui - será validado e salvo através do modal
       formData.append("city", city)
       formData.append("bio", bio)
       formData.append("isProfessional", isProfessional.toString())
