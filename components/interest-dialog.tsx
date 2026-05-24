@@ -60,13 +60,11 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setIsCheckingPermission(true)
     try {
       const result = await canUserExpressInterest(currentUserEmail)
-      console.log("[v0] canUserExpressInterest result:", result)
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
       setIsProfessionalCheckbox(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       setPhoneValidated(result.phoneVerified || false)
-      console.log("[v0] phoneVerified from DB:", result.phoneVerified, "Setting phoneValidated to:", result.phoneVerified || false)
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)
@@ -166,8 +164,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     try {
       const cleanPhone = phoneInput.replace(/\D/g, "")
 
-      console.log("[v0] Verificando código para:", cleanPhone)
-
       const response = await fetch("/api/phone/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -179,21 +175,16 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         }),
       })
 
-      console.log("[v0] Resposta de verificação:", response.status)
-
       if (!response.ok) {
         const data = await response.json()
-        console.error("[v0] Erro de verificação:", data)
         throw new Error(data.message || `Erro ao verificar código (${response.status})`)
       }
 
       const data = await response.json()
-      console.log("[v0] Verificação bem-sucedida:", data)
       
       setIsProfessional(isProfessionalCheckbox)
       handlePhoneValidationSuccess(cleanPhone)
     } catch (err: any) {
-      console.error("[v0] Erro na verificação:", err)
       setPhoneValidationError(err.message || "Erro ao verificar código")
     } finally {
       setPhoneValidationLoading(false)
