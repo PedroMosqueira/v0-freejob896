@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { grantFreeCreditsIfFirstTime } from "@/lib/phone-credits"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,8 +13,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[v0] Verificando código para:", phone, "email:", email)
-
     // Criar cliente Supabase com service role
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -23,12 +22,11 @@ export async function POST(request: NextRequest) {
     // Buscar o usuário
     const { data: user, error: selectError } = await supabase
       .from("users")
-      .select("phone_verification_code, phone_verification_expires_at, phone_verified")
+      .select("phone_verification_code, phone_verification_expires_at, phone_verified, is_professional")
       .eq("email", email)
       .single()
 
     if (selectError || !user) {
-      console.log("[v0] Usuário não encontrado:", email)
       return NextResponse.json(
         { message: "Usuário não encontrado" },
         { status: 400 }
@@ -40,7 +38,6 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date(user.phone_verification_expires_at)
     
     if (now > expiresAt) {
-      console.log("[v0] Código expirado para:", email)
       return NextResponse.json(
         { message: "Código expirado. Solicite um novo código." },
         { status: 400 }
@@ -49,7 +46,6 @@ export async function POST(request: NextRequest) {
 
     // Verificar se o código está correto
     if (user.phone_verification_code !== code) {
-      console.log("[v0] Código incorreto para:", email)
       return NextResponse.json(
         { message: "Código inválido" },
         { status: 400 }
@@ -68,22 +64,29 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
 
     if (updateError) {
-      console.error("[v0] Erro ao atualizar perfil:", updateError)
       return NextResponse.json(
         { message: "Erro ao salvar telefone validado" },
         { status: 500 }
       )
     }
 
-    console.log("[v0] Telefone validado com sucesso:", phone, "para:", email)
+    // Grant free credits if this is a professional and first validation
+    let creditsGranted = false
+    if (user.is_professional) {
+      const creditResult = await grantFreeCreditsIfFirstTime(email)
+      creditsGranted = creditResult.creditsGranted
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Telefone validado com sucesso",
+      message: creditsGranted 
+        ? "Telefone validado! Você recebeu 3 propostas gratuitas."
+        : "Telefone validado com sucesso",
       phone: phone,
+      creditsGranted,
     })
   } catch (error) {
-    console.error("[v0] Erro em verify:", error)
+    console.error("[v0] Erro ao verificar telefone:", error)
     return NextResponse.json(
       { message: "Erro ao processar requisição" },
       { status: 500 }

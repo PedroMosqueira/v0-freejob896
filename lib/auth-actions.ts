@@ -194,6 +194,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
               professional_phone: professionalPhone?.toString() || null,
               free_interests_remaining: 3, // Inicializa com 3 propostas gratuitas
               total_interests_sent: 0,
+              has_received_free_credits: false, // Ainda não recebeu os créditos
             })
             .eq("id", data.user.id)
 
