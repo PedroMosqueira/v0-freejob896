@@ -170,12 +170,27 @@ export default function Home() {
               {/* Spacer to align content below the professionals section */}
               <div className="md:hidden h-[33.33%]" />
               
-              {/* Form container starting from the empty area */}
-              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col justify-center">
+              {/* Content container starting from the empty area */}
+              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col">
                 <div className="w-full max-w-sm">
-                  <div className="text-center mb-6">
-                    {/* Logo for desktop */}
-                    <div className="flex justify-center mb-4 hidden md:block">
+                  {/* Text below logo on mobile */}
+                  <div className="text-center mb-8 md:hidden mt-8">
+                    <h1 className="text-2xl font-extrabold leading-tight">
+                      <span className="text-[#4F7CFF]" translate="no">
+                        Freejob
+                      </span>
+                      <span className="block text-[#4F7CFF] text-sm font-medium">
+                        prático e do seu jeito
+                      </span>
+                    </h1>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Solicite ou procure serviço com facilidade
+                    </p>
+                  </div>
+
+                  {/* Desktop layout */}
+                  <div className="hidden md:block text-center mb-6">
+                    <div className="flex justify-center mb-4">
                       <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
@@ -191,7 +206,10 @@ export default function Home() {
                     </p>
                   </div>
 
-                  <AuthForm />
+                  {/* Form */}
+                  <div className="flex-1 flex items-end md:items-center">
+                    <AuthForm />
+                  </div>
                 </div>
               </div>
             </div>
