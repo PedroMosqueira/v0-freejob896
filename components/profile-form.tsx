@@ -36,6 +36,8 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [phoneValidated, setPhoneValidated] = useState(profile.phoneValidated || false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phoneValid, setPhoneValid] = useState(false)
+  const [phoneStatus, setPhoneStatus] = useState<"invalid" | "valid" | "">("")
   const { toast } = useToast()
   const router = useRouter()
 
@@ -66,17 +68,20 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
+    // Validar nome: precisa ter pelo menos primeiro e último nome
     if (!fullName.trim()) {
       newErrors.fullName = "Nome completo é obrigatório"
-    } else if (!lastName.trim()) {
-      // Validar se tem pelo menos dois nomes (primeiro e último)
-      newErrors.fullName = "Por favor, informe seu nome e sobrenome"
+    } else {
+      const nameParts = fullName.trim().split(/\s+/).filter(Boolean)
+      if (nameParts.length < 2) {
+        newErrors.fullName = "Por favor, informe seu nome e sobrenome"
+      }
     }
 
     if (isProfessional) {
       if (!phone.trim()) {
         newErrors.phone = "Telefone é obrigatório para profissionais"
-      } else if (!/^[\d\s\-\(\)]+$/.test(phone)) {
+      } else if (!phoneValid) {
         newErrors.phone = "Telefone inválido"
       }
 
@@ -101,9 +106,30 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
     }
   }
 
+  // Função para validar telefone em tempo real
+  const validatePhoneFormat = (phoneValue: string): boolean => {
+    // Extrair apenas números
+    const cleanedPhone = phoneValue.replace(/\D/g, "")
+    // Telefone brasileiro padrão: 11 dígitos (2 de DDD + 9 do número)
+    // Pode começar com 9 ou 8 (celular ou fixo)
+    const isValid = cleanedPhone.length === 11 || cleanedPhone.length === 10
+    return isValid
+  }
+
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhone(value)
     setPhone(formatted)
+    
+    // Validar formato em tempo real
+    const isValid = validatePhoneFormat(formatted)
+    setPhoneValid(isValid)
+    
+    if (formatted.trim()) {
+      setPhoneStatus(isValid ? "valid" : "invalid")
+    } else {
+      setPhoneStatus("")
+    }
+    
     // Se o telefone mudou, resetar validação
     if (phoneChanged && phoneValidated) {
       setPhoneValidated(false)
@@ -316,9 +342,17 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="font-semibold">Telefone para Contato *</Label>
-                    {phoneValidated && !phoneChanged && (
-                      <span className="text-xs text-green-600 font-semibold">✓ Verificado</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {phoneValidated && !phoneChanged && (
+                        <span className="text-xs text-green-600 font-semibold">✓ Verificado</span>
+                      )}
+                      {phoneStatus === "valid" && !phoneValidated && (
+                        <span className="text-xs text-green-600 font-semibold">✓ Válido</span>
+                      )}
+                      {phoneStatus === "invalid" && phone.trim() && (
+                        <span className="text-xs text-red-600 font-semibold">✗ Inválido</span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2 items-end">
                     <div className="flex-shrink-0">
@@ -344,7 +378,9 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                         onChange={(e) => handlePhoneChange(e.target.value)}
                         disabled={phoneValidated && !phoneChanged}
                         maxLength={20}
-                        className={`${errors.phone ? "border-red-500" : ""}`}
+                        className={`${
+                          phoneStatus === "valid" ? "border-green-500" : phoneStatus === "invalid" ? "border-red-500" : ""
+                        }`}
                       />
                       {phoneValidated && !phoneChanged ? (
                         <Button
@@ -355,11 +391,20 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                         >
                           Verificado
                         </Button>
-                      ) : phone.trim() && (
+                      ) : phoneValid && phoneChanged ? (
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setShowPhoneModal(true)}
+                          className="whitespace-nowrap"
+                        >
+                          Validar
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled
                           className="whitespace-nowrap"
                         >
                           Validar
