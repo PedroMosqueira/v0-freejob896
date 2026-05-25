@@ -148,8 +148,21 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
-            <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
-              <div className="w-full max-w-sm">
+            <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8 relative">
+              {/* Background image for mobile */}
+              <div className="absolute inset-0 md:hidden">
+                <Image
+                  src="/professionals-hero.png"
+                  alt="Profissionais"
+                  fill
+                  className="object-cover object-center"
+                  priority
+                />
+                {/* Dark overlay for better readability */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/60" />
+              </div>
+              
+              <div className="w-full max-w-sm relative z-10">
                 <div className="text-center mb-6">
                   <div className="flex justify-center mb-4">
                     <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
