@@ -54,6 +54,14 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }, [isOpen, currentUserEmail])
 
+  // Se abrir o dialog com telefone validado, profissional e sem créditos, mostrar planos direto
+  useEffect(() => {
+    if (isOpen && phoneValidated && isProfessional && !canExpress) {
+      console.log("[v0] Dialog opened with exhausted credits - showing upgrade modal directly")
+      setShowUpgradeModal(true)
+    }
+  }, [isOpen, phoneValidated, isProfessional, canExpress])
+
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
