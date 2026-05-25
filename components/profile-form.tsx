@@ -135,13 +135,6 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
       formData.append("skills", skills)
       formData.append("isClient", (!isProfessional).toString())
 
-      console.log("[v0] profile-form - Enviando FormData:", {
-        firstName: first,
-        lastName: last,
-        isProfessional,
-        skills,
-      })
-
       await formAction(formData)
 
       toast({

@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { auth } from "@/lib/auth"
 
 export interface UserProfile {
   id: string
@@ -178,14 +179,6 @@ export async function updateUserProfile(
           .filter(Boolean)
       : []
 
-    console.log("[v0] updateUserProfile - Recebido:", {
-      firstName,
-      lastName,
-      isProfessional,
-      skills,
-      email: session.user.email,
-    })
-
     const supabase = await createSupabaseServerClient()
 
     const fullName = `${firstName || ""} ${lastName || ""}`.trim()
@@ -204,16 +197,12 @@ export async function updateUserProfile(
       updated_at: new Date().toISOString(),
     }
 
-    console.log("[v0] updateUserProfile - Enviando para DB:", updateData)
-
     const { data, error } = await supabase.from("users").update(updateData).eq("email", session.user.email).select()
 
     if (error) {
       console.error("[v0] Erro ao atualizar perfil - Erro do DB:", error)
       return { success: false, message: `Erro ao atualizar perfil: ${error.message}` }
     }
-
-    console.log("[v0] Perfil atualizado com sucesso:", data)
 
     revalidatePath("/profile")
     revalidatePath("/profile/[email]", "page")
