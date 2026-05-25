@@ -148,39 +148,51 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
-            <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8 relative">
-              {/* Background image for mobile */}
-              <div className="absolute inset-0 md:hidden">
+            <div className="min-h-[calc(100vh-4rem)] flex flex-col md:items-center md:justify-center relative">
+              {/* Background image for mobile - fixed height showing only top portion */}
+              <div className="absolute top-0 left-0 right-0 h-[33.33%] md:hidden overflow-hidden">
                 <Image
                   src="/professionals-hero.png"
                   alt="Profissionais"
                   fill
-                  className="object-cover object-center"
+                  className="object-cover object-top"
                   priority
                 />
-                {/* Dark overlay for better readability */}
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/60" />
               </div>
               
-              <div className="w-full max-w-sm relative z-10">
-                <div className="text-center mb-6">
-                  <div className="flex justify-center mb-4">
-                    <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
-                    <span className="text-[#4F7CFF]" translate="no">
-                      Freejob
-                    </span>
-                    <span className="block text-[#4F7CFF] text-sm sm:text-base font-medium">
-                      prático e do seu jeito
-                    </span>
-                  </h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-                    Solicite ou procure serviço com facilidade
-                  </p>
+              {/* Logo positioned at the dividing line */}
+              <div className="md:hidden absolute top-[calc(33.33%-40px)] left-1/2 transform -translate-x-1/2 z-20">
+                <div className="flex justify-center">
+                  <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full shadow-lg" />
                 </div>
+              </div>
+              
+              {/* Spacer to align content below the professionals section */}
+              <div className="md:hidden h-[33.33%]" />
+              
+              {/* Form container starting from the empty area */}
+              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col justify-center">
+                <div className="w-full max-w-sm">
+                  <div className="text-center mb-6">
+                    {/* Logo for desktop */}
+                    <div className="flex justify-center mb-4 hidden md:block">
+                      <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+                      <span className="text-[#4F7CFF]" translate="no">
+                        Freejob
+                      </span>
+                      <span className="block text-[#4F7CFF] text-sm sm:text-base font-medium">
+                        prático e do seu jeito
+                      </span>
+                    </h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                      Solicite ou procure serviço com facilidade
+                    </p>
+                  </div>
 
-                <AuthForm />
+                  <AuthForm />
+                </div>
               </div>
             </div>
           ) : (
