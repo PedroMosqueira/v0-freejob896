@@ -5,7 +5,6 @@ import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
@@ -25,7 +24,6 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
-  const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -251,7 +249,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         requesterEmail: need.requesterEmail,
         professionalEmail: currentUserEmail,
         reason: "interest",
-        customText: message ? `Profissional manifestou interesse: "${message}"` : "Profissional manifestou interesse em seu serviço.",
+        customText: "Profissional manifestou interesse em seu serviço.",
       })
 
       toast({
@@ -260,7 +258,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         variant: "success",
       })
 
-      setMessage("")
       onActionSuccess()
       onClose()
     } catch (error: any) {
@@ -411,19 +408,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
               {phoneValidated && (
                 <>
-                  <div>
-                    <Label htmlFor="message">Mensagem (Opcional)</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Deixe uma mensagem para o solicitante..."
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
                   {isProfessional && (
                     <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
                       <p className="text-sm text-gray-700 dark:text-gray-300">
