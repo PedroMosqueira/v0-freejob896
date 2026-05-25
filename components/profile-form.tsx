@@ -63,6 +63,9 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
     if (!fullName.trim()) {
       newErrors.fullName = "Nome completo é obrigatório"
+    } else if (!lastName.trim()) {
+      // Validar se tem pelo menos dois nomes (primeiro e último)
+      newErrors.fullName = "Por favor, informe seu nome e sobrenome"
     }
 
     if (isProfessional) {
