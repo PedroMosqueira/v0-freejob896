@@ -160,10 +160,11 @@ export default function Home() {
                 />
               </div>
               
-              {/* Logo positioned at the dividing line */}
-              <div className="md:hidden absolute top-[calc(33.33%-40px)] left-1/2 transform -translate-x-1/2 z-20">
-                <div className="flex justify-center">
-                  <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full shadow-lg" />
+              {/* Logo positioned at the dividing line - LARGER */}
+              <div className="md:hidden absolute top-[calc(33.33%-60px)] left-1/2 transform -translate-x-1/2 z-20">
+                <div className="flex flex-col items-center">
+                  <Image src="/logo.png" alt="Freejob Logo" width={120} height={120} className="rounded-full shadow-xl" />
+                  <h1 className="text-4xl font-extrabold mt-4 text-[#4F7CFF]">Freejob</h1>
                 </div>
               </div>
               
@@ -173,15 +174,10 @@ export default function Home() {
               {/* Text below logo on mobile - OUTSIDE the spacer div */}
               <div className="w-full flex justify-center px-4 relative z-10 md:hidden">
                 <div className="text-center mb-8">
-                  <h1 className="text-2xl font-extrabold leading-tight">
-                    <span className="text-[#4F7CFF]" translate="no">
-                      Freejob
-                    </span>
-                    <span className="block text-[#4F7CFF] text-sm font-medium">
-                      prático e do seu jeito
-                    </span>
-                  </h1>
-                  <p className="text-xs text-muted-foreground mt-3">
+                  <p className="text-sm text-[#4F7CFF] font-semibold">
+                    prático e do seu jeito
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
                     Solicite ou procure serviço com facilidade
                   </p>
                 </div>
