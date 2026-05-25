@@ -26,6 +26,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [phone, setPhone] = useState(profile.phone || "")
+  const [originalPhone, setOriginalPhone] = useState(profile.phone || "")
   const [countryCode, setCountryCode] = useState("+55")
   const [isProfessional, setIsProfessional] = useState(profile.isProfessional || false)
   const [skills, setSkills] = useState(profile.skills?.join(", ") || "")
@@ -37,6 +38,10 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+
+  // Limpar telefone para comparação
+  const cleanPhone = (p: string) => p.replace(/\D/g, "")
+  const phoneChanged = cleanPhone(phone) !== cleanPhone(originalPhone)
 
   // Função para extrair primeiro e último nome
   const extractNameParts = (full: string) => {
@@ -75,7 +80,9 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
         newErrors.phone = "Telefone inválido"
       }
 
-      if (!phoneValidated) {
+      // Só obrigar validação se o telefone mudou
+      // Se não mudou e já está validado, está OK
+      if (phoneChanged && !phoneValidated) {
         newErrors.phoneValidation = "Telefone precisa ser validado"
       }
     }
@@ -97,6 +104,10 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const handlePhoneChange = (value: string) => {
     const formatted = formatPhone(value)
     setPhone(formatted)
+    // Se o telefone mudou, resetar validação
+    if (phoneChanged && phoneValidated) {
+      setPhoneValidated(false)
+    }
     if (errors.phone) {
       setErrors({ ...errors, phone: undefined })
     }
@@ -305,8 +316,8 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="font-semibold">Telefone para Contato *</Label>
-                    {phoneValidated && (
-                      <span className="text-xs text-green-600 font-semibold">✓ Validado</span>
+                    {phoneValidated && !phoneChanged && (
+                      <span className="text-xs text-green-600 font-semibold">✓ Verificado</span>
                     )}
                   </div>
                   <div className="flex gap-2 items-end">
@@ -315,7 +326,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                         id="country"
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
-                        disabled={phoneValidated}
+                        disabled={phoneValidated && !phoneChanged}
                         className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
                       >
                         {COUNTRIES.map((country) => (
@@ -331,11 +342,20 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                         placeholder="11 99123-4567"
                         value={phone}
                         onChange={(e) => handlePhoneChange(e.target.value)}
-                        disabled={phoneValidated}
+                        disabled={phoneValidated && !phoneChanged}
                         maxLength={20}
                         className={`${errors.phone ? "border-red-500" : ""}`}
                       />
-                      {!phoneValidated && phone.trim() && (
+                      {phoneValidated && !phoneChanged ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled
+                          className="whitespace-nowrap"
+                        >
+                          Verificado
+                        </Button>
+                      ) : phone.trim() && (
                         <Button
                           type="button"
                           variant="outline"

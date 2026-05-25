@@ -68,7 +68,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
-    const freeInterestsRemaining = user.free_interests_remaining || 3
+    const freeInterestsRemaining = user.free_interests_remaining ?? 3
 
     if (freeInterestsRemaining > 0) {
       return {
@@ -158,8 +158,8 @@ export async function incrementInterestCount(userEmail: string): Promise<{
       }
     }
 
-    const currentFreeRemaining = user.free_interests_remaining || 3
-    const currentTotalSent = user.total_interests_sent || 0
+    const currentFreeRemaining = user.free_interests_remaining ?? 3
+    const currentTotalSent = user.total_interests_sent ?? 0
 
     // DECREMENTAR contador de créditos gratuitos
     let newFreeRemaining = currentFreeRemaining
