@@ -159,8 +159,12 @@ export async function updateUserProfile(
   formData: FormData,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const session = await auth()
-    if (!session?.user?.email) {
+    const supabase = await createSupabaseServerClient()
+    
+    // Obter o usuário autenticado do Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user?.email) {
       return { success: false, message: "Você precisa estar autenticado" }
     }
 
@@ -178,8 +182,6 @@ export async function updateUserProfile(
           .filter(Boolean)
       : []
 
-    const supabase = await createSupabaseServerClient()
-
     const fullName = `${firstName || ""} ${lastName || ""}`.trim()
 
     // NÃO incluir phone ou phone_verified aqui
@@ -196,11 +198,11 @@ export async function updateUserProfile(
       updated_at: new Date().toISOString(),
     }
 
-    const { data, error } = await supabase.from("users").update(updateData).eq("email", session.user.email).select()
+    const { data, error } = await supabase.from("users").update(updateData).eq("email", user.email).select()
 
     if (error) {
-      console.error("Erro ao atualizar perfil:", error)
-      return { success: false, message: "Erro ao atualizar perfil" }
+      console.error("[v0] Erro ao atualizar perfil - Erro do DB:", error)
+      return { success: false, message: `Erro ao atualizar perfil: ${error.message}` }
     }
 
     revalidatePath("/profile")
@@ -208,8 +210,8 @@ export async function updateUserProfile(
 
     return { success: true, message: "Perfil atualizado com sucesso!" }
   } catch (error) {
-    console.error("Erro inesperado ao atualizar perfil:", error)
-    return { success: false, message: "Erro inesperado ao atualizar perfil" }
+    console.error("[v0] Erro inesperado ao atualizar perfil:", error)
+    return { success: false, message: `Erro inesperado: ${error instanceof Error ? error.message : "desconhecido"}` }
   }
 }
 

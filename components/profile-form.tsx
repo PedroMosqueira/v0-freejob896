@@ -63,6 +63,9 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
     if (!fullName.trim()) {
       newErrors.fullName = "Nome completo é obrigatório"
+    } else if (!lastName.trim()) {
+      // Validar se tem pelo menos dois nomes (primeiro e último)
+      newErrors.fullName = "Por favor, informe seu nome e sobrenome"
     }
 
     if (isProfessional) {
@@ -123,15 +126,17 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
     setIsSubmitting(true)
 
     try {
+      // Extrair first e last name do fullName
+      const { first, last } = extractNameParts(fullName)
+      
       const formData = new FormData()
-      formData.append("fullName", fullName)
-      formData.append("firstName", firstName)
-      formData.append("lastName", lastName)
-      // NÃO incluir telefone aqui - será validado e salvo através do modal
+      formData.append("firstName", first)
+      formData.append("lastName", last)
       formData.append("city", city)
       formData.append("bio", bio)
       formData.append("isProfessional", isProfessional.toString())
       formData.append("skills", skills)
+      formData.append("isClient", (!isProfessional).toString())
 
       await formAction(formData)
 
