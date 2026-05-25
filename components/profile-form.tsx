@@ -81,7 +81,8 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
     if (isProfessional) {
       if (!phone.trim()) {
         newErrors.phone = "Telefone é obrigatório para profissionais"
-      } else if (!phoneValid) {
+      } else if (phoneChanged && !phoneValid) {
+        // Só validar formato se o número foi mexido
         newErrors.phone = "Telefone inválido"
       }
 
