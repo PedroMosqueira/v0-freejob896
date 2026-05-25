@@ -54,6 +54,14 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }, [isOpen, currentUserEmail])
 
+  // Se abrir o dialog com telefone validado, profissional e sem créditos, mostrar planos direto
+  useEffect(() => {
+    if (isOpen && phoneValidated && isProfessional && !canExpress) {
+      console.log("[v0] Dialog opened with exhausted credits - showing upgrade modal directly")
+      setShowUpgradeModal(true)
+    }
+  }, [isOpen, phoneValidated, isProfessional, canExpress])
+
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
@@ -447,15 +455,22 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   Cancelar
                 </Button>
                 <Button
-                type="submit"
-                disabled={
-                  isSubmitting ||
-                  phoneValidationLoading ||
-                  (!phoneValidated && phoneInput.length === 0) ||
-                  (phoneValidated && isProfessional && !canExpress)
-                }
-                className="flex-1 gap-2"
-              >
+                  type="submit"
+                  disabled={
+                    isSubmitting ||
+                    phoneValidationLoading ||
+                    (!phoneValidated && phoneInput.length === 0)
+                  }
+                  onClick={(e) => {
+                    // Se telefone validado mas sem créditos, abrir modal
+                    if (phoneValidated && isProfessional && !canExpress) {
+                      e.preventDefault()
+                      setShowUpgradeModal(true)
+                      return
+                    }
+                  }}
+                  className="flex-1 gap-2"
+                >
                   {phoneValidationLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -470,6 +485,11 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Manifestando...
+                    </>
+                  ) : isProfessional && !canExpress ? (
+                    <>
+                      <Heart className="h-4 w-4" />
+                      Escolher Plano
                     </>
                   ) : (
                     <>
