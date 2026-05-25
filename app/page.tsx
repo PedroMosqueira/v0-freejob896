@@ -170,24 +170,26 @@ export default function Home() {
               {/* Spacer to align content below the professionals section */}
               <div className="md:hidden h-[33.33%]" />
               
-              {/* Content container starting from the empty area */}
-              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col">
+              {/* Text below logo on mobile - OUTSIDE the spacer div */}
+              <div className="w-full flex justify-center px-4 relative z-10 md:hidden">
+                <div className="text-center mb-8">
+                  <h1 className="text-2xl font-extrabold leading-tight">
+                    <span className="text-[#4F7CFF]" translate="no">
+                      Freejob
+                    </span>
+                    <span className="block text-[#4F7CFF] text-sm font-medium">
+                      prático e do seu jeito
+                    </span>
+                  </h1>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Solicite ou procure serviço com facilidade
+                  </p>
+                </div>
+              </div>
+              
+              {/* Form container */}
+              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col justify-end pb-4">
                 <div className="w-full max-w-sm">
-                  {/* Text below logo on mobile */}
-                  <div className="text-center mb-8 md:hidden mt-8">
-                    <h1 className="text-2xl font-extrabold leading-tight">
-                      <span className="text-[#4F7CFF]" translate="no">
-                        Freejob
-                      </span>
-                      <span className="block text-[#4F7CFF] text-sm font-medium">
-                        prático e do seu jeito
-                      </span>
-                    </h1>
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Solicite ou procure serviço com facilidade
-                    </p>
-                  </div>
-
                   {/* Desktop layout */}
                   <div className="hidden md:block text-center mb-6">
                     <div className="flex justify-center mb-4">
@@ -207,9 +209,7 @@ export default function Home() {
                   </div>
 
                   {/* Form */}
-                  <div className="flex-1 flex items-end md:items-center">
-                    <AuthForm />
-                  </div>
+                  <AuthForm />
                 </div>
               </div>
             </div>
