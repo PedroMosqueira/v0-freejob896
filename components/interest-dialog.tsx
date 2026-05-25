@@ -226,7 +226,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         needId: need.id,
         professionalEmail: currentUserEmail,
         type: "interest_only",
-        message: message || undefined,
       })
 
       // Incrementar contador de interesses
