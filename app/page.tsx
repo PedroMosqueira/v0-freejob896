@@ -171,8 +171,8 @@ export default function Home() {
               {/* Spacer to align content below the professionals section */}
               <div className="md:hidden h-[33.33%]" />
               
-              {/* Form container positioned at bottom */}
-              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col justify-end pb-4">
+              {/* Form container */}
+              <div className="w-full flex justify-center px-4 relative z-10">
                 <div className="w-full max-w-sm">
                   <p className="text-xs text-muted-foreground text-center mb-4">
                     prático e do seu jeito
