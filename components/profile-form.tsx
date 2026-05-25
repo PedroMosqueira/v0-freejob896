@@ -123,15 +123,24 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
     setIsSubmitting(true)
 
     try {
+      // Extrair first e last name do fullName
+      const { first, last } = extractNameParts(fullName)
+      
       const formData = new FormData()
-      formData.append("fullName", fullName)
-      formData.append("firstName", firstName)
-      formData.append("lastName", lastName)
-      // NÃO incluir telefone aqui - será validado e salvo através do modal
+      formData.append("firstName", first)
+      formData.append("lastName", last)
       formData.append("city", city)
       formData.append("bio", bio)
       formData.append("isProfessional", isProfessional.toString())
       formData.append("skills", skills)
+      formData.append("isClient", (!isProfessional).toString())
+
+      console.log("[v0] profile-form - Enviando FormData:", {
+        firstName: first,
+        lastName: last,
+        isProfessional,
+        skills,
+      })
 
       await formAction(formData)
 
