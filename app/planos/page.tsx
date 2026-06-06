@@ -1,4 +1,4 @@
-import { PlansContent } from "@/components/plans-content"
+import { PlansPageWrapper } from "@/components/plans-page-wrapper"
 
 export const metadata = {
   title: "Planos | Freejob",
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function PlansPage() {
-  return <PlansContent />
+  return <PlansPageWrapper />
 }
