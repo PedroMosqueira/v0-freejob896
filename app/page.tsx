@@ -168,10 +168,13 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Form container - FLEX TO BOTTOM */}
-              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col justify-end pb-6">
+              {/* Spacer to push logo area - mobile only */}
+              <div className="md:hidden h-[33.33%]" />
+              
+              {/* Text and Form container */}
+              <div className="w-full flex justify-center px-4 relative z-10 flex-1 flex flex-col md:justify-center">
                 <div className="w-full max-w-sm">
-                  <p className="text-xs text-muted-foreground text-center mb-4">
+                  <p className="text-xs text-muted-foreground text-center mb-6">
                     prático e do seu jeito
                   </p>
 
