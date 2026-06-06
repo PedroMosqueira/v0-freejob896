@@ -18,6 +18,7 @@ import { CourseBannerAd } from "./course-banner-ad"
 import { GoogleAdSense } from "./google-adsense"
 import { AFFILIATE_CONFIG } from "@/lib/affiliate-config"
 import { FilterForm } from "./filter-form"
+import { InterestsCounter } from "./interests-counter"
 
 interface SearchRequestsProps {
   initialShowMyRequests?: boolean
@@ -350,6 +351,9 @@ function SearchRequests({
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Interests Counter */}
+      <InterestsCounter />
+
       <AdWrapper freeUserOnly={isFreeUser}>
         <AffiliateSidebar />
       </AdWrapper>
