@@ -4,12 +4,6 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { PLAN_FEATURES } from "@/lib/subscription-manager"
 import type { SubscriptionPlan } from "@/lib/subscription-manager"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 export function InterestsCounter() {
   const { email, subscriptionPlan } = useAuth()
@@ -53,43 +47,35 @@ export function InterestsCounter() {
   const slots = Array.from({ length: limit }, (_, i) => i < activeInterests)
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer">
-            {/* Barra seccionada */}
-            <div className="flex gap-1">
-              {slots.map((isActive, index) => (
-                <div
-                  key={index}
-                  className={`h-3 w-2 rounded-sm transition-colors ${
-                    isActive
-                      ? isNearLimit
-                        ? "bg-orange-500"
-                        : "bg-blue-500"
-                      : "bg-gray-300 dark:bg-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-            
-            {/* Texto contador */}
-            <span className={`text-xs font-semibold whitespace-nowrap ${
-              isNearLimit
-                ? "text-orange-600 dark:text-orange-400"
-                : "text-blue-600 dark:text-blue-400"
-            }`}>
-              {activeInterests}/{limit}
-            </span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="text-sm">
-            <p className="font-semibold">Propostas Ativas: {activeInterests}/{limit}</p>
-            <p className="text-xs text-gray-400 mt-1">{planFeatures.name}</p>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div
+      title={`Propostas Ativas: ${activeInterests}/${limit} - ${planFeatures.name}`}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-help group"
+    >
+      {/* Barra seccionada */}
+      <div className="flex gap-1">
+        {slots.map((isActive, index) => (
+          <div
+            key={index}
+            className={`h-3 w-2 rounded-sm transition-colors ${
+              isActive
+                ? isNearLimit
+                  ? "bg-orange-500"
+                  : "bg-blue-500"
+                : "bg-gray-300 dark:bg-gray-600"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Texto contador */}
+      <span
+        className={`text-xs font-semibold whitespace-nowrap ${
+          isNearLimit ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
+        }`}
+      >
+        {activeInterests}/{limit}
+      </span>
+    </div>
   )
 }
+
