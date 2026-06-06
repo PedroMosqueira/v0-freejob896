@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import InstallAppButton from "./install-app-button"
 import { canUserExpressInterest } from "@/lib/interest-manager"
+import { InterestsCounter } from "@/components/interests-counter"
 
 interface SiteHeaderProps {
   onSolicitarClick?: () => void
@@ -262,6 +263,10 @@ export function SiteHeader({
                   <InstallAppButton />
 
                   <NotificationsDropdown userEmail={email} />
+                  
+                  {/* Interests Counter */}
+                  <InterestsCounter />
+                  
                   <ThemeToggle />
 
                   {/* DropdownMenu Desktop with Interesses and Pedidos */}
