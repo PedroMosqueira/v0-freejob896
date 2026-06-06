@@ -184,7 +184,7 @@ export function PlansContent({
                   </Button>
                 </Card>
               )
-              )}
+              })
             )}
           </div>
         </div>
