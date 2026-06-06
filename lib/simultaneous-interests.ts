@@ -7,28 +7,83 @@ export interface ActiveInterest {
   professional_email: string
   created_at: string
   status: string
+  cancelled_at?: string
+  cancelled_before_viewed?: boolean
+  viewed_by_requester_at?: string
 }
 
 /**
- * Get count of active (non-declined, non-accepted) interests for a professional
+ * Check if a cancelled interest should be released from simultaneous limit
+ * Release conditions:
+ * 1. Cancelled before requester viewed → release immediately
+ * 2. Cancelled after requester viewed + 2h has passed → release
+ * 3. Completed proposal → release immediately (status check only)
+ */
+async function shouldReleaseInterest(proposal: any): Promise<boolean> {
+  if (proposal.status === "completed") {
+    return true // Completed proposals don't count
+  }
+
+  if (proposal.status !== "cancelled" || !proposal.cancelled_at) {
+    return false // Not cancelled, so doesn't get released
+  }
+
+  // Case 1: Cancelled before requester viewed → release immediately
+  if (proposal.cancelled_before_viewed === true) {
+    return true
+  }
+
+  // Case 2: Cancelled after viewed - check 2h timeout
+  if (proposal.viewed_by_requester_at || proposal.cancelled_before_viewed === false) {
+    const cancelledTime = new Date(proposal.cancelled_at).getTime()
+    const now = new Date().getTime()
+    const twoHoursInMs = 2 * 60 * 60 * 1000
+
+    return now - cancelledTime >= twoHoursInMs
+  }
+
+  return false
+}
+
+/**
+ * Get count of active interests that count toward simultaneous limit
  */
 export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
   const supabase = createSupabaseServerClient()
 
-  const { data, error, count } = await supabase
+  const { data, error } = await supabase
     .from("need_proposals")
-    .select("id", { count: "exact" })
+    .select(
+      "id, status, cancelled_at, cancelled_before_viewed, viewed_by_requester_at, type"
+    )
     .eq("professional_email", professionalEmail)
-    .eq("type", "interest_only")
-    .in("status", ["pending", "viewed"]) // Active statuses
-    .limit(0)
 
   if (error) {
     console.error("[v0] Error getting active interests count:", error)
     return 0
   }
 
-  return count || 0
+  let activeCount = 0
+
+  for (const proposal of data || []) {
+    // Skip if not an interest
+    if (proposal.type !== "interest_only") {
+      continue
+    }
+
+    // Check if this proposal should be released
+    const isReleased = await shouldReleaseInterest(proposal)
+    if (isReleased) {
+      continue // Don't count released proposals
+    }
+
+    // Count all other statuses that aren't yet released
+    if (proposal.status !== "completed") {
+      activeCount++
+    }
+  }
+
+  return activeCount
 }
 
 /**
@@ -89,10 +144,11 @@ export async function getActiveInterests(professionalEmail: string): Promise<Act
 
   const { data, error } = await supabase
     .from("need_proposals")
-    .select("id, need_id, professional_email, created_at, status")
+    .select(
+      "id, need_id, professional_email, created_at, status, type, cancelled_at, cancelled_before_viewed, viewed_by_requester_at"
+    )
     .eq("professional_email", professionalEmail)
     .eq("type", "interest_only")
-    .in("status", ["pending", "viewed"])
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -100,5 +156,85 @@ export async function getActiveInterests(professionalEmail: string): Promise<Act
     return []
   }
 
-  return data || []
+  const activeInterests: ActiveInterest[] = []
+
+  for (const proposal of data || []) {
+    // Skip released proposals
+    const isReleased = await shouldReleaseInterest(proposal)
+    if (isReleased) {
+      continue
+    }
+
+    // Skip completed proposals
+    if (proposal.status === "completed") {
+      continue
+    }
+
+    activeInterests.push(proposal)
+  }
+
+  return activeInterests
+}
+
+/**
+ * Cancel an interest and mark if it was before requester viewed
+ */
+export async function cancelInterest(
+  proposalId: string,
+  beforeViewed: boolean = true,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from("need_proposals")
+    .update({
+      status: "cancelled",
+      cancelled_at: new Date().toISOString(),
+      cancelled_before_viewed: beforeViewed,
+    })
+    .eq("id", proposalId)
+
+  if (error) {
+    console.error("[v0] Error cancelling interest:", error)
+    return { success: false, error: error.message }
+  }
+
+  console.log(`[v0] Interest cancelled: ${proposalId}, before viewed: ${beforeViewed}`)
+  return { success: true }
+}
+
+/**
+ * Mark proposal as viewed by requester
+ */
+export async function markProposalAsViewed(proposalId: string): Promise<void> {
+  const supabase = createSupabaseServerClient()
+
+  await supabase
+    .from("need_proposals")
+    .update({
+      viewed_by_requester_at: new Date().toISOString(),
+    })
+    .eq("id", proposalId)
+}
+
+/**
+ * Complete a proposal (professional finished the work)
+ */
+export async function completeProposal(proposalId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = createSupabaseServerClient()
+
+  const { error } = await supabase
+    .from("need_proposals")
+    .update({
+      status: "completed",
+    })
+    .eq("id", proposalId)
+
+  if (error) {
+    console.error("[v0] Error completing proposal:", error)
+    return { success: false, error: error.message }
+  }
+
+  console.log(`[v0] Proposal completed: ${proposalId}`)
+  return { success: true }
 }
