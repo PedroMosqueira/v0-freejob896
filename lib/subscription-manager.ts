@@ -73,81 +73,131 @@ export async function getUserSubscription(userEmail: string): Promise<UserSubscr
 
   const supabase = createSupabaseServerClient()
 
-  const { data: user, error } = await supabase
+  // Get user first to get their ID
+  const { data: user, error: userError } = await supabase
     .from("users")
-    .select("subscription_plan, subscription_started_at, subscription_expires_at")
+    .select("id")
     .eq("email", userEmail)
     .single()
 
-  if (error || !user) {
-    console.error("[v0] Error getting subscription:", error)
+  if (userError || !user) {
+    console.error("[v0] Error getting user:", userError)
     return null
   }
 
+  // Get active subscription from user_subscriptions
+  const { data: subscription, error: subError } = await supabase
+    .from("user_subscriptions")
+    .select("*, subscription_plans(slug, name)")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  if (subError) {
+    // User doesn't have active subscription, return free plan
+    console.log("[v0] No active subscription, user is on free plan")
+    return {
+      plan: "free",
+      started_at: null,
+      expires_at: null,
+      is_active: false,
+    }
+  }
+
+  const planSlug = subscription.subscription_plans?.slug || "free"
   const now = new Date()
-  const expiresAt = user.subscription_expires_at ? new Date(user.subscription_expires_at) : null
-  const isActive = user.subscription_plan === "premium" && (!expiresAt || expiresAt > now)
+  const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null
+  const isActive = subscription.status === "active" && (!currentPeriodEnd || currentPeriodEnd > now)
 
   return {
-    plan: (user.subscription_plan as SubscriptionPlan) || "free",
-    started_at: user.subscription_started_at,
-    expires_at: user.subscription_expires_at,
+    plan: (planSlug as SubscriptionPlan) || "free",
+    started_at: subscription.current_period_start,
+    expires_at: subscription.current_period_end,
     is_active: isActive,
   }
 }
 
-export async function upgradeToPremium(userEmail: string, durationMonths = 1): Promise<boolean> {
-  console.log("[v0] Upgrading to premium:", userEmail, "for", durationMonths, "months")
+export async function upgradeToPlan(
+  userEmail: string,
+  planSlug: SubscriptionPlan,
+  billingCycle: "monthly" | "annual" = "monthly",
+): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
+  console.log("[v0] Upgrading user to plan:", userEmail, planSlug, billingCycle)
 
   const supabase = createSupabaseServerClient()
 
-  const now = new Date()
-  const expiresAt = new Date()
-  expiresAt.setMonth(expiresAt.getMonth() + durationMonths)
+  try {
+    // Get user ID
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", userEmail)
+      .single()
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      subscription_plan: "agencia",
-      subscription_started_at: now.toISOString(),
-      subscription_expires_at: expiresAt.toISOString(),
-    })
-    .eq("email", userEmail)
+    if (userError || !user) {
+      return { success: false, error: "User not found" }
+    }
 
-  if (error) {
-    console.error("[v0] Error upgrading to premium:", error)
-    return false
+    // Get plan ID from subscription_plans
+    const { data: plan, error: planError } = await supabase
+      .from("subscription_plans")
+      .select("id")
+      .eq("slug", planSlug)
+      .single()
+
+    if (planError || !plan) {
+      return { success: false, error: "Plan not found" }
+    }
+
+    // Create subscription record
+    const now = new Date()
+    const currentPeriodEnd = new Date()
+    currentPeriodEnd.setMonth(billingCycle === "monthly" ? currentPeriodEnd.getMonth() + 1 : currentPeriodEnd.getMonth() + 12)
+
+    const { data: subscription, error: createError } = await supabase
+      .from("user_subscriptions")
+      .insert({
+        user_id: user.id,
+        plan_id: plan.id,
+        status: "active",
+        billing_cycle: billingCycle,
+        current_period_start: now.toISOString(),
+        current_period_end: currentPeriodEnd.toISOString(),
+      })
+      .select()
+      .single()
+
+    if (createError) {
+      console.error("[v0] Error creating subscription:", createError)
+      return { success: false, error: createError.message }
+    }
+
+    // Also update users table for quick access (denormalization)
+    await supabase
+      .from("users")
+      .update({ subscription_plan: planSlug })
+      .eq("id", user.id)
+
+    console.log("[v0] Successfully upgraded to", planSlug, "plan")
+    return { success: true, subscriptionId: subscription.id }
+  } catch (error) {
+    console.error("[v0] Error upgrading plan:", error)
+    return { success: false, error: String(error) }
   }
+}
 
-  console.log("[v0] Successfully upgraded to agencia plan")
-  return true
+export async function upgradeToPremium(userEmail: string, durationMonths = 1): Promise<boolean> {
+  console.log("[v0] Upgrading to premium (agencia):", userEmail, "for", durationMonths, "months")
+  const result = await upgradeToPlan(userEmail, "agencia", "monthly")
+  return result.success
 }
 
 export async function upgradeToSimples(userEmail: string, durationMonths = 1): Promise<boolean> {
   console.log("[v0] Upgrading to simples:", userEmail, "for", durationMonths, "months")
-
-  const supabase = createSupabaseServerClient()
-
-  const now = new Date()
-  const expiresAt = new Date()
-  expiresAt.setMonth(expiresAt.getMonth() + durationMonths)
-
-  const { error } = await supabase
-    .from("users")
-    .update({
-      subscription_plan: "simples",
-      subscription_started_at: now.toISOString(),
-      subscription_expires_at: expiresAt.toISOString(),
-    })
-    .eq("email", userEmail)
-
-  if (error) {
-    console.error("[v0] Error upgrading to simples:", error)
-    return false
-  }
-
-  console.log("[v0] Successfully upgraded to simples plan")
-  return true
+  const result = await upgradeToPlan(userEmail, "simples", "monthly")
+  return result.success
 }
 
 export async function cancelSubscription(userEmail: string): Promise<boolean> {
@@ -155,21 +205,57 @@ export async function cancelSubscription(userEmail: string): Promise<boolean> {
 
   const supabase = createSupabaseServerClient()
 
-  const { error } = await supabase
-    .from("users")
-    .update({
-      subscription_plan: "free",
-      subscription_expires_at: null,
-    })
-    .eq("email", userEmail)
+  try {
+    // Get user ID
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", userEmail)
+      .single()
 
-  if (error) {
+    if (userError || !user) {
+      console.error("[v0] User not found")
+      return false
+    }
+
+    // Get active subscription
+    const { data: subscription, error: getError } = await supabase
+      .from("user_subscriptions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (getError || !subscription) {
+      console.log("[v0] No active subscription to cancel")
+      return false
+    }
+
+    // Cancel subscription
+    const { error: cancelError } = await supabase
+      .from("user_subscriptions")
+      .update({ status: "canceled" })
+      .eq("id", subscription.id)
+
+    if (cancelError) {
+      console.error("[v0] Error canceling subscription:", cancelError)
+      return false
+    }
+
+    // Reset user plan to free
+    await supabase
+      .from("users")
+      .update({ subscription_plan: "free" })
+      .eq("id", user.id)
+
+    console.log("[v0] Successfully canceled subscription")
+    return true
+  } catch (error) {
     console.error("[v0] Error canceling subscription:", error)
     return false
   }
-
-  console.log("[v0] Successfully canceled subscription")
-  return true
 }
 
 export function canPerformAction(
