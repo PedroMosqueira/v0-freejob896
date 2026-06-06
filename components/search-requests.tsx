@@ -356,7 +356,7 @@ function SearchRequests({
 
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">{getTitle()}</h1>
-        <div className="flex gap-2">
+        <div className="hidden md:flex gap-2">
           <button
             onClick={() => {
               setShowMyRequests(false)

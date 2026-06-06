@@ -459,7 +459,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   disabled={
                     isSubmitting ||
                     phoneValidationLoading ||
-                    (!phoneValidated && phoneInput.length === 0)
+                    (!phoneValidated && phoneInput.length === 0) ||
+                    (!phoneValidated && !isProfessionalCheckbox)
                   }
                   onClick={(e) => {
                     // Se telefone validado mas sem créditos, abrir modal
