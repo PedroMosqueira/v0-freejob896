@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { Card } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
 import { PLAN_FEATURES } from "@/lib/subscription-manager"
 import type { SubscriptionPlan } from "@/lib/subscription-manager"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 export function InterestsCounter() {
   const { email, subscriptionPlan } = useAuth()
@@ -30,58 +34,62 @@ export function InterestsCounter() {
     }
 
     fetchActiveInterests()
-    const interval = setInterval(fetchActiveInterests, 30000) // Atualiza a cada 30s
+    const interval = setInterval(fetchActiveInterests, 30000)
     return () => clearInterval(interval)
   }, [email])
-
-  if (loading) {
-    return (
-      <Card className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border border-blue-200 dark:border-blue-800">
-        <div className="text-sm text-gray-600 dark:text-gray-400">Carregando...</div>
-      </Card>
-    )
-  }
 
   const plan = (subscriptionPlan || "free") as SubscriptionPlan
   const planFeatures = PLAN_FEATURES[plan]
   const limit = planFeatures.limits.simultaneous_interests
-  const percentageUsed = limit > 0 ? (activeInterests / limit) * 100 : 0
+
+  if (loading || limit === -1) {
+    return null // Não mostrar para planos ilimitados ou enquanto carrega
+  }
+
+  const percentageUsed = (activeInterests / limit) * 100
   const isNearLimit = percentageUsed >= 75
 
-  return (
-    <Card className={`p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border ${
-      isNearLimit ? "border-orange-300 dark:border-orange-700" : "border-blue-200 dark:border-blue-800"
-    }`}>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-gray-900 dark:text-white">
-            Propostas Ativas
-          </h3>
-          <span className={`text-lg font-bold ${
-            isNearLimit ? "text-orange-600 dark:text-orange-400" : "text-blue-600 dark:text-blue-400"
-          }`}>
-            {activeInterests} / {limit === -1 ? "∞" : limit}
-          </span>
-        </div>
-        
-        {limit > 0 && (
-          <>
-            <Progress 
-              value={Math.min(percentageUsed, 100)} 
-              className={isNearLimit ? "bg-orange-100" : "bg-blue-100"}
-            />
-            {isNearLimit && (
-              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                ⚠️ Você está chegando ao limite de propostas simultâneas
-              </p>
-            )}
-          </>
-        )}
+  // Criar array de slots para visualizar seccionado
+  const slots = Array.from({ length: limit }, (_, i) => i < activeInterests)
 
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          Plano: <span className="font-semibold">{planFeatures.name}</span>
-        </div>
-      </div>
-    </Card>
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer">
+            {/* Barra seccionada */}
+            <div className="flex gap-1">
+              {slots.map((isActive, index) => (
+                <div
+                  key={index}
+                  className={`h-3 w-2 rounded-sm transition-colors ${
+                    isActive
+                      ? isNearLimit
+                        ? "bg-orange-500"
+                        : "bg-blue-500"
+                      : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {/* Texto contador */}
+            <span className={`text-xs font-semibold whitespace-nowrap ${
+              isNearLimit
+                ? "text-orange-600 dark:text-orange-400"
+                : "text-blue-600 dark:text-blue-400"
+            }`}>
+              {activeInterests}/{limit}
+            </span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="text-sm">
+            <p className="font-semibold">Propostas Ativas: {activeInterests}/{limit}</p>
+            <p className="text-xs text-gray-400 mt-1">{planFeatures.name}</p>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
