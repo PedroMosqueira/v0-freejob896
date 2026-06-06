@@ -85,17 +85,18 @@ export function PlansContent({
         </div>
 
         {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          {isLoading ? (
-            <div className="col-span-full text-center text-slate-500 dark:text-slate-400">
-              Carregando planos...
-            </div>
-          ) : activePlans.length === 0 ? (
-            <div className="col-span-full text-center text-slate-500 dark:text-slate-400">
-              Nenhum plano disponível no momento
-            </div>
-          ) : (
-            activePlans.map((plan, index) => {
+        <div className="w-full overflow-x-auto mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 min-w-full md:min-w-0">
+            {isLoading ? (
+              <div className="col-span-full text-center text-slate-500 dark:text-slate-400">
+                Carregando planos...
+              </div>
+            ) : activePlans.length === 0 ? (
+              <div className="col-span-full text-center text-slate-500 dark:text-slate-400">
+                Nenhum plano disponível no momento
+              </div>
+            ) : (
+              activePlans.map((plan, index) => {
               const price = getPrice(plan)
               const savings = getSavings(plan)
               const isCurrentPlan = currentPlan === plan.slug
@@ -104,11 +105,11 @@ export function PlansContent({
               return (
                 <Card
                   key={plan.id}
-                  className={`relative flex flex-col p-8 transition-all ${
+                  className={`relative flex flex-col p-4 sm:p-6 md:p-8 transition-all ${
                     isPopular
-                      ? "ring-2 ring-blue-500 dark:ring-blue-400 transform scale-105"
+                      ? "ring-2 ring-blue-500 dark:ring-blue-400 md:transform md:scale-105"
                       : "hover:shadow-lg"
-                  } ${isCurrentPlan ? "ring-2 ring-green-500 dark:ring-green-400" : ""}`}
+                  } ${isCurrentPlan ? "ring-2 ring-green-500 dark:ring-green-400" : ""} min-w-[320px] md:min-w-0`}
                 >
                   {isPopular && (
                     <Badge className="absolute top-4 right-4 bg-blue-500 text-white dark:bg-blue-600">
@@ -183,8 +184,9 @@ export function PlansContent({
                   </Button>
                 </Card>
               )
-            })
-          )}
+              })
+            )}
+          </div>
         </div>
 
         {/* FAQ Section */}
