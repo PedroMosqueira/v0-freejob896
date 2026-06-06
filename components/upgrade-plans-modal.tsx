@@ -67,21 +67,21 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-2xl sm:max-w-3xl lg:max-w-5xl w-[95vw] sm:w-full">
         <DialogHeader>
           <div className="space-y-2">
-            <DialogTitle className="text-2xl">Você usou suas propostas gratuitas</DialogTitle>
-            <DialogDescription className="text-base">
+            <DialogTitle className="text-xl sm:text-2xl">Você usou suas propostas gratuitas</DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Escolha um plano abaixo para continuar manifestando interesse em serviços
             </DialogDescription>
           </div>
           
           {/* Alert Box */}
-          <div className="mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex gap-3">
+          <div className="mt-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4 flex gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-900 dark:text-amber-200">Créditos esgotados</p>
-              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+              <p className="font-semibold text-sm sm:text-base text-amber-900 dark:text-amber-200">Créditos esgotados</p>
+              <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-300 mt-1">
                 Você manifestou seus 3 interesses gratuitos. Assine um plano agora para continuar!
               </p>
             </div>
@@ -89,7 +89,7 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
         </DialogHeader>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 my-6">
           {displayPlans.map((plan) => (
             <Card
               key={plan.id}
@@ -108,21 +108,21 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
               )}
 
               <div className="pt-2">
-                <h3 className="font-bold text-lg mb-1">{plan.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                <h3 className="font-bold text-base sm:text-lg mb-1">{plan.name}</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
                   {plan.description}
                 </p>
 
                 <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-baseline">
-                    <span className="text-3xl font-bold">R$ {plan.price_monthly.toFixed(2)}</span>
-                    <span className="text-gray-600 dark:text-gray-400 text-sm ml-1">/mês</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl sm:text-3xl font-bold">R$ {plan.price_monthly.toFixed(2)}</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">/mês</span>
                   </div>
                 </div>
 
-                <ul className="space-y-3 mb-6 flex-1">
+                <ul className="space-y-2 sm:space-y-3 mb-6 flex-1">
                   {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm">
+                    <li key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                       <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700 dark:text-gray-300">{feature}</span>
                     </li>
@@ -131,7 +131,7 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
 
                 <Button 
                   asChild 
-                  className={`w-full font-semibold ${
+                  className={`w-full font-semibold text-sm sm:text-base py-2 sm:py-2.5 ${
                     plan.popular
                       ? "bg-cyan-500 hover:bg-cyan-600 text-white"
                       : "bg-gray-800 hover:bg-gray-900 text-white dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900"
@@ -146,7 +146,7 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
 
         {/* Footer Actions */}
         <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
-          <Button variant="outline" onClick={onClose} className="flex-1">
+          <Button variant="outline" onClick={onClose} className="flex-1 text-sm sm:text-base">
             Continuar Depois
           </Button>
         </div>
