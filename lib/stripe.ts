@@ -42,3 +42,54 @@ export function toCents(amount: number): number {
 export function fromCents(cents: number): number {
   return cents / 100
 }
+
+// Criar sessão de checkout para subscrição
+export async function createSubscriptionCheckoutSession(
+  productId: string,
+  userEmail: string,
+  successUrl: string,
+  cancelUrl: string,
+) {
+  if (!isStripeConfigured()) {
+    throw new Error("Stripe não está configurado")
+  }
+
+  const { getProductById } = await import("./stripe-products")
+  const product = getProductById(productId)
+
+  if (!product) {
+    throw new Error(`Produto "${productId}" não encontrado`)
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "brl",
+          product_data: {
+            name: product.name,
+            description: product.description,
+          },
+          unit_amount: product.priceInCents,
+          recurring: {
+            interval: "month",
+            interval_count: 1,
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "subscription",
+    customer_email: userEmail,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata: {
+      product_id: productId,
+      plan_slug: product.slug,
+    },
+  })
+
+  return session
+}
+
