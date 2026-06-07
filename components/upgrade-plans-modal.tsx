@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, AlertCircle } from "lucide-react"
 import { useState } from "react"
-import { startSubscriptionCheckout } from "@/app/actions/stripe-checkout"
 
 interface Plan {
   id: string
@@ -71,9 +70,25 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [] }: Up
     setError(null)
 
     try {
-      const result = await startSubscriptionCheckout(plan.slug || plan.id, userEmail)
-      if (result.url) {
-        window.location.href = result.url
+      const response = await fetch("/api/subscriptions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userEmail,
+          planSlug: plan.slug || plan.id,
+          billingCycle: "monthly",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao iniciar checkout")
+        return
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
       } else {
         setError("Erro ao iniciar checkout")
       }
