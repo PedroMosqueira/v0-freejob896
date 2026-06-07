@@ -63,7 +63,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Get base URL for redirect
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    let baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+    
+    // Validate base URL
+    if (!baseUrl || baseUrl.trim() === '') {
+      console.warn("[v0] NEXT_PUBLIC_SITE_URL is not set, attempting to use request origin")
+      // Use request origin as fallback
+      const requestUrl = request.nextUrl.clone()
+      baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+    }
+    
+    // Final validation - ensure URL has scheme
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`
+    }
+    
     console.log("[v0] Base URL:", baseUrl)
     
     // Create Stripe checkout session
