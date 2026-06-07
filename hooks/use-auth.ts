@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export type SubscriptionPlan = "free" | "simples" | "agencia"
@@ -21,7 +21,8 @@ export function useAuth() {
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [session, setSession] = useState<any>(null)
 
-  const supabase = createSupabaseBrowserClient()
+  const supabaseRef = useRef(createSupabaseBrowserClient())
+  const supabase = supabaseRef.current
 
   // Fetch subscription data for user
   const fetchSubscription = useCallback(async (userId: string, userEmail: string) => {
