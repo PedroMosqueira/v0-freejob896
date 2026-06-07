@@ -50,17 +50,23 @@ export async function createSubscriptionCheckoutSession(
   successUrl: string,
   cancelUrl: string,
 ) {
+  console.log("[v0] createSubscriptionCheckoutSession called with:", { productId, userEmail, successUrl, cancelUrl })
+  
   if (!isStripeConfigured()) {
+    console.error("[v0] Stripe is not configured. STRIPE_SECRET_KEY is missing.")
     throw new Error("Stripe não está configurado")
   }
 
+  console.log("[v0] Stripe is configured, fetching product...")
   const { getProductById } = await import("./stripe-products")
   const product = getProductById(productId)
 
+  console.log("[v0] Product found:", product)
   if (!product) {
     throw new Error(`Produto "${productId}" não encontrado`)
   }
 
+  console.log("[v0] Creating Stripe checkout session with product:", product)
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     line_items: [
@@ -90,6 +96,7 @@ export async function createSubscriptionCheckoutSession(
     },
   })
 
+  console.log("[v0] Stripe checkout session created successfully:", session.id)
   return session
 }
 
