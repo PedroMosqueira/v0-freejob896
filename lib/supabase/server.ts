@@ -136,5 +136,13 @@ export async function createClient() {
 }
 
 export async function createSupabaseServerClient() {
-  return createClient()
+  console.log("[v0] Creating Supabase server client")
+  try {
+    const client = await createClient()
+    console.log("[v0] Supabase client created successfully")
+    return client
+  } catch (error) {
+    console.error("[v0] Error creating Supabase client:", error)
+    throw error
+  }
 }
