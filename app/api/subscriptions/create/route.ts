@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { startSubscriptionCheckout } from "@/app/actions/stripe-checkout"
+import { createSubscriptionCheckoutSession } from "@/lib/stripe"
 import { getProductBySlug } from "@/lib/stripe-products"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -50,18 +50,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 })
     }
 
+    // Get base URL for redirect
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    
     // Create Stripe checkout session
-    const checkoutResult = await startSubscriptionCheckout(
+    const session = await createSubscriptionCheckoutSession(
       product.id,
-      email
+      email,
+      `${baseUrl}/planos?session_id={CHECKOUT_SESSION_ID}`,
+      `${baseUrl}/planos?canceled=true`,
     )
 
-    console.log("[v0] Stripe checkout session created:", checkoutResult.sessionId)
+    console.log("[v0] Stripe checkout session created:", session.id)
 
     return NextResponse.json({
       success: true,
-      checkoutUrl: checkoutResult.url,
-      sessionId: checkoutResult.sessionId,
+      checkoutUrl: session.url,
+      sessionId: session.id,
       message: "Redirecting to payment",
     })
   } catch (error) {
