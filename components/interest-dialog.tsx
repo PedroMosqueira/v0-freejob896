@@ -508,6 +508,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       <UpgradePlansModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
+        userEmail={currentUserEmail}
       />
     </>
   )
