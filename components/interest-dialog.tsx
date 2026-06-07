@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/hooks/use-auth"
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -24,6 +25,7 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
+  const { subscriptionPlan, isSubscribed } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -55,12 +57,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   }, [isOpen, currentUserEmail])
 
   // Se abrir o dialog com telefone validado, profissional e sem créditos, mostrar planos direto
+  // PORÉM, se tem inscrição ativa, NÃO mostrar modal - o usuário pode continuar
   useEffect(() => {
-    if (isOpen && phoneValidated && isProfessional && !canExpress) {
-      console.log("[v0] Dialog opened with exhausted credits - showing upgrade modal directly")
+    if (isOpen && phoneValidated && isProfessional && !canExpress && !isSubscribed) {
+      console.log("[v0] Dialog opened with exhausted credits and NO subscription - showing upgrade modal")
       setShowUpgradeModal(true)
     }
-  }, [isOpen, phoneValidated, isProfessional, canExpress])
+  }, [isOpen, phoneValidated, isProfessional, canExpress, isSubscribed])
 
   const checkPermission = async () => {
     setIsCheckingPermission(true)
