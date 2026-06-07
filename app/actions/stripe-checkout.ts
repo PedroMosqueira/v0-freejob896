@@ -12,7 +12,7 @@ export async function startSubscriptionCheckout(
 
   try {
     // Validar que o usuário existe
-    const supabase = createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, email')
