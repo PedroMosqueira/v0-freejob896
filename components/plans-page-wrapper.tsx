@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
-import { startSubscriptionCheckout } from "@/app/actions/stripe-checkout"
 
 interface Plan {
   id: string
@@ -62,9 +61,25 @@ export function PlansPageWrapper() {
     setError(null)
 
     try {
-      const result = await startSubscriptionCheckout(plan.slug, email)
-      if (result.url) {
-        window.location.href = result.url
+      const response = await fetch("/api/subscriptions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          planSlug: plan.slug,
+          billingCycle: "monthly",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao iniciar checkout")
+        return
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
       } else {
         setError("Erro ao iniciar checkout")
       }
