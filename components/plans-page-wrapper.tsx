@@ -24,7 +24,6 @@ export function PlansPageWrapper() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscribing, setIsSubscribing] = useState(false)
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly")
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -34,7 +33,11 @@ export function PlansPageWrapper() {
         const data = await response.json()
         
         if (response.ok) {
-          setPlans(data.plans || [])
+          // Filter to show only paid plans (simples and agencia)
+          const paidPlans = (data.plans || []).filter((plan: Plan) => 
+            plan.slug === "simples" || plan.slug === "agencia"
+          )
+          setPlans(paidPlans)
         } else {
           setError("Erro ao carregar planos")
         }
@@ -92,26 +95,6 @@ export function PlansPageWrapper() {
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center items-center gap-4 mb-12">
-          <span className={`text-sm font-medium ${billingCycle === "monthly" ? "text-foreground" : "text-muted-foreground"}`}>
-            Mensal
-          </span>
-          <button
-            onClick={() => setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly")}
-            className="relative inline-flex h-8 w-16 items-center rounded-full bg-gray-300 dark:bg-gray-600 transition-colors"
-          >
-            <span
-              className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                billingCycle === "annual" ? "translate-x-8" : "translate-x-1"
-              }`}
-            />
-          </button>
-          <span className={`text-sm font-medium ${billingCycle === "annual" ? "text-foreground" : "text-muted-foreground"}`}>
-            Anual
-          </span>
-        </div>
-
         {/* Error message */}
         {error && (
           <div className="mb-8 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-200">
@@ -120,7 +103,7 @@ export function PlansPageWrapper() {
         )}
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}
@@ -147,7 +130,7 @@ export function PlansPageWrapper() {
                 {/* Price */}
                 <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">R$ {(billingCycle === "annual" ? plan.price_annual : plan.price_monthly).toFixed(2)}</span>
+                    <span className="text-4xl font-bold">R$ {plan.price_monthly.toFixed(2)}</span>
                     <span className="text-muted-foreground">/mês</span>
                   </div>
                 </div>
@@ -177,25 +160,6 @@ export function PlansPageWrapper() {
               </Button>
             </Card>
           ))}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-20 max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Dúvidas Frequentes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-card p-6 rounded-lg border border-gray-200 dark:border-gray-800">
-              <h3 className="font-semibold mb-2">Posso cancelar a qualquer momento?</h3>
-              <p className="text-sm text-muted-foreground">
-                Sim, você pode cancelar sua assinatura a qualquer momento. Não há taxas de cancelamento.
-              </p>
-            </div>
-            <div className="bg-card p-6 rounded-lg border border-gray-200 dark:border-gray-800">
-              <h3 className="font-semibold mb-2">Existe período de teste gratuito?</h3>
-              <p className="text-sm text-muted-foreground">
-                Todos os usuários recebem 3 propostas gratuitas para começar. Após isso, você pode escolher um plano.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
