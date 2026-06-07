@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
 import { useAuth } from "@/hooks/use-auth"
 import NeedDetailsDialog from "./need-details-dialog"
-import { InterestDialog } from "./interest-dialog"
+import InterestDialog from "./interest-dialog"
 import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
 import { AffiliateSidebar, AffiliateSidebarVertical } from "@/components/affiliate-sidebar"
