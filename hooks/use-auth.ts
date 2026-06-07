@@ -44,7 +44,15 @@ export function useAuth() {
       }
 
       if (subscriptionData) {
-        console.log("[v0] ✅ Active subscription found:", subscriptionData.plan_id)
+        // Validate plan_id exists
+        if (!subscriptionData.plan_id) {
+          console.warn("[v0] Subscription found but plan_id is null")
+          setSubscriptionPlan("free")
+          setSubscription(null)
+          return
+        }
+
+        console.log("[v0] ✅ Active subscription found with plan_id:", subscriptionData.plan_id)
         
         // Get plan slug from plan_id
         const { data: planData, error: planError } = await supabase
@@ -54,7 +62,7 @@ export function useAuth() {
           .single()
 
         if (planError || !planData) {
-          console.error("[v0] Error fetching plan details:", planError)
+          console.error("[v0] Error fetching plan details:", planError?.message)
           setSubscriptionPlan("free")
           setSubscription(null)
           return
@@ -73,6 +81,8 @@ export function useAuth() {
 
   // Verificar sessão ao carregar o componente
   useEffect(() => {
+    let isMounted = true
+
     const checkSession = async () => {
       try {
         console.log("[v0] Verificando sessão Supabase...")
@@ -80,6 +90,8 @@ export function useAuth() {
           data: { session },
           error,
         } = await supabase.auth.getSession()
+
+        if (!isMounted) return
 
         if (error) {
           console.error("[v0] Erro ao obter sessão:", error)
@@ -93,22 +105,28 @@ export function useAuth() {
           setSession(session)
           
           // Fetch subscription data
-          await fetchSubscription(session.user.id, session.user.email)
+          if (isMounted) {
+            await fetchSubscription(session.user.id, session.user.email)
+          }
         } else {
           console.log("[v0] ❌ Sem sessão")
+          if (isMounted) {
+            setEmail(null)
+            setSession(null)
+            setSubscriptionPlan("free")
+            setSubscription(null)
+            setIsLoading(false)
+          }
+        }
+      } catch (error) {
+        console.error("[v0] Erro ao verificar sessão:", error)
+        if (isMounted) {
           setEmail(null)
           setSession(null)
           setSubscriptionPlan("free")
           setSubscription(null)
+          setIsLoading(false)
         }
-      } catch (error) {
-        console.error("[v0] Erro ao verificar sessão:", error)
-        setEmail(null)
-        setSession(null)
-        setSubscriptionPlan("free")
-        setSubscription(null)
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -118,6 +136,8 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return
+      
       console.log("[v0] Auth state change:", event, session?.user?.email)
 
       if (session?.user?.email) {
@@ -133,6 +153,7 @@ export function useAuth() {
     })
 
     return () => {
+      isMounted = false
       subscription?.unsubscribe()
     }
   }, [supabase, fetchSubscription])
