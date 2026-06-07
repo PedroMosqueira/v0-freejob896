@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     // Teste 1: Enviar email de recuperação de senha
     if (testType === "resend" || testType === "all") {
-      const baseUrl = "https://freejob.online"
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
       console.log("[v0] Base URL para redirecionamento:", baseUrl)
 
       console.log("[v0] Iniciando resetPasswordForEmail...")
