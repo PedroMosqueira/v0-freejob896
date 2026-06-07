@@ -32,9 +32,17 @@ export function InterestsCounter() {
     return () => clearInterval(interval)
   }, [email])
 
-  const plan = (subscriptionPlan || "free") as SubscriptionPlan
-  const planFeatures = PLAN_FEATURES[plan]
-  const limit = planFeatures.limits.simultaneous_interests
+  // Get plan features based on subscription
+  let limit = -1 // unlimited by default
+  let planName = "Grátis"
+
+  if (subscriptionPlan === "simples") {
+    limit = 2
+    planName = "Plano Simples"
+  } else if (subscriptionPlan === "agencia") {
+    limit = 8
+    planName = "Plano Agência"
+  }
 
   if (loading || limit === -1) {
     return null // Não mostrar para planos ilimitados ou enquanto carrega
@@ -48,7 +56,7 @@ export function InterestsCounter() {
 
   return (
     <div
-      title={`Propostas Ativas: ${activeInterests}/${limit} - ${planFeatures.name}`}
+      title={`Propostas Ativas: ${activeInterests}/${limit} - ${planName}`}
       className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-help group"
     >
       {/* Barra seccionada */}
