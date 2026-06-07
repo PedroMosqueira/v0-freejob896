@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Creating subscription:", { email, planSlug, billingCycle })
 
-    const supabase = createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
 
     // Validate user exists
     const { data: user, error: userError } = await supabase
