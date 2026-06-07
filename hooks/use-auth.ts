@@ -79,6 +79,7 @@ export function useAuth() {
   // Check session only on mount
   useEffect(() => {
     isMountedRef.current = true
+    let timeoutId: NodeJS.Timeout | null = null
 
     const checkSession = async () => {
       try {
@@ -88,7 +89,9 @@ export function useAuth() {
 
         if (error || !session?.user?.email) {
           console.log("[v0] No session found")
-          setIsLoading(false)
+          if (isMountedRef.current) {
+            setIsLoading(false)
+          }
           return
         }
 
@@ -109,6 +112,14 @@ export function useAuth() {
         }
       }
     }
+
+    // Set timeout to force loading to false after 5 seconds
+    timeoutId = setTimeout(() => {
+      if (isMountedRef.current) {
+        console.log("[v0] Auth check timeout - forcing loading to false")
+        setIsLoading(false)
+      }
+    }, 5000)
 
     checkSession()
 
@@ -134,6 +145,7 @@ export function useAuth() {
 
     return () => {
       isMountedRef.current = false
+      if (timeoutId) clearTimeout(timeoutId)
       subscription?.unsubscribe()
     }
   }, [supabase, fetchSubscription])
