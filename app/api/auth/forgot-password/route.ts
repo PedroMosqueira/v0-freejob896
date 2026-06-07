@@ -31,8 +31,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Usar HTTPS obrigatoriamente com o domínio correto
-    const redirectUrl = "https://freejob.online/auth/callback"
+    // Use NEXT_PUBLIC_SITE_URL for dynamic URL based on environment
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const redirectUrl = `${baseUrl}/auth/callback`
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,
