@@ -28,10 +28,17 @@ export function PlansPageWrapper() {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
+        console.log("[v0] Fetching plans from /api/plans...")
         const response = await fetch("/api/plans")
+        const data = await response.json()
+        console.log("[v0] API response status:", response.status)
+        console.log("[v0] API response data:", data)
+        
         if (response.ok) {
-          const data = await response.json()
+          console.log("[v0] Plans fetched successfully:", data.plans)
           setPlans(data.plans || [])
+        } else {
+          console.error("[v0] API returned error:", data)
         }
       } catch (error) {
         console.error("[v0] Error fetching plans:", error)
