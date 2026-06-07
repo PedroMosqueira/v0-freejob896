@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { PlansContent } from "./plans-content"
 import { useAuth } from "@/hooks/use-auth"
-import type { SubscriptionPlan } from "@/lib/subscription-manager"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Check } from "lucide-react"
+import { startSubscriptionCheckout } from "@/app/actions/stripe-checkout"
 
 interface Plan {
   id: string
@@ -18,30 +20,27 @@ interface Plan {
 }
 
 export function PlansPageWrapper() {
-  const router = useRouter()
-  const { email, subscriptionPlan } = useAuth()
+  const { email } = useAuth()
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscribing, setIsSubscribing] = useState(false)
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly")
+  const [error, setError] = useState<string | null>(null)
 
-  // Fetch plans on mount
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        console.log("[v0] Fetching plans from /api/plans...")
         const response = await fetch("/api/plans")
         const data = await response.json()
-        console.log("[v0] API response status:", response.status)
-        console.log("[v0] API response data:", data)
         
         if (response.ok) {
-          console.log("[v0] Plans fetched successfully:", data.plans)
           setPlans(data.plans || [])
         } else {
-          console.error("[v0] API returned error:", data)
+          setError("Erro ao carregar planos")
         }
-      } catch (error) {
-        console.error("[v0] Error fetching plans:", error)
+      } catch (err) {
+        console.error("[v0] Error fetching plans:", err)
+        setError("Erro ao carregar planos")
       } finally {
         setIsLoading(false)
       }
@@ -50,62 +49,155 @@ export function PlansPageWrapper() {
     fetchPlans()
   }, [])
 
-  const handleSelectPlan = async (plan: Plan, billingCycle: "monthly" | "annual") => {
+  const handleSubscribe = async (plan: Plan) => {
     if (!email) {
-      console.error("[v0] User not authenticated")
-      router.push("/auth/login")
+      setError("Você precisa estar autenticado")
       return
     }
 
     setIsSubscribing(true)
+    setError(null)
 
     try {
-      console.log("[v0] Subscribing to plan:", plan.slug, billingCycle)
-
-      // Call subscribe API
-      const response = await fetch("/api/subscriptions/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          planSlug: plan.slug,
-          billingCycle,
-        }),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        alert(`Erro ao se inscrever: ${error.error || "Tente novamente"}`)
-        return
+      const result = await startSubscriptionCheckout(plan.slug, email)
+      if (result.url) {
+        window.location.href = result.url
+      } else {
+        setError("Erro ao iniciar checkout")
       }
-
-      const result = await response.json()
-      console.log("[v0] Subscription created:", result)
-
-      // Redirect based on payment method
-      if (result.checkoutUrl) {
-        // Stripe checkout
-        window.location.href = result.checkoutUrl
-      } else if (result.success) {
-        // Direct subscription (for testing/free plans)
-        alert("Parabéns! Você se inscreveu com sucesso!")
-        router.push("/dashboard")
-        router.refresh()
-      }
-    } catch (error) {
-      console.error("[v0] Error subscribing:", error)
-      alert("Erro ao processar sua inscrição. Tente novamente.")
+    } catch (err) {
+      console.error("[v0] Error starting checkout:", err)
+      setError("Erro ao processar sua inscrição")
     } finally {
       setIsSubscribing(false)
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">Carregando planos...</div>
+      </div>
+    )
+  }
+
   return (
-    <PlansContent
-      plans={plans}
-      currentPlan={subscriptionPlan}
-      onSelectPlan={handleSelectPlan}
-      isLoading={isLoading || isSubscribing}
-    />
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Planos de Assinatura</h1>
+          <p className="text-lg text-muted-foreground">
+            Escolha o plano que melhor se adapta às suas necessidades
+          </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center items-center gap-4 mb-12">
+          <span className={`text-sm font-medium ${billingCycle === "monthly" ? "text-foreground" : "text-muted-foreground"}`}>
+            Mensal
+          </span>
+          <button
+            onClick={() => setBillingCycle(billingCycle === "monthly" ? "annual" : "monthly")}
+            className="relative inline-flex h-8 w-16 items-center rounded-full bg-gray-300 dark:bg-gray-600 transition-colors"
+          >
+            <span
+              className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                billingCycle === "annual" ? "translate-x-8" : "translate-x-1"
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${billingCycle === "annual" ? "text-foreground" : "text-muted-foreground"}`}>
+            Anual
+          </span>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-8 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-200">
+            {error}
+          </div>
+        )}
+
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {plans.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`relative flex flex-col p-8 transition-all ${
+                plan.slug === "agencia"
+                  ? "border-2 border-cyan-500 dark:border-cyan-400 shadow-xl lg:scale-105"
+                  : "border border-gray-200 dark:border-gray-800"
+              }`}
+            >
+              {/* Popular Badge */}
+              {plan.slug === "agencia" && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
+                    Mais Popular
+                  </Badge>
+                </div>
+              )}
+
+              {/* Plan Info */}
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-sm text-muted-foreground mb-6">{plan.description}</p>
+
+                {/* Price */}
+                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-bold">R$ {(billingCycle === "annual" ? plan.price_annual : plan.price_monthly).toFixed(2)}</span>
+                    <span className="text-muted-foreground">/mês</span>
+                  </div>
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Subscribe Button */}
+              <Button
+                onClick={() => handleSubscribe(plan)}
+                disabled={isSubscribing || !email}
+                className={`w-full font-semibold py-3 text-base ${
+                  plan.slug === "agencia"
+                    ? "bg-cyan-500 hover:bg-cyan-600 text-white"
+                    : "bg-gray-800 hover:bg-gray-900 text-white dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900"
+                }`}
+              >
+                {isSubscribing ? "Redirecionando..." : "Assinar"}
+              </Button>
+            </Card>
+          ))}
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-20 max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-12">Dúvidas Frequentes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-card p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <h3 className="font-semibold mb-2">Posso cancelar a qualquer momento?</h3>
+              <p className="text-sm text-muted-foreground">
+                Sim, você pode cancelar sua assinatura a qualquer momento. Não há taxas de cancelamento.
+              </p>
+            </div>
+            <div className="bg-card p-6 rounded-lg border border-gray-200 dark:border-gray-800">
+              <h3 className="font-semibold mb-2">Existe período de teste gratuito?</h3>
+              <p className="text-sm text-muted-foreground">
+                Todos os usuários recebem 3 propostas gratuitas para começar. Após isso, você pode escolher um plano.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, AlertCircle } from "lucide-react"
-import Link from "next/link"
+import { useState } from "react"
+import { startSubscriptionCheckout } from "@/app/actions/stripe-checkout"
 
 interface Plan {
   id: string
   name: string
+  slug?: string
   description: string
   price_monthly: number
   features: string[]
@@ -19,13 +21,18 @@ interface Plan {
 interface UpgradePlansModalProps {
   isOpen: boolean
   onClose: () => void
+  userEmail?: string
   plans?: Plan[]
 }
 
-export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansModalProps) {
+export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [] }: UpgradePlansModalProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   const defaultPlans: Plan[] = [
     {
       id: "simples",
+      slug: "simples",
       name: "Plano Simples",
       description: "Para profissionais iniciantes",
       price_monthly: 29.90,
@@ -38,6 +45,7 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
     },
     {
       id: "agencia",
+      slug: "agencia",
       name: "Plano Agência",
       description: "Para agências e profissionais experientes",
       price_monthly: 49.90,
@@ -52,6 +60,30 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
   ]
 
   const displayPlans = plans.length > 0 ? plans : defaultPlans
+
+  const handleSubscribe = async (plan: Plan) => {
+    if (!userEmail) {
+      setError("Email não fornecido")
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await startSubscriptionCheckout(plan.slug || plan.id, userEmail)
+      if (result.url) {
+        window.location.href = result.url
+      } else {
+        setError("Erro ao iniciar checkout")
+      }
+    } catch (err) {
+      console.error("[v0] Error starting checkout:", err)
+      setError("Erro ao iniciar checkout. Tente novamente.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -74,6 +106,12 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
               </p>
             </div>
           </div>
+
+          {error && (
+            <div className="mt-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3 sm:p-4">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
         </DialogHeader>
 
         {/* Plans Grid */}
@@ -118,14 +156,15 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
                 </ul>
 
                 <Button 
-                  asChild 
+                  onClick={() => handleSubscribe(plan)}
+                  disabled={isLoading || !userEmail}
                   className={`w-full font-semibold text-sm sm:text-base py-2 sm:py-2.5 ${
                     plan.popular
                       ? "bg-cyan-500 hover:bg-cyan-600 text-white"
                       : "bg-gray-800 hover:bg-gray-900 text-white dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900"
                   }`}
                 >
-                  <Link href="/planos">Assinar</Link>
+                  {isLoading ? "Redirecionando..." : "Assinar"}
                 </Button>
               </div>
             </Card>
@@ -134,7 +173,7 @@ export function UpgradePlansModal({ isOpen, onClose, plans = [] }: UpgradePlansM
 
         {/* Footer Actions */}
         <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
-          <Button variant="outline" onClick={onClose} className="flex-1 text-sm sm:text-base">
+          <Button variant="outline" onClick={onClose} className="flex-1 text-sm sm:text-base" disabled={isLoading}>
             Continuar Depois
           </Button>
         </div>
