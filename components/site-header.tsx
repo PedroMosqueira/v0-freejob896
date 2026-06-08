@@ -317,7 +317,6 @@ export function SiteHeader({
                         <Zap className="h-4 w-4" />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">Planos</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{freeCredits} créditos livres</p>
                         </div>
                       </Link>
                     </DropdownMenuItem>
@@ -380,7 +379,6 @@ export function SiteHeader({
                         <Zap className="h-4 w-4" />
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">Planos</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{freeCredits} créditos livres</p>
                         </div>
                       </Link>
                     </DropdownMenuItem>
