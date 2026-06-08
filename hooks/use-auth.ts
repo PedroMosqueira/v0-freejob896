@@ -76,9 +76,10 @@ export function useAuth() {
     }
   }, [supabase])
 
-  // Check session only on mount
+  // Check session only on mount - with memoized fetchSubscription
   useEffect(() => {
     isMountedRef.current = true
+    let unsubscribe: (() => void) | null = null
 
     const checkSession = async () => {
       try {
@@ -88,9 +89,7 @@ export function useAuth() {
 
         if (error || !session?.user?.email) {
           console.log("[v0] No session found")
-          if (isMountedRef.current) {
-            setIsLoading(false)
-          }
+          setIsLoading(false)
           return
         }
 
@@ -136,7 +135,7 @@ export function useAuth() {
 
     return () => {
       isMountedRef.current = false
-      subscription?.unsubscribe()
+      if (subscription) subscription.unsubscribe()
     }
   }, [supabase, fetchSubscription])
 
