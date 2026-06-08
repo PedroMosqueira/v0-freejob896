@@ -24,7 +24,6 @@ import { formatUserName } from "@/lib/format-user-name"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useTheme } from "@/components/theme-provider"
 import InstallAppButton from "./install-app-button"
-import { canUserExpressInterest } from "@/lib/interest-manager"
 import { InterestsCounter } from "@/components/interests-counter"
 
 interface SiteHeaderProps {
@@ -52,8 +51,6 @@ export function SiteHeader({
   const [displayName, setDisplayName] = useState<string>("")
   const [userProfile, setUserProfile] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [freeCredits, setFreeCredits] = useState(0)
-  const [isProfessional, setIsProfessional] = useState(false)
   const { theme, setTheme } = useTheme()
 
   const effectiveTheme = mounted
@@ -78,6 +75,9 @@ export function SiteHeader({
       if (!email) return
 
       try {
+        console.log("[v0] Loading user profile for:", email)
+        const startTime = performance.now()
+        
         const profile = await getUserProfile(email)
         if (profile) {
           setUserProfile(profile)
@@ -87,10 +87,8 @@ export function SiteHeader({
           setDisplayName(email.split("@")[0])
         }
 
-        // Carregar créditos disponíveis
-        const result = await canUserExpressInterest(email)
-        setFreeCredits(result.freeInterestsRemaining || 0)
-        setIsProfessional(result.isProfessional || false)
+        const elapsed = performance.now() - startTime
+        console.log("[v0] Profile loaded in:", elapsed, "ms")
       } catch (error) {
         console.error("Error loading user profile:", error)
         setDisplayName(email.split("@")[0])
@@ -105,6 +103,9 @@ export function SiteHeader({
       if (!email || !mounted) return
 
       try {
+        console.log("[v0] Loading unread count...")
+        const startTime = performance.now()
+        
         const threads = await listAllChatThreadsForUser(email)
         let count = 0
 
@@ -124,12 +125,19 @@ export function SiteHeader({
         })
 
         setUnreadMessagesCount(count)
+        const elapsed = performance.now() - startTime
+        console.log("[v0] Unread count loaded in:", elapsed, "ms, count:", count)
       } catch (error) {
         console.error("Error loading unread messages count:", error)
       }
     }
 
-    loadUnreadCount()
+    // Delay loading unread count to not block initial render
+    const timer = setTimeout(() => {
+      loadUnreadCount()
+    }, 500)
+
+    return () => clearTimeout(timer)
   }, [email, mounted])
 
   useEffect(() => {
