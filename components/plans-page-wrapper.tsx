@@ -6,10 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { COUNTRIES } from "@/lib/countries"
 
 interface Plan {
   id: string
@@ -23,19 +19,11 @@ interface Plan {
 }
 
 export function PlansPageWrapper() {
-  const { email, isSubscribed, subscriptionPlan } = useAuth()
+  const { email } = useAuth()
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscribing, setIsSubscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPhoneDialog, setShowPhoneDialog] = useState(false)
-  const [phoneInput, setPhoneInput] = useState("")
-  const [verificationCode, setVerificationCode] = useState("")
-  const [codeSent, setCodeSent] = useState(false)
-  const [phoneValidationLoading, setPhoneValidationLoading] = useState(false)
-  const [countryCode, setCountryCode] = useState("+55")
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
-  const [phoneValidated, setPhoneValidated] = useState(false)
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -44,6 +32,7 @@ export function PlansPageWrapper() {
         const data = await response.json()
         
         if (response.ok) {
+          // Filter to show only paid plans (simples and agencia)
           const paidPlans = (data.plans || []).filter((plan: Plan) => 
             plan.slug === "simples" || plan.slug === "agencia"
           )
@@ -62,86 +51,7 @@ export function PlansPageWrapper() {
     fetchPlans()
   }, [])
 
-  const handleSubscribeClick = (plan: Plan) => {
-    // Se já está inscrito em um plano, avisa
-    if (isSubscribed) {
-      setError(`Você já está inscrito no plano ${subscriptionPlan}`)
-      return
-    }
-
-    setSelectedPlan(plan)
-    setShowPhoneDialog(true)
-  }
-
-  const handleSendVerificationCode = async () => {
-    if (!phoneInput.trim()) {
-      setError("Por favor, insira um número de telefone")
-      return
-    }
-
-    setPhoneValidationLoading(true)
-    try {
-      const response = await fetch("/api/verify-phone", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          phone: countryCode + phoneInput.replace(/\D/g, ""),
-        }),
-      })
-
-      const data = await response.json()
-      if (response.ok) {
-        setCodeSent(true)
-        setError(null)
-      } else {
-        setError(data.error || "Erro ao enviar código")
-      }
-    } catch (err) {
-      console.error("[v0] Error sending code:", err)
-      setError("Erro ao enviar código de verificação")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
-
-  const handleVerifyCode = async () => {
-    if (!verificationCode.trim()) {
-      setError("Por favor, insira o código de verificação")
-      return
-    }
-
-    setPhoneValidationLoading(true)
-    try {
-      const response = await fetch("/api/verify-phone", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          code: verificationCode,
-        }),
-      })
-
-      const data = await response.json()
-      if (response.ok) {
-        setPhoneValidated(true)
-        setError(null)
-        // Prosseguir com inscrição automaticamente
-        if (selectedPlan) {
-          proceedWithSubscription(selectedPlan)
-        }
-      } else {
-        setError(data.error || "Código inválido")
-      }
-    } catch (err) {
-      console.error("[v0] Error verifying code:", err)
-      setError("Erro ao verificar código")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
-
-  const proceedWithSubscription = async (plan: Plan) => {
+  const handleSubscribe = async (plan: Plan) => {
     if (!email) {
       setError("Você precisa estar autenticado")
       return
@@ -253,7 +163,7 @@ export function PlansPageWrapper() {
 
               {/* Subscribe Button */}
               <Button
-                onClick={() => handleSubscribeClick(plan)}
+                onClick={() => handleSubscribe(plan)}
                 disabled={isSubscribing || !email}
                 className={`w-full font-semibold py-3 text-base ${
                   plan.slug === "agencia"
@@ -266,97 +176,6 @@ export function PlansPageWrapper() {
             </Card>
           ))}
         </div>
-
-        {/* Phone Verification Dialog */}
-        <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Verificar Telefone</DialogTitle>
-              <DialogDescription>
-                Por favor, verifique seu telefone para continuar com a inscrição
-              </DialogDescription>
-            </DialogHeader>
-
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-800 dark:text-red-200">
-                {error}
-              </div>
-            )}
-
-            {!codeSent ? (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="country">País</Label>
-                  <select
-                    id="country"
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md mt-1"
-                  >
-                    {COUNTRIES.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name} ({country.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="11 98765-4321"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSendVerificationCode}
-                  disabled={phoneValidationLoading || !phoneInput.trim()}
-                  className="w-full"
-                >
-                  {phoneValidationLoading ? "Enviando..." : "Enviar Código"}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="code">Código de Verificação</Label>
-                  <Input
-                    id="code"
-                    type="text"
-                    placeholder="123456"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleVerifyCode}
-                  disabled={phoneValidationLoading || !verificationCode.trim()}
-                  className="w-full"
-                >
-                  {phoneValidationLoading ? "Verificando..." : "Verificar"}
-                </Button>
-
-                <Button
-                  onClick={() => {
-                    setCodeSent(false)
-                    setVerificationCode("")
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Voltar
-                </Button>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   )

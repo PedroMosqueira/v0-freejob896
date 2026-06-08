@@ -68,23 +68,47 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
-      // Se o usuário tem inscrição ativa, não precisa verificar créditos
-      if (isSubscribed) {
-        console.log("[v0] User is subscribed - skipping credit check")
-        setCanExpress(true)
-        setIsProfessional(true)
-        setPhoneValidated(true) // Consideramos validado para inscritos
-        setIsCheckingPermission(false)
-        return
-      }
-
-      // Caso contrário, verifica créditos livres
+      // Verificar permissão do usuário
       const result = await canUserExpressInterest(currentUserEmail)
-      setCanExpress(result.canExpressInterest)
+      
+      console.log("[v0] Permission check result:", {
+        phoneVerified: result.phoneVerified,
+        freeCredits: result.freeInterestsRemaining,
+        canExpress: result.canExpressInterest,
+        isProfessional: result.isProfessional,
+        isSubscribed,
+      })
+
+      setPhoneValidated(result.phoneVerified || false)
       setIsProfessional(result.isProfessional || false)
       setIsProfessionalCheckbox(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
-      setPhoneValidated(result.phoneVerified || false)
+
+      // Lógica do fluxo:
+      // 1. Se telefone NÃO validado → bloquear e pedir validação
+      if (!result.phoneVerified) {
+        setCanExpress(false)
+        console.log("[v0] Phone not verified - blocking interest")
+        return
+      }
+
+      // 2. Se tem créditos grátis restantes → pode expressar interesse
+      if (result.canExpressInterest && result.freeInterestsRemaining > 0) {
+        setCanExpress(true)
+        console.log("[v0] Has free credits - can express interest")
+        return
+      }
+
+      // 3. Se não tem créditos grátis mas TEM inscrição ativa → pode expressar interesse
+      if (isSubscribed) {
+        setCanExpress(true)
+        console.log("[v0] Has active subscription - can express interest")
+        return
+      }
+
+      // 4. Se não tem créditos grátis E não tem inscrição → mostrar planos
+      setCanExpress(false)
+      console.log("[v0] No credits and no subscription - will show upgrade modal")
     } catch (error) {
       console.error("Erro ao verificar permissão:", error)
       setCanExpress(false)
