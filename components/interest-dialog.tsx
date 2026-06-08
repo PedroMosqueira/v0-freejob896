@@ -60,7 +60,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   // PORÉM, se tem inscrição ativa, NÃO mostrar modal - o usuário pode continuar
   useEffect(() => {
     if (isOpen && phoneValidated && isProfessional && !canExpress && !isSubscribed) {
-      console.log("[v0] Dialog opened with exhausted credits and NO subscription - showing upgrade modal")
+      console.log("[v0] Dialog: Professional with no credits and no subscription - showing upgrade modal")
       setShowUpgradeModal(true)
     }
   }, [isOpen, phoneValidated, isProfessional, canExpress, isSubscribed])
@@ -68,6 +68,17 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const checkPermission = async () => {
     setIsCheckingPermission(true)
     try {
+      // Se o usuário tem inscrição ativa, não precisa verificar créditos
+      if (isSubscribed) {
+        console.log("[v0] User is subscribed - skipping credit check")
+        setCanExpress(true)
+        setIsProfessional(true)
+        setPhoneValidated(true) // Consideramos validado para inscritos
+        setIsCheckingPermission(false)
+        return
+      }
+
+      // Caso contrário, verifica créditos livres
       const result = await canUserExpressInterest(currentUserEmail)
       setCanExpress(result.canExpressInterest)
       setIsProfessional(result.isProfessional || false)
