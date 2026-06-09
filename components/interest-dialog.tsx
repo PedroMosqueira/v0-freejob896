@@ -133,8 +133,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setIsProfessional(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
       
-      // Se é profissional e não tem créditos, abre modal de planos
-      if (result.isProfessional && !result.canExpressInterest) {
+      // Se é profissional e não tem créditos E não tem inscrição, abre modal de planos
+      // Caso contrário, pode manifestar interesse
+      if (result.isProfessional && !result.canExpressInterest && !isSubscribed) {
         toast({
           title: "Telefone validado!",
           description: "Agora escolha um plano para manifestar interesse.",

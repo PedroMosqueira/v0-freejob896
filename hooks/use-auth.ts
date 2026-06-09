@@ -76,10 +76,9 @@ export function useAuth() {
     }
   }, [supabase])
 
-  // Check session only on mount - with memoized fetchSubscription
+  // Check session only on mount - fetchSubscription is NOT in dependency array
   useEffect(() => {
     isMountedRef.current = true
-    let unsubscribe: (() => void) | null = null
 
     const checkSession = async () => {
       try {
@@ -137,7 +136,7 @@ export function useAuth() {
       isMountedRef.current = false
       if (subscription) subscription.unsubscribe()
     }
-  }, [supabase, fetchSubscription])
+  }, [supabase])
 
   const logout = useCallback(async () => {
     try {
