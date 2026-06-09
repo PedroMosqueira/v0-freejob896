@@ -25,7 +25,7 @@ export function useAuth() {
   const supabase = supabaseRef.current
   const isMountedRef = useRef(true)
 
-  // Fetch subscription data for user
+  // Fetch subscription data for user - without dependencies to prevent re-creation
   const fetchSubscription = useCallback(async (userId: string) => {
     try {
       console.log("[v0] Fetching subscription for user:", userId)
@@ -74,9 +74,9 @@ export function useAuth() {
         setSubscription(null)
       }
     }
-  }, [supabase])
+  }, [])
 
-  // Check session only on mount - fetchSubscription is NOT in dependency array
+  // Check session only on mount - NO dependencies to run once
   useEffect(() => {
     isMountedRef.current = true
 
@@ -136,7 +136,7 @@ export function useAuth() {
       isMountedRef.current = false
       if (subscription) subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   const logout = useCallback(async () => {
     try {
