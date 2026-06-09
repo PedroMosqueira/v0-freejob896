@@ -150,7 +150,7 @@ export function useAuth() {
       console.error("[v0] Logout error:", error)
       return false
     }
-  }, [supabase])
+  }, [])
 
   return { 
     email, 
