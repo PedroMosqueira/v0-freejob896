@@ -19,6 +19,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   needsUpgrade?: boolean
 }> {
   try {
+    console.log("[v0] === canUserExpressInterest START ===")
+    console.log("[v0] Input email:", userEmail)
     const cookieStore = await cookies()
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +45,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .single()
 
     if (userError || !user) {
-      console.error("[v0] User error or not found:", { userError, user })
+      console.error("[v0] User error or not found:", { userError, user, queryEmail: userEmail })
+      console.error("[v0] Error details:", userError?.message)
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -51,7 +54,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
     }
 
-    console.log("[v0] User check:", { email: userEmail, userId: user.id, phoneVerified: user.phone_verified, isProfessional: user.is_professional })
+    console.log("[v0] User found - FULL DATA:", { 
+      email: userEmail, 
+      userId: user.id, 
+      phoneVerified: user.phone_verified, 
+      isProfessional: user.is_professional,
+      freeInterestsRemaining: user.free_interests_remaining
+    })
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
