@@ -79,6 +79,7 @@ export function useAuth() {
   // Check session only on mount - NO dependencies to run once
   useEffect(() => {
     isMountedRef.current = true
+    let timeoutId: NodeJS.Timeout
 
     const checkSession = async () => {
       try {
@@ -88,7 +89,7 @@ export function useAuth() {
 
         if (error || !session?.user?.email) {
           console.log("[v0] No session found")
-          setIsLoading(false)
+          if (isMountedRef.current) setIsLoading(false)
           return
         }
 
@@ -97,14 +98,18 @@ export function useAuth() {
         setSession(session)
         
         // Fetch subscription after session is set
+        console.log("[v0] Starting subscription fetch...")
         await fetchSubscription(session.user.id)
+        console.log("[v0] Subscription fetch completed")
         
         if (isMountedRef.current) {
+          console.log("[v0] Setting isLoading to false (session found)")
           setIsLoading(false)
         }
       } catch (error) {
         console.error("[v0] Session check error:", error)
         if (isMountedRef.current) {
+          console.log("[v0] Setting isLoading to false (error)")
           setIsLoading(false)
         }
       }
@@ -112,17 +117,31 @@ export function useAuth() {
 
     checkSession()
 
+    // Set a max timeout of 5 seconds - if we're still loading after 5s, force it to false
+    timeoutId = setTimeout(() => {
+      if (isMountedRef.current && isLoading) {
+        console.log("[v0] AUTH TIMEOUT: Setting isLoading to false after 5 seconds")
+        setIsLoading(false)
+      }
+    }, 5000)
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMountedRef.current) return
 
-        console.log("[v0] Auth change:", event)
+        console.log("[v0] Auth change:", event, session?.user?.email)
         
         if (session?.user?.email) {
           setEmail(session.user.email)
           setSession(session)
+          console.log("[v0] onAuthStateChange: Starting subscription fetch...")
           await fetchSubscription(session.user.id)
+          console.log("[v0] onAuthStateChange: Subscription fetch completed")
+          // Force isLoading to false after auth change
+          if (isMountedRef.current) {
+            setIsLoading(false)
+          }
         } else {
           setEmail(null)
           setSession(null)
@@ -133,7 +152,9 @@ export function useAuth() {
     )
 
     return () => {
+      console.log("[v0] useAuth cleanup")
       isMountedRef.current = false
+      clearTimeout(timeoutId)
       if (subscription) subscription.unsubscribe()
     }
   }, [])
