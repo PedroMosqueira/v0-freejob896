@@ -36,7 +36,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Buscar dados do usuário
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("is_professional, free_interests_remaining, total_interests_sent, phone_verified")
+      .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified")
       .eq("email", userEmail)
       .single()
 
@@ -46,6 +46,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         reason: "Usuário não encontrado",
       }
     }
+
+    console.log("[v0] User check:", { email: userEmail, userId: user.id, phoneVerified: user.phone_verified })
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
@@ -82,14 +84,17 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     // Se usou todas as propostas gratuitas, verificar se tem plano ativo
-    const { data: subscription, error: subError } = await supabase
+    console.log("[v0] Checking subscription for user:", user.id)
+    const { data: subscriptions, error: subError } = await supabase
       .from("user_subscriptions")
-      .select("id, status")
-      .eq("user_id", userEmail)
+      .select("id, status, plan_id")
+      .eq("user_id", user.id)
       .eq("status", "active")
-      .single()
+      .limit(1)
 
-    const hasActiveSubscription = !subError && subscription
+    console.log("[v0] Subscription result:", { subscriptions, subError })
+
+    const hasActiveSubscription = !subError && subscriptions && subscriptions.length > 0
 
     if (hasActiveSubscription) {
       return {
