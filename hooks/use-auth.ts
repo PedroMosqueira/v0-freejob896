@@ -30,21 +30,34 @@ export function useAuth() {
     try {
       console.log("[v0] Fetching subscription for user:", userId)
       
-      const { data: subscriptionData, error: subscriptionError } = await supabase
+      // Use limit(1) instead of single() - faster query
+      const { data: subscriptionsData, error: subscriptionError } = await supabase
         .from("user_subscriptions")
         .select("id, user_id, plan_id, status, stripe_subscription_id, current_period_end")
         .eq("user_id", userId)
         .eq("status", "active")
-        .single()
+        .limit(1)
 
       if (subscriptionError) {
-        console.log("[v0] No active subscription")
+        console.log("[v0] Subscription query error:", subscriptionError)
         if (isMountedRef.current) {
           setSubscriptionPlan("free")
           setSubscription(null)
         }
         return
       }
+
+      // No active subscription found
+      if (!subscriptionsData || subscriptionsData.length === 0) {
+        console.log("[v0] No active subscription found")
+        if (isMountedRef.current) {
+          setSubscriptionPlan("free")
+          setSubscription(null)
+        }
+        return
+      }
+
+      const subscriptionData = subscriptionsData[0]
 
       if (subscriptionData && subscriptionData.plan_id) {
         console.log("[v0] Fetching plan for id:", subscriptionData.plan_id)
@@ -53,17 +66,18 @@ export function useAuth() {
           .from("subscription_plans")
           .select("slug")
           .eq("id", subscriptionData.plan_id)
-          .single()
+          .limit(1)
 
-        if (!planError && planData && isMountedRef.current) {
-          console.log("[v0] ✅ Plan:", planData.slug)
-          setSubscriptionPlan(planData.slug as SubscriptionPlan)
+        if (!planError && planData && planData.length > 0 && isMountedRef.current) {
+          console.log("[v0] ✅ Plan found:", planData[0].slug)
+          setSubscriptionPlan(planData[0].slug as SubscriptionPlan)
           setSubscription(subscriptionData)
           return
         }
       }
       
       if (isMountedRef.current) {
+        console.log("[v0] No plan data found")
         setSubscriptionPlan("free")
         setSubscription(null)
       }
@@ -97,15 +111,17 @@ export function useAuth() {
         setEmail(session.user.email)
         setSession(session)
         
-        // Fetch subscription after session is set
-        console.log("[v0] Starting subscription fetch...")
-        await fetchSubscription(session.user.id)
-        console.log("[v0] Subscription fetch completed")
-        
+        // Set loading to false immediately - subscription will load in background
         if (isMountedRef.current) {
-          console.log("[v0] Setting isLoading to false (session found)")
+          console.log("[v0] Setting isLoading to false (session verified)")
           setIsLoading(false)
         }
+
+        // Fetch subscription in background without blocking
+        console.log("[v0] Starting subscription fetch in background...")
+        fetchSubscription(session.user.id).catch(err => {
+          console.error("[v0] Background subscription fetch error:", err)
+        })
       } catch (error) {
         console.error("[v0] Session check error:", error)
         if (isMountedRef.current) {
@@ -117,13 +133,13 @@ export function useAuth() {
 
     checkSession()
 
-    // Set a max timeout of 5 seconds - if we're still loading after 5s, force it to false
+    // Set a max timeout of 3 seconds - if we're still loading after 3s, force it to false
     timeoutId = setTimeout(() => {
       if (isMountedRef.current && isLoading) {
-        console.log("[v0] AUTH TIMEOUT: Setting isLoading to false after 5 seconds")
+        console.log("[v0] AUTH TIMEOUT: Setting isLoading to false after 3 seconds")
         setIsLoading(false)
       }
-    }, 5000)
+    }, 3000)
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -135,13 +151,15 @@ export function useAuth() {
         if (session?.user?.email) {
           setEmail(session.user.email)
           setSession(session)
-          console.log("[v0] onAuthStateChange: Starting subscription fetch...")
-          await fetchSubscription(session.user.id)
-          console.log("[v0] onAuthStateChange: Subscription fetch completed")
-          // Force isLoading to false after auth change
+          // Set loading to false immediately
           if (isMountedRef.current) {
             setIsLoading(false)
           }
+          // Fetch subscription in background
+          console.log("[v0] onAuthStateChange: Fetching subscription in background...")
+          fetchSubscription(session.user.id).catch(err => {
+            console.error("[v0] Auth change subscription fetch error:", err)
+          })
         } else {
           setEmail(null)
           setSession(null)
