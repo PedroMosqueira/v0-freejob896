@@ -54,7 +54,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     if (isOpen && currentUserEmail) {
       checkPermission()
     } else if (!isOpen) {
-      // Limpar estados quando fecha o dialog
+      // Limpar apenas os campos de formulário quando fecha
+      // NÃO limpar phoneValidated - ele deve persistir se já foi validado
       setPhoneInput("")
       setVerificationCode("")
       setCodeSent(false)
