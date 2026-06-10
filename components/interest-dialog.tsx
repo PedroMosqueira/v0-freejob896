@@ -53,6 +53,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   useEffect(() => {
     if (isOpen && currentUserEmail) {
       checkPermission()
+    } else if (!isOpen) {
+      // Limpar estados quando fecha o dialog
+      setPhoneInput("")
+      setVerificationCode("")
+      setCodeSent(false)
+      setPhoneValidationError("")
+      setShowUpgradeModal(false)
     }
   }, [isOpen, currentUserEmail, isSubscribed, subscriptionPlan])
 
