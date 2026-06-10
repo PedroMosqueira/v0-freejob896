@@ -43,6 +43,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .single()
 
     if (userError || !user) {
+      console.error("[v0] User error or not found:", { userError, user })
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -50,10 +51,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
     }
 
-    console.log("[v0] User check:", { email: userEmail, userId: user.id, phoneVerified: user.phone_verified })
+    console.log("[v0] User check:", { email: userEmail, userId: user.id, phoneVerified: user.phone_verified, isProfessional: user.is_professional })
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
+      console.log("[v0] Phone not verified, blocking:", { email: userEmail, phone_verified: user.phone_verified })
       return {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
@@ -62,6 +64,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         phoneVerified: false,
       }
     }
+
+    console.log("[v0] Phone verified, continuing...")
 
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
