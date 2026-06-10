@@ -242,7 +242,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setPhoneValidationLoading(false)
     }
   }
-  }
 
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
