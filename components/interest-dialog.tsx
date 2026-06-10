@@ -54,7 +54,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     if (isOpen && currentUserEmail) {
       checkPermission()
     }
-  }, [isOpen, currentUserEmail])
+  }, [isOpen, currentUserEmail, isSubscribed, subscriptionPlan])
 
   // Se abrir o dialog com telefone validado, profissional e sem créditos, mostrar planos direto
   // PORÉM, se tem inscrição ativa, NÃO mostrar modal - o usuário pode continuar
@@ -91,6 +91,31 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         console.log("[v0] Phone not verified - blocking interest")
         return
       }
+
+      // 2. Se tem créditos grátis restantes → pode expressar interesse
+      if (result.canExpressInterest && result.freeInterestsRemaining > 0) {
+        setCanExpress(true)
+        console.log("[v0] Has free credits - can express interest")
+        return
+      }
+
+      // 3. Se não tem créditos grátis mas TEM inscrição ativa → pode expressar interesse
+      if (isSubscribed) {
+        setCanExpress(true)
+        console.log("[v0] Has active subscription - can express interest")
+        return
+      }
+
+      // 4. Se não tem créditos grátis E não tem inscrição → mostrar planos
+      setCanExpress(false)
+      console.log("[v0] No credits and no subscription - will show upgrade modal")
+    } catch (error) {
+      console.error("Erro ao verificar permissão:", error)
+      setCanExpress(false)
+    } finally {
+      setIsCheckingPermission(false)
+    }
+  }
 
       // 2. Se tem créditos grátis restantes → pode expressar interesse
       if (result.canExpressInterest && result.freeInterestsRemaining > 0) {
@@ -226,14 +251,22 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       }
 
       const data = await response.json()
+      setPhoneValidated(true)
+      setPhoneValidationError("")
       
-      setIsProfessional(isProfessionalCheckbox)
-      handlePhoneValidationSuccess(cleanPhone)
+      // Rerun permission check now that phone is validated and subscription may have loaded
+      await checkPermission()
+      
+      toast({
+        title: "Telefone verificado!",
+        description: "Você pode agora manifestar interesse.",
+      })
     } catch (err: any) {
       setPhoneValidationError(err.message || "Erro ao verificar código")
     } finally {
       setPhoneValidationLoading(false)
     }
+  }
   }
 
   const handleManifestInterest = async (e: React.FormEvent) => {
