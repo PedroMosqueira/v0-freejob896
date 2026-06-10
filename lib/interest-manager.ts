@@ -46,6 +46,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
+        phoneVerified: false,
       }
     }
 
@@ -169,6 +170,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     return {
       canExpressInterest: false,
       reason: "Erro ao verificar sua permissão",
+      phoneVerified: false,
     }
   }
 }
