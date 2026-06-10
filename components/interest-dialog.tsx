@@ -62,8 +62,11 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     if (isOpen && phoneValidated && isProfessional && !canExpress && !isSubscribed) {
       console.log("[v0] Dialog: Professional with no credits and no subscription - showing upgrade modal")
       setShowUpgradeModal(true)
+    } else if (isOpen && showUpgradeModal && isSubscribed) {
+      console.log("[v0] Dialog: User is subscribed - closing upgrade modal")
+      setShowUpgradeModal(false)
     }
-  }, [isOpen, phoneValidated, isProfessional, canExpress, isSubscribed])
+  }, [isOpen, phoneValidated, isProfessional, canExpress, isSubscribed, showUpgradeModal])
 
   const checkPermission = async () => {
     setIsCheckingPermission(true)
@@ -461,7 +464,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
               {phoneValidated && (
                 <>
-                  {isProfessional && (
+                  {isProfessional && !isSubscribed && (
                     <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
                       <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
@@ -472,7 +475,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     </div>
                   )}
 
-                  {isProfessional && !canExpress && (
+                  {isProfessional && !canExpress && !isSubscribed && (
                     <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                       <div className="flex gap-3">
                         <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
