@@ -117,31 +117,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     }
   }
 
-      // 2. Se tem créditos grátis restantes → pode expressar interesse
-      if (result.canExpressInterest && result.freeInterestsRemaining > 0) {
-        setCanExpress(true)
-        console.log("[v0] Has free credits - can express interest")
-        return
-      }
-
-      // 3. Se não tem créditos grátis mas TEM inscrição ativa → pode expressar interesse
-      if (isSubscribed) {
-        setCanExpress(true)
-        console.log("[v0] Has active subscription - can express interest")
-        return
-      }
-
-      // 4. Se não tem créditos grátis E não tem inscrição → mostrar planos
-      setCanExpress(false)
-      console.log("[v0] No credits and no subscription - will show upgrade modal")
-    } catch (error) {
-      console.error("Erro ao verificar permissão:", error)
-      setCanExpress(false)
-    } finally {
-      setIsCheckingPermission(false)
-    }
-  }
-
   const handlePhoneValidationSuccess = (phone: string) => {
     setPhoneValidated(true)
     setPhoneInput("")
