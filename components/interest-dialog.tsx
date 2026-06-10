@@ -80,8 +80,10 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setIsCheckingPermission(true)
     try {
       // Verificar permissão do usuário
+      console.log("[v0] checkPermission: Calling canUserExpressInterest with email:", currentUserEmail)
       const result = await canUserExpressInterest(currentUserEmail)
       
+      console.log("[v0] checkPermission: FULL RESPONSE:", result)
       console.log("[v0] Permission check result:", {
         phoneVerified: result.phoneVerified,
         freeCredits: result.freeInterestsRemaining,
@@ -94,6 +96,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setIsProfessional(result.isProfessional || false)
       setIsProfessionalCheckbox(result.isProfessional || false)
       setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
+
+      console.log("[v0] checkPermission: States set - phoneValidated:", result.phoneVerified)
 
       // Lógica do fluxo:
       // 1. Se telefone NÃO validado → bloquear e pedir validação
