@@ -1,26 +1,16 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
-import dynamic from "next/dynamic"
+import { useState, useEffect } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
+import RequestForm from "@/components/request-form"
+import SearchRequests from "@/components/search-requests"
 import { AuthForm } from "@/components/auth-form"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
 import { useSearchParams } from "next/navigation"
-
-// Lazy load heavy components - these are only needed when user is authenticated
-const RequestForm = dynamic(() => import("@/components/request-form"), {
-  loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
-  ssr: false,
-})
-
-const SearchRequests = dynamic(() => import("@/components/search-requests"), {
-  loading: () => <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />,
-  ssr: false,
-})
 
 export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
