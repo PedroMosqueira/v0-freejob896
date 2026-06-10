@@ -1,7 +1,6 @@
 "use server"
 
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getActiveInterestsCount } from "./simultaneous-interests"
 import { PLAN_FEATURES } from "./subscription-manager"
 
@@ -21,21 +20,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   try {
     console.log("[v0] === canUserExpressInterest START ===")
     console.log("[v0] Input email:", userEmail)
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          },
-        },
-      },
-    )
+    const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
     const { data: user, error: userError } = await supabase
@@ -179,7 +164,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       hasActiveSubscription: false,
     }
   } catch (error) {
-    console.error("Erro ao verificar permissão de interesse:", error)
+    console.error("[v0] ERROR in canUserExpressInterest:", {
+      message: error instanceof Error ? error.message : String(error),
+      error: error,
+      email: userEmail,
+    })
     return {
       canExpressInterest: false,
       reason: "Erro ao verificar sua permissão",
