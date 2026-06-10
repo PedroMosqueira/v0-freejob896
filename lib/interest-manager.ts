@@ -23,15 +23,19 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
-    const { data: user, error: userError } = await supabase
+    const { data: users, error: userError } = await supabase
       .from("users")
       .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified")
       .eq("email", userEmail)
-      .single()
+      .limit(1)
 
-    if (userError || !user) {
-      console.error("[v0] User error or not found:", { userError, user, queryEmail: userEmail })
-      console.error("[v0] Error details:", userError?.message)
+    if (userError) {
+      console.error("[v0] Query error:", { userError, message: userError?.message, code: userError?.code })
+      throw userError
+    }
+
+    if (!users || users.length === 0) {
+      console.error("[v0] User not found for email:", userEmail)
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -39,6 +43,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
     }
 
+    const user = users[0]
     console.log("[v0] User found - FULL DATA:", { 
       email: userEmail, 
       userId: user.id, 
@@ -164,11 +169,14 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       hasActiveSubscription: false,
     }
   } catch (error) {
+    console.error("[v0] === CATCH BLOCK HIT ===")
     console.error("[v0] ERROR in canUserExpressInterest:", {
       message: error instanceof Error ? error.message : String(error),
-      error: error,
+      name: error instanceof Error ? error.name : 'Unknown',
+      code: (error as any)?.code,
       email: userEmail,
     })
+    console.error("[v0] Full error object:", error)
     return {
       canExpressInterest: false,
       reason: "Erro ao verificar sua permissão",
