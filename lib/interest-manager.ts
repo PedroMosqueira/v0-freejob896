@@ -18,8 +18,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   needsUpgrade?: boolean
 }> {
   try {
-    console.log("[v0] === canUserExpressInterest START ===")
-    console.log("[v0] Input email:", userEmail)
     const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
@@ -30,12 +28,10 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .limit(1)
 
     if (userError) {
-      console.error("[v0] Query error:", { userError, message: userError?.message, code: userError?.code })
       throw userError
     }
 
     if (!users || users.length === 0) {
-      console.error("[v0] User not found for email:", userEmail)
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -44,17 +40,9 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     const user = users[0]
-    console.log("[v0] User found - FULL DATA:", { 
-      email: userEmail, 
-      userId: user.id, 
-      phoneVerified: user.phone_verified, 
-      isProfessional: user.is_professional,
-      freeInterestsRemaining: user.free_interests_remaining
-    })
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
-      console.log("[v0] Phone not verified, blocking:", { email: userEmail, phone_verified: user.phone_verified })
       return {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
@@ -63,8 +51,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         phoneVerified: false,
       }
     }
-
-    console.log("[v0] Phone verified, continuing...")
 
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
@@ -82,8 +68,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       // Verificar também limite de propostas simultâneas
       const activeCount = await getActiveInterestsCount(userEmail)
       const planLimit = PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
-      
-      console.log("[v0] Active interests check:", { activeCount, planLimit, freeRemaining: freeInterestsRemaining })
       
       if (activeCount >= planLimit) {
         return {
@@ -107,15 +91,12 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     // Se usou todas as propostas gratuitas, verificar se tem plano ativo
-    console.log("[v0] Checking subscription for user:", user.id)
     const { data: subscriptions, error: subError } = await supabase
       .from("user_subscriptions")
       .select("id, status, plan_id")
       .eq("user_id", user.id)
       .eq("status", "active")
       .limit(1)
-
-    console.log("[v0] Subscription result:", { subscriptions, subError })
 
     const hasActiveSubscription = !subError && subscriptions && subscriptions.length > 0
 
@@ -133,8 +114,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       
       // Verificar limite de propostas simultâneas
       const activeCount = await getActiveInterestsCount(userEmail)
-      
-      console.log("[v0] Subscribed user - simultaneous check:", { activeCount, planSlug, limit: simultaneousLimit })
       
       if (activeCount >= simultaneousLimit) {
         return {
@@ -169,14 +148,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       hasActiveSubscription: false,
     }
   } catch (error) {
-    console.error("[v0] === CATCH BLOCK HIT ===")
-    console.error("[v0] ERROR in canUserExpressInterest:", {
-      message: error instanceof Error ? error.message : String(error),
-      name: error instanceof Error ? error.name : 'Unknown',
-      code: (error as any)?.code,
-      email: userEmail,
-    })
-    console.error("[v0] Full error object:", error)
     return {
       canExpressInterest: false,
       reason: "Erro ao verificar sua permissão",
@@ -192,35 +163,23 @@ export async function incrementInterestCount(userEmail: string): Promise<{
   freeInterestsRemaining?: number
 }> {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          },
-        },
-      },
-    )
+    const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
-    const { data: user, error: userError } = await supabase
+    const { data: users, error: userError } = await supabase
       .from("users")
       .select("is_professional, free_interests_remaining, total_interests_sent")
       .eq("email", userEmail)
-      .single()
+      .limit(1)
 
-    if (userError || !user) {
+    if (userError || !users || users.length === 0) {
       return {
         success: false,
         error: "Usuário não encontrado",
       }
     }
+
+    const user = users[0]
 
     const currentFreeRemaining = user.free_interests_remaining ?? 3
     const currentTotalSent = user.total_interests_sent ?? 0

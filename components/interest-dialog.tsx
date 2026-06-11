@@ -164,35 +164,36 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Se telefone não está validado, não faz nada
-    if (!phoneValidated) {
-      return
-    }
-
-    // Revalidar permissão antes de manifestar interesse (créditos podem ter mudado)
-    const permissionCheck = await canUserExpressInterest(currentUserEmail)
-    
-    // Se é profissional, verificar se tem créditos/plano
-    if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest) {
-      if (permissionCheck.needsUpgrade) {
-        toast({
-          title: "Créditos insuficientes",
-          description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
-          variant: "destructive",
-        })
-        setShowUpgradeModal(true)
-      } else if (permissionCheck.needsPhoneValidation) {
-        toast({
-          title: "Validação necessária",
-          description: "Por favor, valide seu telefone primeiro.",
-          variant: "destructive",
-        })
-      }
-      return
-    }
-
     setIsSubmitting(true)
     try {
+      // SEMPRE validar no servidor que telefone está verificado (segurança)
+      const permissionCheck = await canUserExpressInterest(currentUserEmail)
+      
+      // Se não tem telefone validado, BLOQUEAR (mesmo que UI diga que está)
+      if (!permissionCheck.phoneVerified) {
+        toast({
+          title: "Validação necessária",
+          description: "Por favor, valide seu telefone antes de manifestar interesse.",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+      
+      // Se é profissional, verificar se tem créditos/plano
+      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest) {
+        if (permissionCheck.needsUpgrade) {
+          toast({
+            title: "Créditos insuficientes",
+            description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
+            variant: "destructive",
+          })
+          setShowUpgradeModal(true)
+        }
+        setIsSubmitting(false)
+        return
+      }
+
       // Criar proposta de interesse simples
       await addNeedProposal({
         needId: need.id,
