@@ -51,23 +51,9 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   // Usar phoneVerified do hook quando o dialog abre (mas só depois de carregar)
   useEffect(() => {
-    if (isOpen) {
-      // Se ainda está carregando, aguardar
-      if (!phoneVerifiedLoaded) {
-        console.log("[v0] Dialog opened - phoneVerifiedLoaded is false, waiting...")
-        setIsCheckingPermission(true)
-        return
-      }
-      console.log("[v0] Dialog opened - phoneVerified from hook:", hookPhoneVerified)
+    if (isOpen && phoneVerifiedLoaded) {
       setPhoneValidated(hookPhoneVerified)
       setIsCheckingPermission(false)
-    } else {
-      // Limpar campos quando fecha
-      setPhoneInput("")
-      setVerificationCode("")
-      setCodeSent(false)
-      setPhoneValidationError("")
-      setShowUpgradeModal(false)
     }
   }, [isOpen, hookPhoneVerified, phoneVerifiedLoaded])
 
@@ -169,26 +155,13 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    console.log("[v0] handleManifestInterest called:", {
-      phoneValidated,
-      hookPhoneVerified,
-      authEmail,
-      currentUserEmail,
-    })
-    
     setIsSubmitting(true)
+    
     try {
-      // SEMPRE validar no servidor que telefone está verificado (segurança)
       const userEmail = authEmail || currentUserEmail
-      console.log("[v0] Calling canUserExpressInterest with email:", userEmail)
       const permissionCheck = await canUserExpressInterest(userEmail)
       
-      console.log("[v0] permissionCheck result:", permissionCheck)
-      
-      // Se não tem telefone validado, BLOQUEAR (mesmo que UI diga que está)
       if (!permissionCheck.phoneVerified) {
-        console.log("[v0] Server returned phoneVerified: false, blocking")
         toast({
           title: "Validação necessária",
           description: "Por favor, valide seu telefone antes de manifestar interesse.",
@@ -197,36 +170,29 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         setIsSubmitting(false)
         return
       }
-
-      console.log("[v0] Phone verified on server, proceeding...")
       
-      // Se é profissional, verificar se tem créditos/plano
-      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest) {
-        if (permissionCheck.needsUpgrade) {
-          toast({
-            title: "Créditos insuficientes",
-            description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
-            variant: "destructive",
-          })
-          setShowUpgradeModal(true)
-        }
+      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest && !isSubscribed) {
+        toast({
+          title: "Créditos insuficientes",
+          description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
+          variant: "destructive",
+        })
+        setShowUpgradeModal(true)
         setIsSubmitting(false)
         return
       }
 
-      // Criar proposta de interesse simples
+      // Criar proposta de interesse
       await addNeedProposal({
         needId: need.id,
-        professionalEmail: currentUserEmail,
+        professionalEmail: userEmail,
         type: "interest_only",
       })
 
-      // Incrementar contador de interesses
       if (permissionCheck.isProfessional) {
-        await incrementInterestCount(currentUserEmail)
+        await incrementInterestCount(userEmail)
       }
 
-      // Notificar o solicitante
       await createNotificationViaAPI(
         need.requesterEmail,
         "Novo interesse em seu serviço",
@@ -235,18 +201,17 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         need.id,
       )
 
-      // Iniciar chat automático
       await startChat({
         needId: need.id,
         requesterEmail: need.requesterEmail,
-        professionalEmail: currentUserEmail,
+        professionalEmail: userEmail,
         reason: "interest",
         customText: "Profissional manifestou interesse em seu serviço.",
       })
 
       toast({
         title: "Interesse manifestado!",
-        description: "Seu interesse foi registrado. O chat foi iniciado para você conversar com o solicitante.",
+        description: "Seu interesse foi registrado. O chat foi iniciado.",
         variant: "success",
       })
 
@@ -256,7 +221,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       console.error("Erro ao manifestar interesse:", error)
       toast({
         title: "Erro",
-        description: error.message || "Erro ao manifestar interesse. Tente novamente.",
+        description: error.message || "Erro ao manifestar interesse.",
         variant: "destructive",
       })
     } finally {
