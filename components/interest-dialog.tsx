@@ -326,7 +326,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 </>
               )}
 
-              {!phoneValidated && codeSent && (
+              {!hookPhoneVerified && codeSent && (
                 <>
                   <div>
                     <Label htmlFor="code">Código de Verificação</Label>
@@ -400,12 +400,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   disabled={
                     isSubmitting ||
                     phoneValidationLoading ||
-                    (!phoneValidated && phoneInput.length === 0) ||
-                    (!phoneValidated && !isProfessionalCheckbox)
+                    (!hookPhoneVerified && phoneInput.length === 0) ||
+                    (!hookPhoneVerified && !isProfessionalCheckbox)
                   }
                   onClick={(e) => {
                     // Se telefone validado mas sem créditos, abrir modal
-                    if (phoneValidated && isProfessional && !canExpress) {
+                    if (hookPhoneVerified && isProfessional && !canExpress) {
                       e.preventDefault()
                       setShowUpgradeModal(true)
                       return
@@ -418,7 +418,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Verificando...
                     </>
-                  ) : !phoneValidated ? (
+                  ) : !hookPhoneVerified ? (
                     <>
                       <Phone className="h-4 w-4" />
                       {codeSent ? "Verificar Código" : "Enviar Código"}
