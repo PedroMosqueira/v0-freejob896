@@ -25,7 +25,7 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
-  const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified, phoneVerifiedLoaded } = useAuth()
+  const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified, phoneVerifiedLoaded, email: authEmail } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -173,7 +173,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     setIsSubmitting(true)
     try {
       // SEMPRE validar no servidor que telefone está verificado (segurança)
-      const permissionCheck = await canUserExpressInterest(currentUserEmail)
+      const userEmail = authEmail || currentUserEmail
+      const permissionCheck = await canUserExpressInterest(userEmail)
       
       // Se não tem telefone validado, BLOQUEAR (mesmo que UI diga que está)
       if (!permissionCheck.phoneVerified) {
