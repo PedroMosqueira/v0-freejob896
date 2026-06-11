@@ -170,14 +170,25 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log("[v0] handleManifestInterest called:", {
+      phoneValidated,
+      hookPhoneVerified,
+      authEmail,
+      currentUserEmail,
+    })
+    
     setIsSubmitting(true)
     try {
       // SEMPRE validar no servidor que telefone está verificado (segurança)
       const userEmail = authEmail || currentUserEmail
+      console.log("[v0] Calling canUserExpressInterest with email:", userEmail)
       const permissionCheck = await canUserExpressInterest(userEmail)
+      
+      console.log("[v0] permissionCheck result:", permissionCheck)
       
       // Se não tem telefone validado, BLOQUEAR (mesmo que UI diga que está)
       if (!permissionCheck.phoneVerified) {
+        console.log("[v0] Server returned phoneVerified: false, blocking")
         toast({
           title: "Validação necessária",
           description: "Por favor, valide seu telefone antes de manifestar interesse.",
@@ -186,6 +197,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         setIsSubmitting(false)
         return
       }
+
+      console.log("[v0] Phone verified on server, proceeding...")
       
       // Se é profissional, verificar se tem créditos/plano
       if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest) {
