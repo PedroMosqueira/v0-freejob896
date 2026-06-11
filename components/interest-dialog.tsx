@@ -30,8 +30,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
-  const [isCheckingPermission, setIsCheckingPermission] = useState(true)
-  const [phoneValidated, setPhoneValidated] = useState(false)
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false)
   const [phoneInput, setPhoneInput] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
   const [codeSent, setCodeSent] = useState(false)
@@ -48,30 +47,6 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
   }
-
-  // Usar phoneVerified do hook quando o dialog abre (mas só depois de carregar)
-  useEffect(() => {
-    console.log("[v0] Dialog useEffect - isOpen:", isOpen, "phoneVerifiedLoaded:", phoneVerifiedLoaded, "hookPhoneVerified:", hookPhoneVerified)
-    if (isOpen) {
-      // Se phoneVerifiedLoaded é true, usar o valor
-      if (phoneVerifiedLoaded) {
-        console.log("[v0] Setting phoneValidated to:", hookPhoneVerified)
-        setPhoneValidated(hookPhoneVerified)
-        setIsCheckingPermission(false)
-      } else {
-        // Se ainda não carregou, tentar usar o valor do hook mesmo assim (pode ter sido carregado rapidamente)
-        // Isso evita o problema de ficar travado se phoneVerifiedLoaded nunca ficasse true
-        if (hookPhoneVerified === true || hookPhoneVerified === false) {
-          console.log("[v0] phoneVerifiedLoaded is false but hookPhoneVerified is set, using it:", hookPhoneVerified)
-          setPhoneValidated(hookPhoneVerified)
-          setIsCheckingPermission(false)
-        } else {
-          console.log("[v0] Still loading phone verification...")
-          setIsCheckingPermission(true)
-        }
-      }
-    }
-  }, [isOpen, hookPhoneVerified, phoneVerifiedLoaded])
 
   const handlePhoneValidationSuccess = (phone: string) => {
     setPhoneValidated(true)
@@ -279,7 +254,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 e.preventDefault()
                 
                 // Se telefone não validado
-                if (!phoneValidated) {
+                if (!hookPhoneVerified) {
                   if (codeSent) {
                     submitPhoneVerification(e)
                   } else {
@@ -293,7 +268,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               }} 
               className="space-y-4"
             >
-              {!phoneValidated && !codeSent && (
+              {!hookPhoneVerified && !codeSent && (
                 <>
                   <div className="space-y-2">
                     <Label>Telefone</Label>
@@ -379,7 +354,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 </>
               )}
 
-              {phoneValidated && (
+              {hookPhoneVerified && (
                 <>
                   {isProfessional && !isSubscribed && (
                     <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
