@@ -51,9 +51,25 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
   // Usar phoneVerified do hook quando o dialog abre (mas só depois de carregar)
   useEffect(() => {
-    if (isOpen && phoneVerifiedLoaded) {
-      setPhoneValidated(hookPhoneVerified)
-      setIsCheckingPermission(false)
+    console.log("[v0] Dialog useEffect - isOpen:", isOpen, "phoneVerifiedLoaded:", phoneVerifiedLoaded, "hookPhoneVerified:", hookPhoneVerified)
+    if (isOpen) {
+      // Se phoneVerifiedLoaded é true, usar o valor
+      if (phoneVerifiedLoaded) {
+        console.log("[v0] Setting phoneValidated to:", hookPhoneVerified)
+        setPhoneValidated(hookPhoneVerified)
+        setIsCheckingPermission(false)
+      } else {
+        // Se ainda não carregou, tentar usar o valor do hook mesmo assim (pode ter sido carregado rapidamente)
+        // Isso evita o problema de ficar travado se phoneVerifiedLoaded nunca ficasse true
+        if (hookPhoneVerified === true || hookPhoneVerified === false) {
+          console.log("[v0] phoneVerifiedLoaded is false but hookPhoneVerified is set, using it:", hookPhoneVerified)
+          setPhoneValidated(hookPhoneVerified)
+          setIsCheckingPermission(false)
+        } else {
+          console.log("[v0] Still loading phone verification...")
+          setIsCheckingPermission(true)
+        }
+      }
     }
   }, [isOpen, hookPhoneVerified, phoneVerifiedLoaded])
 
