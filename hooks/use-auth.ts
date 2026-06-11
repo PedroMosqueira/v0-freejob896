@@ -18,6 +18,7 @@ export function useAuth() {
   const [email, setEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [phoneVerified, setPhoneVerified] = useState(false)
+  const [phoneVerifiedLoaded, setPhoneVerifiedLoaded] = useState(false)
   const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>("free")
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [session, setSession] = useState<any>(null)
@@ -39,8 +40,14 @@ export function useAuth() {
         setPhoneVerified(user[0].phone_verified || false)
         console.log("[v0] Phone verification status:", user[0].phone_verified)
       }
+      if (isMountedRef.current) {
+        setPhoneVerifiedLoaded(true)
+      }
     } catch (err) {
       console.error("[v0] Error fetching phone verification:", err)
+      if (isMountedRef.current) {
+        setPhoneVerifiedLoaded(true)
+      }
     }
   }, [supabase])
 
@@ -206,6 +213,7 @@ export function useAuth() {
       setEmail(null)
       setSession(null)
       setPhoneVerified(false)
+      setPhoneVerifiedLoaded(false)
       setSubscriptionPlan("free")
       setSubscription(null)
       return true
@@ -220,6 +228,7 @@ export function useAuth() {
     logout, 
     isLoading, 
     phoneVerified,
+    phoneVerifiedLoaded,
     subscriptionPlan,
     subscription,
     isSubscribed: subscriptionPlan !== "free",

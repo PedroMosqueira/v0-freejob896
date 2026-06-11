@@ -25,7 +25,7 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
-  const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified } = useAuth()
+  const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified, phoneVerifiedLoaded } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -49,9 +49,15 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
   }
 
-  // Usar phoneVerified do hook quando o dialog abre
+  // Usar phoneVerified do hook quando o dialog abre (mas só depois de carregar)
   useEffect(() => {
     if (isOpen) {
+      // Se ainda está carregando, aguardar
+      if (!phoneVerifiedLoaded) {
+        console.log("[v0] Dialog opened - phoneVerifiedLoaded is false, waiting...")
+        setIsCheckingPermission(true)
+        return
+      }
       console.log("[v0] Dialog opened - phoneVerified from hook:", hookPhoneVerified)
       setPhoneValidated(hookPhoneVerified)
       setIsCheckingPermission(false)
@@ -63,7 +69,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setPhoneValidationError("")
       setShowUpgradeModal(false)
     }
-  }, [isOpen, hookPhoneVerified])
+  }, [isOpen, hookPhoneVerified, phoneVerifiedLoaded])
 
   const handlePhoneValidationSuccess = (phone: string) => {
     setPhoneValidated(true)
