@@ -17,6 +17,7 @@ interface UserSubscription {
 export function useAuth() {
   const [email, setEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [phoneVerified, setPhoneVerified] = useState(false)
   const [subscriptionPlan, setSubscriptionPlan] = useState<SubscriptionPlan>("free")
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [session, setSession] = useState<any>(null)
@@ -24,6 +25,24 @@ export function useAuth() {
   const supabaseRef = useRef(createSupabaseBrowserClient())
   const supabase = supabaseRef.current
   const isMountedRef = useRef(true)
+
+  // Fetch user phone verification status
+  const fetchPhoneVerification = useCallback(async (email: string) => {
+    try {
+      const { data: user, error } = await supabase
+        .from("users")
+        .select("phone_verified")
+        .eq("email", email)
+        .limit(1)
+
+      if (!error && user && user.length > 0 && isMountedRef.current) {
+        setPhoneVerified(user[0].phone_verified || false)
+        console.log("[v0] Phone verification status:", user[0].phone_verified)
+      }
+    } catch (err) {
+      console.error("[v0] Error fetching phone verification:", err)
+    }
+  }, [supabase])
 
   // Fetch subscription data for user - without dependencies to prevent re-creation
   const fetchSubscription = useCallback(async (userId: string) => {
@@ -155,14 +174,18 @@ export function useAuth() {
           if (isMountedRef.current) {
             setIsLoading(false)
           }
-          // Fetch subscription in background
-          console.log("[v0] onAuthStateChange: Fetching subscription in background...")
+          // Fetch subscription and phone verification in background
+          console.log("[v0] onAuthStateChange: Fetching subscription and phone verification...")
           fetchSubscription(session.user.id).catch(err => {
             console.error("[v0] Auth change subscription fetch error:", err)
+          })
+          fetchPhoneVerification(session.user.email).catch(err => {
+            console.error("[v0] Auth change phone verification fetch error:", err)
           })
         } else {
           setEmail(null)
           setSession(null)
+          setPhoneVerified(false)
           setSubscriptionPlan("free")
           setSubscription(null)
         }
@@ -182,6 +205,7 @@ export function useAuth() {
       await supabase.auth.signOut()
       setEmail(null)
       setSession(null)
+      setPhoneVerified(false)
       setSubscriptionPlan("free")
       setSubscription(null)
       return true
@@ -195,6 +219,7 @@ export function useAuth() {
     email, 
     logout, 
     isLoading, 
+    phoneVerified,
     subscriptionPlan,
     subscription,
     isSubscribed: subscriptionPlan !== "free",
