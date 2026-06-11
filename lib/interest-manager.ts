@@ -39,11 +39,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     if (!users || users.length === 0) {
       console.log("[v0-server] User not found")
-      return {
+      const result = {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
         phoneVerified: false,
       }
+      console.log("[v0-browser] Result for", userEmail, ":", result)
+      return result
     }
 
     const user = users[0]
@@ -51,13 +53,15 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
       console.log("[v0-server] Phone not verified - blocking")
-      return {
+      const result = {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
         needsPhoneValidation: true,
         isProfessional: user.is_professional || false,
         phoneVerified: false,
       }
+      console.log("[v0-browser] PHONE NOT VERIFIED - Result for", userEmail, ":", result)
+      return result
     }
 
     console.log("[v0-server] Phone verified - proceeding")
@@ -65,11 +69,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
       console.log("[v0-server] Non-professional user - returning success")
-      return {
+      const result = {
         canExpressInterest: true,
         isProfessional: false,
         phoneVerified: true,
       }
+      console.log("[v0-browser] NON-PROFESSIONAL - Result for", userEmail, ":", result)
+      return result
     }
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
@@ -81,7 +87,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       const planLimit = PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
       
       if (activeCount >= planLimit) {
-        return {
+        const result = {
           canExpressInterest: false,
           reason: `Você atingiu o limite de ${planLimit} proposta(s) simultânea(s). Aguarde a conclusão de uma para continuar.`,
           isProfessional: true,
@@ -89,9 +95,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
           freeInterestsRemaining,
           hasActiveSubscription: false,
         }
+        console.log("[v0-browser] LIMIT REACHED - Result for", userEmail, ":", result)
+        return result
       }
       
-      return {
+      const result = {
         canExpressInterest: true,
         isProfessional: true,
         freeInterestsUsed: 3 - freeInterestsRemaining,
@@ -99,6 +107,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         phoneVerified: true,
         hasActiveSubscription: false,
       }
+      console.log("[v0-browser] PROFESSIONAL WITH FREE INTERESTS - Result for", userEmail, ":", result)
+      return result
     }
 
     // Se usou todas as propostas gratuitas, verificar se tem plano ativo
@@ -127,7 +137,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       const activeCount = await getActiveInterestsCount(userEmail)
       
       if (activeCount >= simultaneousLimit) {
-        return {
+        const result = {
           canExpressInterest: false,
           reason: `Você atingiu o limite de ${simultaneousLimit} proposta(s) simultânea(s) do seu plano. Aguarde a conclusão de uma.`,
           isProfessional: true,
@@ -136,9 +146,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
           phoneVerified: true,
           hasActiveSubscription: true,
         }
+        console.log("[v0-browser] SUBSCRIPTION LIMIT REACHED - Result for", userEmail, ":", result)
+        return result
       }
       
-      return {
+      const result = {
         canExpressInterest: true,
         isProfessional: true,
         freeInterestsUsed: 3,
@@ -146,9 +158,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         phoneVerified: true,
         hasActiveSubscription: true,
       }
+      console.log("[v0-browser] PROFESSIONAL WITH SUBSCRIPTION - Result for", userEmail, ":", result)
+      return result
     }
 
-    return {
+    const result = {
       canExpressInterest: false,
       reason: "Você usou suas 3 propostas gratuitas. Para continuar, é necessário um plano de assinatura.",
       needsUpgrade: true,
@@ -158,6 +172,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       phoneVerified: true,
       hasActiveSubscription: false,
     }
+    console.log("[v0-browser] NEEDS UPGRADE - Result for", userEmail, ":", result)
+    return result
   } catch (error) {
     return {
       canExpressInterest: false,
