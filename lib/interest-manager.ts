@@ -18,6 +18,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   needsUpgrade?: boolean
 }> {
   try {
+    console.log("[v0-server] canUserExpressInterest - checking email:", userEmail)
     const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
@@ -27,11 +28,17 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .eq("email", userEmail)
       .limit(1)
 
+    console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message)
+    if (users && users.length > 0) {
+      console.log("[v0-server] User data:", { phone_verified: users[0].phone_verified, is_professional: users[0].is_professional })
+    }
+
     if (userError) {
       throw userError
     }
 
     if (!users || users.length === 0) {
+      console.log("[v0-server] User not found")
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -43,6 +50,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
+      console.log("[v0-server] Phone not verified - blocking")
       return {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
@@ -52,8 +60,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
     }
 
+    console.log("[v0-server] Phone verified - proceeding")
+    
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
+      console.log("[v0-server] Non-professional user - returning success")
       return {
         canExpressInterest: true,
         isProfessional: false,
