@@ -175,9 +175,12 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     console.log("[v0-browser] NEEDS UPGRADE - Result for", userEmail, ":", result)
     return result
   } catch (error) {
+    console.error("[v0-server] ERROR in canUserExpressInterest for", userEmail, ":", error)
+    console.error("[v0-browser] ERROR CAUGHT - Check server logs for details")
+    const errorMessage = error instanceof Error ? error.message : String(error)
     return {
       canExpressInterest: false,
-      reason: "Erro ao verificar sua permissão",
+      reason: `Erro ao verificar sua permissão: ${errorMessage}`,
       phoneVerified: false,
     }
   }
