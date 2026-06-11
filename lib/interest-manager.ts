@@ -18,6 +18,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   needsUpgrade?: boolean
 }> {
   try {
+    console.log("[v0-server] canUserExpressInterest called with email:", userEmail)
     const supabase = await createSupabaseServerClient()
 
     // Buscar dados do usuário
@@ -27,11 +28,15 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .eq("email", userEmail)
       .limit(1)
 
+    console.log("[v0-server] Query result:", { userError, usersLength: users?.length, users })
+
     if (userError) {
+      console.error("[v0-server] Query error:", userError)
       throw userError
     }
 
     if (!users || users.length === 0) {
+      console.log("[v0-server] User not found for email:", userEmail)
       return {
         canExpressInterest: false,
         reason: "Usuário não encontrado",
@@ -40,9 +45,11 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     const user = users[0]
+    console.log("[v0-server] User found:", { id: user.id, email: userEmail, phone_verified: user.phone_verified, is_professional: user.is_professional })
 
     // Verificar se tem telefone validado
     if (!user.phone_verified) {
+      console.log("[v0-server] Phone NOT verified, blocking")
       return {
         canExpressInterest: false,
         reason: "Você precisa validar seu telefone primeiro",
@@ -54,6 +61,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     // Se não é profissional, pode expressar interesse
     if (!user.is_professional) {
+      console.log("[v0-server] Not professional - allowing interest")
       return {
         canExpressInterest: true,
         isProfessional: false,
@@ -63,11 +71,14 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
     const freeInterestsRemaining = user.free_interests_remaining ?? 3
+    console.log("[v0-server] Professional user - checking interests:", { freeInterestsRemaining })
 
     if (freeInterestsRemaining > 0) {
       // Verificar também limite de propostas simultâneas
       const activeCount = await getActiveInterestsCount(userEmail)
       const planLimit = PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
+      
+      console.log("[v0-server] Has free interests remaining:", { activeCount, planLimit })
       
       if (activeCount >= planLimit) {
         return {
@@ -80,6 +91,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
         }
       }
       
+      console.log("[v0-server] Professional with free interests - allowing")
       return {
         canExpressInterest: true,
         isProfessional: true,
