@@ -150,9 +150,18 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     
     try {
       const userEmail = authEmail || currentUserEmail
+      console.log("[v0] handleManifestInterest - userEmail:", userEmail, "hookPhoneVerified:", hookPhoneVerified)
+      
       const permissionCheck = await canUserExpressInterest(userEmail)
+      console.log("[v0] permissionCheck result:", {
+        phoneVerified: permissionCheck.phoneVerified,
+        isProfessional: permissionCheck.isProfessional,
+        canExpressInterest: permissionCheck.canExpressInterest,
+        reason: permissionCheck.reason,
+      })
       
       if (!permissionCheck.phoneVerified) {
+        console.log("[v0] BLOCKING - phoneVerified is false from server")
         toast({
           title: "Validação necessária",
           description: "Por favor, valide seu telefone antes de manifestar interesse.",
