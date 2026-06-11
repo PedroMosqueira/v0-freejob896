@@ -25,7 +25,7 @@ interface InterestDialogProps {
 
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
-  const { subscriptionPlan, isSubscribed } = useAuth()
+  const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -49,128 +49,31 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
   }
 
-  // Verificar permissão ao abrir o diálogo
+  // Usar phoneVerified do hook quando o dialog abre
   useEffect(() => {
-    if (isOpen && currentUserEmail) {
-      checkPermission()
-    } else if (!isOpen) {
-      // Limpar apenas os campos de formulário quando fecha
-      // NÃO limpar phoneValidated - ele deve persistir se já foi validado
+    if (isOpen) {
+      console.log("[v0] Dialog opened - phoneVerified from hook:", hookPhoneVerified)
+      setPhoneValidated(hookPhoneVerified)
+      setIsCheckingPermission(false)
+    } else {
+      // Limpar campos quando fecha
       setPhoneInput("")
       setVerificationCode("")
       setCodeSent(false)
       setPhoneValidationError("")
       setShowUpgradeModal(false)
     }
-  }, [isOpen, currentUserEmail, isSubscribed, subscriptionPlan])
-
-  // Se abrir o dialog com telefone validado, profissional e sem créditos, mostrar planos direto
-  // PORÉM, se tem inscrição ativa, NÃO mostrar modal - o usuário pode continuar
-  useEffect(() => {
-    if (isOpen && phoneValidated && isProfessional && !canExpress && !isSubscribed) {
-      console.log("[v0] Dialog: Professional with no credits and no subscription - showing upgrade modal")
-      setShowUpgradeModal(true)
-    } else if (isOpen && showUpgradeModal && isSubscribed) {
-      console.log("[v0] Dialog: User is subscribed - closing upgrade modal")
-      setShowUpgradeModal(false)
-    }
-  }, [isOpen, phoneValidated, isProfessional, canExpress, isSubscribed, showUpgradeModal])
-
-  const checkPermission = async () => {
-    setIsCheckingPermission(true)
-    try {
-      // Verificar permissão do usuário
-      console.log("[v0] checkPermission: Calling canUserExpressInterest with email:", currentUserEmail)
-      const result = await canUserExpressInterest(currentUserEmail)
-      
-      console.log("[v0] checkPermission: FULL RESPONSE:", result)
-      console.log("[v0] Permission check result:", {
-        phoneVerified: result.phoneVerified,
-        freeCredits: result.freeInterestsRemaining,
-        canExpress: result.canExpressInterest,
-        isProfessional: result.isProfessional,
-        isSubscribed,
-      })
-
-      setPhoneValidated(result.phoneVerified || false)
-      setIsProfessional(result.isProfessional || false)
-      setIsProfessionalCheckbox(result.isProfessional || false)
-      setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
-
-      console.log("[v0] checkPermission: States set - phoneValidated:", result.phoneVerified)
-
-      // Lógica do fluxo:
-      // 1. Se telefone NÃO validado → bloquear e pedir validação
-      if (!result.phoneVerified) {
-        setCanExpress(false)
-        console.log("[v0] Phone not verified - blocking interest")
-        return
-      }
-
-      // 2. Se tem créditos grátis restantes → pode expressar interesse
-      if (result.canExpressInterest && result.freeInterestsRemaining > 0) {
-        setCanExpress(true)
-        console.log("[v0] Has free credits - can express interest")
-        return
-      }
-
-      // 3. Se não tem créditos grátis mas TEM inscrição ativa → pode expressar interesse
-      if (isSubscribed) {
-        setCanExpress(true)
-        console.log("[v0] Has active subscription - can express interest")
-        return
-      }
-
-      // 4. Se não tem créditos grátis E não tem inscrição → mostrar planos
-      setCanExpress(false)
-      console.log("[v0] No credits and no subscription - will show upgrade modal")
-    } catch (error) {
-      console.error("Erro ao verificar permissão:", error)
-      setCanExpress(false)
-    } finally {
-      setIsCheckingPermission(false)
-    }
-  }
+  }, [isOpen, hookPhoneVerified])
 
   const handlePhoneValidationSuccess = (phone: string) => {
     setPhoneValidated(true)
     setPhoneInput("")
     setVerificationCode("")
     setCodeSent(false)
-    // Verificar créditos após validar telefone
-    checkCreditsAfterPhoneValidation()
-  }
-
-  const checkCreditsAfterPhoneValidation = async () => {
-    try {
-      const result = await canUserExpressInterest(currentUserEmail)
-      setCanExpress(result.canExpressInterest)
-      setIsProfessional(result.isProfessional || false)
-      setFreeInterestsRemaining(result.freeInterestsRemaining || 3)
-      
-      // Se é profissional e não tem créditos E não tem inscrição, abre modal de planos
-      // Caso contrário, pode manifestar interesse
-      if (result.isProfessional && !result.canExpressInterest && !isSubscribed) {
-        toast({
-          title: "Telefone validado!",
-          description: "Agora escolha um plano para manifestar interesse.",
-        })
-        setShowUpgradeModal(true)
-      } else {
-        toast({
-          title: "Telefone validado!",
-          description: "Agora você pode manifestar interesse em serviços.",
-          variant: "success",
-        })
-      }
-    } catch (error) {
-      console.error("Erro ao verificar créditos:", error)
-      toast({
-        title: "Telefone validado!",
-        description: "Agora você pode manifestar interesse em serviços.",
-        variant: "success",
-      })
-    }
+    toast({
+      title: "Telefone verificado!",
+      description: "Você pode agora manifestar interesse.",
+    })
   }
 
   const requestPhoneVerification = async (e: React.FormEvent) => {
