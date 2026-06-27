@@ -49,7 +49,7 @@ async function shouldReleaseInterest(proposal: any): Promise<boolean> {
  * Get count of active interests that count toward simultaneous limit
  */
 export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data, error } = await supabase
     .from("need_proposals")

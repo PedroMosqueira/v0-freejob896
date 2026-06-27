@@ -48,16 +48,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
   }
 
-  const handlePhoneValidationSuccess = (phone: string) => {
-    setPhoneValidated(true)
-    setPhoneInput("")
-    setVerificationCode("")
-    setCodeSent(false)
-    toast({
-      title: "Telefone verificado!",
-      description: "Você pode agora manifestar interesse.",
-    })
-  }
+
 
   const requestPhoneVerification = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -127,11 +118,10 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       }
 
       const data = await response.json()
-      setPhoneValidated(true)
       setPhoneValidationError("")
-      
-      // Rerun permission check now that phone is validated and subscription may have loaded
-      await checkPermission()
+      setPhoneInput("")
+      setVerificationCode("")
+      setCodeSent(false)
       
       toast({
         title: "Telefone verificado!",
