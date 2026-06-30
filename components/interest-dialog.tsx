@@ -449,6 +449,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         userEmail={currentUserEmail}
+        needId={need.id}
+        onUpgradeSuccess={() => {
+          // Após upgrade bem-sucedido, tentar manifestar interesse novamente
+          setShowUpgradeModal(false)
+          handleManifestInterest(new Event("click") as unknown as React.FormEvent)
+        }}
       />
     </>
   )
