@@ -26,6 +26,47 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session
+        console.log("[v0] Checkout session completed:", session.id)
+
+        // Atualizar plano do usuário no banco de dados
+        const userEmail = session.metadata?.userEmail
+        const planId = session.metadata?.planId
+
+        if (userEmail && planId) {
+          try {
+            // Determinar o novo plano baseado no planId
+            let newPlan = "free"
+            if (planId === "pro") {
+              newPlan = "pro"
+            } else if (planId === "business") {
+              newPlan = "business"
+            }
+
+            // Atualizar usuário com novo plano
+            const { error: updateError } = await supabase
+              .from("users")
+              .update({
+                subscription_plan: newPlan,
+                subscription_active: true,
+                subscription_start_date: new Date().toISOString(),
+              })
+              .eq("email", userEmail)
+
+            if (updateError) {
+              console.error("[v0] Erro ao atualizar plano do usuário:", updateError)
+            } else {
+              console.log(`[v0] Plano atualizado para ${userEmail}: ${newPlan}`)
+            }
+          } catch (err) {
+            console.error("[v0] Erro ao processar upgrade de plano:", err)
+          }
+        }
+
+        break
+      }
+
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
 

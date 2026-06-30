@@ -22,9 +22,11 @@ interface UpgradePlansModalProps {
   onClose: () => void
   userEmail?: string
   plans?: Plan[]
+  needId?: string
+  onUpgradeSuccess?: () => void
 }
 
-export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [] }: UpgradePlansModalProps) {
+export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], needId, onUpgradeSuccess }: UpgradePlansModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -70,6 +72,14 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [] }: Up
     setError(null)
 
     try {
+      // Se há um needId, salvar no sessionStorage para continuar após pagamento
+      if (needId) {
+        sessionStorage.setItem("pendingInterest", JSON.stringify({
+          needId,
+          timestamp: Date.now(),
+        }))
+      }
+
       const response = await fetch("/api/subscriptions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

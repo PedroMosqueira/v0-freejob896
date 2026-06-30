@@ -49,8 +49,9 @@ export async function createSubscriptionCheckoutSession(
   userEmail: string,
   successUrl: string,
   cancelUrl: string,
+  metadata?: Record<string, string>,
 ) {
-  console.log("[v0] createSubscriptionCheckoutSession called with:", { productId, userEmail, successUrl, cancelUrl })
+  console.log("[v0] createSubscriptionCheckoutSession called with:", { productId, userEmail, successUrl, cancelUrl, metadata })
   
   if (!isStripeConfigured()) {
     console.error("[v0] Stripe is not configured. STRIPE_SECRET_KEY is missing.")
@@ -93,6 +94,7 @@ export async function createSubscriptionCheckoutSession(
     metadata: {
       product_id: productId,
       plan_slug: product.slug,
+      ...metadata, // Adicionar metadata customizada
     },
   })
 

@@ -87,6 +87,10 @@ export async function POST(request: NextRequest) {
       email,
       `${baseUrl}/planos?session_id={CHECKOUT_SESSION_ID}`,
       `${baseUrl}/planos?canceled=true`,
+      {
+        userEmail: email,
+        planId: planSlug,
+      }
     )
 
     console.log("[v0] Stripe checkout session created:", session.id)
