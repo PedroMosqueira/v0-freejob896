@@ -72,12 +72,14 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
     setError(null)
 
     try {
-      // Se há um needId, salvar no sessionStorage para continuar após pagamento
+      // Se há um needId, salvar em sessionStorage para continuar após pagamento
       if (needId) {
         sessionStorage.setItem("pendingInterest", JSON.stringify({
           needId,
+          userEmail,
           timestamp: Date.now(),
         }))
+        console.log("[v0] Pending interest salvo em sessionStorage para needId:", needId)
       }
 
       const response = await fetch("/api/subscriptions/create", {
