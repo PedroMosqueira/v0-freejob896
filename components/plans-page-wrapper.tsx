@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
+import { createClient } from "@supabase/supabase-js"
 
 interface Plan {
   id: string
@@ -31,25 +32,50 @@ export function PlansPageWrapper() {
   // Verificar se há pendingInterest após pagamento bem-sucedido
   useEffect(() => {
     const sessionId = searchParams.get("session_id")
-    if (sessionId) {
-      const pendingInterest = sessionStorage.getItem("pendingInterest")
-      if (pendingInterest) {
+    if (sessionId && email) {
+      const checkPendingInterest = async () => {
         try {
-          const { needId } = JSON.parse(pendingInterest)
-          console.log("[v0] Continuando com manifestar interesse para needId:", needId)
-          
-          // Limpar sessionStorage
-          sessionStorage.removeItem("pendingInterest")
-          
-          // Redirecionar de volta para manifestar interesse
-          // Usando replace para não deixar a página de sucesso no histórico
-          router.replace(`/?focus-need=${needId}`)
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          )
+
+          // Buscar pendingInterest do Supabase
+          const { data: user, error } = await supabase
+            .from("users")
+            .select("pending_interest_need_id")
+            .eq("email", email)
+            .single()
+
+          if (error) {
+            console.error("[v0] Erro ao buscar pending interest:", error)
+            return
+          }
+
+          const needId = user?.pending_interest_need_id
+          if (needId) {
+            console.log("[v0] Continuando com manifestar interesse para needId:", needId)
+
+            // Limpar pending_interest_need_id do banco de dados
+            await supabase
+              .from("users")
+              .update({ pending_interest_need_id: null })
+              .eq("email", email)
+
+            // Limpar sessionStorage também
+            sessionStorage.removeItem("pendingInterest")
+
+            // Redirecionar de volta para manifestar interesse
+            router.replace(`/?focus-need=${needId}`)
+          }
         } catch (err) {
           console.error("[v0] Erro ao processar pendingInterest:", err)
         }
       }
+
+      checkPendingInterest()
     }
-  }, [searchParams, router])
+  }, [searchParams, router, email])
 
   useEffect(() => {
     const fetchPlans = async () => {
