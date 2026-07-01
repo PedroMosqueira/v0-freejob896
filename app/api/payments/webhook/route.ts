@@ -25,14 +25,27 @@ export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
 
   try {
+    console.log("[v0] Webhook event received:", {
+      type: event.type,
+      id: event.id,
+      timestamp: new Date().toISOString(),
+    })
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
-        console.log("[v0] Checkout session completed:", session.id)
+        console.log("[v0] Checkout session completed:", {
+          sessionId: session.id,
+          customerId: session.customer_email,
+          metadata: session.metadata,
+          status: session.payment_status,
+        })
 
         // Atualizar plano do usuário no banco de dados
         const userEmail = session.metadata?.userEmail
         const planId = session.metadata?.planId
+
+        console.log("[v0] Metadata extracted:", { userEmail, planId })
 
         if (userEmail && planId) {
           try {
@@ -45,7 +58,13 @@ export async function POST(request: NextRequest) {
             }
 
             // Atualizar usuário com novo plano
-            const { error: updateError } = await supabase
+            console.log("[v0] About to update user:", {
+              email: userEmail,
+              newPlan,
+              timestamp: new Date().toISOString(),
+            })
+
+            const { error: updateError, data: updatedData } = await supabase
               .from("users")
               .update({
                 subscription_plan: newPlan,
@@ -53,11 +72,20 @@ export async function POST(request: NextRequest) {
                 subscription_start_date: new Date().toISOString(),
               })
               .eq("email", userEmail)
+              .select()
 
             if (updateError) {
-              console.error("[v0] Erro ao atualizar plano do usuário:", updateError)
+              console.error("[v0] Erro ao atualizar plano do usuário:", {
+                error: updateError.message,
+                code: updateError.code,
+                details: updateError.details,
+              })
             } else {
-              console.log(`[v0] Plano atualizado para ${userEmail}: ${newPlan}`)
+              console.log("[v0] Plano atualizado com sucesso:", {
+                email: userEmail,
+                newPlan,
+                rowsAffected: updatedData?.length,
+              })
             }
           } catch (err) {
             console.error("[v0] Erro ao processar upgrade de plano:", err)
