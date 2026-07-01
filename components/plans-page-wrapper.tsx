@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,10 +21,35 @@ interface Plan {
 
 export function PlansPageWrapper() {
   const { email } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [plans, setPlans] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscribing, setIsSubscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Verificar se há pendingInterest após pagamento bem-sucedido
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id")
+    if (sessionId) {
+      const pendingInterest = sessionStorage.getItem("pendingInterest")
+      if (pendingInterest) {
+        try {
+          const { needId } = JSON.parse(pendingInterest)
+          console.log("[v0] Continuando com manifestar interesse para needId:", needId)
+          
+          // Limpar sessionStorage
+          sessionStorage.removeItem("pendingInterest")
+          
+          // Redirecionar de volta para manifestar interesse
+          // Usando replace para não deixar a página de sucesso no histórico
+          router.replace(`/?focus-need=${needId}`)
+        } catch (err) {
+          console.error("[v0] Erro ao processar pendingInterest:", err)
+        }
+      }
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     const fetchPlans = async () => {
