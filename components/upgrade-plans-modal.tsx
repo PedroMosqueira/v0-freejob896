@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, AlertCircle } from "lucide-react"
 import { useState } from "react"
-import { createClient } from "@supabase/supabase-js"
 
 interface Plan {
   id: string
@@ -73,30 +72,14 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
     setError(null)
 
     try {
-      // Se há um needId, salvar no Supabase para continuar após pagamento
+      // Se há um needId, salvar em sessionStorage para continuar após pagamento
       if (needId) {
-        const supabase = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        )
-
-        // Atualizar user com pending_interest_need_id
-        const { error: updateError } = await supabase
-          .from("users")
-          .update({ pending_interest_need_id: needId })
-          .eq("email", userEmail)
-
-        if (updateError) {
-          console.error("[v0] Erro ao salvar pending interest:", updateError)
-        } else {
-          console.log("[v0] Pending interest salvo para needId:", needId)
-        }
-
-        // Também salvar em sessionStorage como backup
         sessionStorage.setItem("pendingInterest", JSON.stringify({
           needId,
+          userEmail,
           timestamp: Date.now(),
         }))
+        console.log("[v0] Pending interest salvo em sessionStorage para needId:", needId)
       }
 
       const response = await fetch("/api/subscriptions/create", {
