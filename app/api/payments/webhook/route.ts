@@ -39,56 +39,85 @@ export async function POST(request: NextRequest) {
           customerId: session.customer_email,
           metadata: session.metadata,
           status: session.payment_status,
+          subscriptionId: session.subscription,
         })
 
-        // Atualizar plano do usuário no banco de dados
+        // Atualizar subscrição do usuário no banco de dados
         const userEmail = session.metadata?.userEmail
-        const planId = session.metadata?.planId
+        const planSlug = session.metadata?.planId
 
-        console.log("[v0] Metadata extracted:", { userEmail, planId })
+        console.log("[v0] Metadata extracted:", { userEmail, planSlug })
 
-        if (userEmail && planId) {
+        if (userEmail && planSlug) {
           try {
-            // Determinar o novo plano baseado no planId
-            let newPlan = "free"
-            if (planId === "pro") {
-              newPlan = "pro"
-            } else if (planId === "business") {
-              newPlan = "business"
+            // 1. Buscar o usuário
+            const { data: user, error: userError } = await supabase
+              .from("users")
+              .select("id")
+              .eq("email", userEmail)
+              .single()
+
+            if (userError || !user) {
+              console.error("[v0] Usuário não encontrado:", userEmail)
+              break
             }
 
-            // Atualizar usuário com novo plano
-            console.log("[v0] About to update user:", {
-              email: userEmail,
-              newPlan,
-              timestamp: new Date().toISOString(),
-            })
+            console.log("[v0] User found:", { userId: user.id, email: userEmail })
 
-            const { error: updateError, data: updatedData } = await supabase
-              .from("users")
-              .update({
-                subscription_plan: newPlan,
-                subscription_active: true,
-                subscription_start_date: new Date().toISOString(),
-              })
-              .eq("email", userEmail)
+            // 2. Buscar o plano pela slug
+            const { data: plan, error: planError } = await supabase
+              .from("subscription_plans")
+              .select("id")
+              .eq("slug", planSlug)
+              .single()
+
+            if (planError || !plan) {
+              console.error("[v0] Plano não encontrado:", { planSlug, error: planError })
+              break
+            }
+
+            console.log("[v0] Plan found:", { planId: plan.id, slug: planSlug })
+
+            // 3. Criar ou atualizar registro em user_subscriptions
+            const subscriptionData = {
+              user_id: user.id,
+              plan_id: plan.id,
+              stripe_subscription_id: session.subscription as string,
+              stripe_customer_id: session.customer as string,
+              status: "active",
+              current_period_start: new Date().toISOString(),
+              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
+              billing_cycle: "monthly",
+              cancel_at_period_end: false,
+            }
+
+            // Tentar fazer upsert
+            const { error: subscriptionError, data: subscriptionData_result } = await supabase
+              .from("user_subscriptions")
+              .upsert(
+                {
+                  ...subscriptionData,
+                  id: session.subscription,
+                },
+                { onConflict: "stripe_subscription_id" }
+              )
               .select()
 
-            if (updateError) {
-              console.error("[v0] Erro ao atualizar plano do usuário:", {
-                error: updateError.message,
-                code: updateError.code,
-                details: updateError.details,
+            if (subscriptionError) {
+              console.error("[v0] Erro ao criar subscrição:", {
+                error: subscriptionError.message,
+                code: subscriptionError.code,
               })
             } else {
-              console.log("[v0] Plano atualizado com sucesso:", {
+              console.log("[v0] Subscrição criada/atualizada com sucesso:", {
                 email: userEmail,
-                newPlan,
-                rowsAffected: updatedData?.length,
+                planSlug,
+                subscriptionId: session.subscription,
+                rowsAffected: subscriptionData_result?.length,
               })
             }
           } catch (err) {
-            console.error("[v0] Erro ao processar upgrade de plano:", err)
+            console.error("[v0] Erro ao processar upgrade de subscrição:", err)
           }
         }
 
