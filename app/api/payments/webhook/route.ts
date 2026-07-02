@@ -6,10 +6,17 @@ import type Stripe from "stripe"
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ""
 
 export async function POST(request: NextRequest) {
+  console.log("[v0] ====== WEBHOOK RECEIVED ======")
+  console.log("[v0] Webhook Secret configured:", !!webhookSecret)
+  console.log("[v0] Webhook Secret starts with:", webhookSecret.substring(0, 10))
+  
   const body = await request.text()
   const signature = request.headers.get("stripe-signature")
 
+  console.log("[v0] Signature present:", !!signature)
+
   if (!signature) {
+    console.error("[v0] Missing signature")
     return NextResponse.json({ error: "Assinatura ausente" }, { status: 400 })
   }
 
@@ -17,8 +24,12 @@ export async function POST(request: NextRequest) {
 
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    console.log("[v0] Event constructed successfully:", event.type)
   } catch (error) {
-    console.error("[v0] Webhook error:", error)
+    console.error("[v0] Webhook signature verification failed:", {
+      error: error instanceof Error ? error.message : String(error),
+      webhookSecretConfigured: !!webhookSecret,
+    })
     return NextResponse.json({ error: "Webhook inválido" }, { status: 400 })
   }
 
@@ -47,6 +58,15 @@ export async function POST(request: NextRequest) {
         const planSlug = session.metadata?.planId
 
         console.log("[v0] Metadata extracted:", { userEmail, planSlug })
+        console.log("[v0] Full metadata available:", Object.keys(session.metadata || {}))
+
+        if (!userEmail || !planSlug) {
+          console.error("[v0] Missing required metadata:", { 
+            hasUserEmail: !!userEmail, 
+            hasPlanSlug: !!planSlug,
+            fullMetadata: session.metadata
+          })
+        }
 
         if (userEmail && planSlug) {
           try {
