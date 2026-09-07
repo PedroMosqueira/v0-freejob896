@@ -145,7 +145,10 @@ Importante:
       message: error instanceof Error ? error.message : String(error),
     })
     return NextResponse.json(
-      { error: "Erro ao processar solicitação" },
+      {
+        error: "Erro ao processar solicitação",
+        detail: error instanceof Error ? error.message : "Erro desconhecido",
+      },
       { status: 500 },
     )
   }
