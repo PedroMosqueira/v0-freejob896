@@ -4,12 +4,20 @@ import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 
+const groqApiKey = process.env.GROQ_API_KEY
 const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: groqApiKey,
 })
 
 export async function POST(request: NextRequest) {
   try {
+    if (!groqApiKey) {
+      console.error("[v0] GROQ_API_KEY is not configured")
+      return NextResponse.json(
+        { error: "Serviço de IA não configurado" },
+        { status: 503 },
+      )
+    }
     const { message, conversationHistory = [] } = await request.json()
 
     if (!message || typeof message !== "string") {
@@ -77,7 +85,7 @@ Importante:
           content: message,
         },
       ],
-      maxTokens: 500,
+      maxOutputTokens: 500,
       temperature: 0.7,
     })
 
@@ -132,7 +140,10 @@ Importante:
 
     return NextResponse.json(parsedResponse, { status: 200 })
   } catch (error) {
-    console.error("[v0] Error in extract-service-info:", error)
+    console.error("[v0] Error in extract-service-info:", {
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: "Erro ao processar solicitação" },
       { status: 500 },
