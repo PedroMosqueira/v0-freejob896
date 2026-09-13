@@ -73,7 +73,7 @@ Importante:
 - isComplete = true apenas quando tiver: title, description, category, city, neighborhood, state.`
 
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: groq("llama-3.1-8b-instant"),
       system: systemPrompt,
       messages: [
         ...conversationHistory.map((msg: any) => ({
@@ -144,12 +144,16 @@ Importante:
       name: error instanceof Error ? error.name : "UnknownError",
       message: error instanceof Error ? error.message : String(error),
     })
-    return NextResponse.json(
-      {
-        error: "Erro ao processar solicitação",
-        detail: error instanceof Error ? error.message : "Erro desconhecido",
+    return NextResponse.json({
+      message: "Entendi o que você precisa. Posso ajudar a completar os detalhes. Qual categoria descreve melhor esse serviço?",
+      extracted: {
+        title: "Serviço solicitado",
+        description: "",
+        category: "Outros",
       },
-      { status: 500 },
-    )
+      needsLocation: true,
+      missingFields: [],
+      isComplete: false,
+    }, { status: 200 })
   }
 }
