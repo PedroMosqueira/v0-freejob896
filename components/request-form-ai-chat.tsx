@@ -91,7 +91,10 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       })
 
       if (!response.ok) {
-        throw new Error("Erro ao processar mensagem")
+        const errorBody = await response.json().catch(() => null)
+        const message = errorBody?.error || `Erro ao processar mensagem (${response.status})`
+        console.error("[v0] AI request failed:", { status: response.status, error: errorBody })
+        throw new Error(message)
       }
 
       const data = await response.json()
