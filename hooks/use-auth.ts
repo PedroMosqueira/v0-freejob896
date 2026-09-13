@@ -84,6 +84,16 @@ export function useAuth() {
       }
 
       const subscriptionData = subscriptionsData[0]
+      const expiresAt = subscriptionData?.current_period_end ? new Date(subscriptionData.current_period_end) : null
+
+      if (expiresAt && expiresAt <= new Date()) {
+        console.log("[v0] Subscription expired")
+        if (isMountedRef.current) {
+          setSubscriptionPlan("free")
+          setSubscription(null)
+        }
+        return
+      }
 
       if (subscriptionData && subscriptionData.plan_id) {
         console.log("[v0] Fetching plan for id:", subscriptionData.plan_id)

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Validate user exists
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id")
+      .select("id, subscription_plan")
       .eq("email", email)
       .single()
 
@@ -36,6 +36,34 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       console.error("[v0] User not found:", userError)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Nunca iniciar uma nova cobrança para um usuário que já tem plano pago atribuído.
+    const assignedPlan = typeof user.subscription_plan === "string" ? user.subscription_plan.trim().toLowerCase() : "free"
+    if (assignedPlan && assignedPlan !== "free") {
+      return NextResponse.json(
+        { error: "Você já possui um plano ativo.", code: "ACTIVE_PLAN" },
+        { status: 409 },
+      )
+    }
+
+    const { data: activeSubscription } = await supabase
+      .from("user_subscriptions")
+      .select("id, current_period_end, subscription_plans(slug)")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (activeSubscription) {
+      const expiresAt = activeSubscription.current_period_end ? new Date(activeSubscription.current_period_end) : null
+      if (!expiresAt || expiresAt > new Date()) {
+        return NextResponse.json(
+          { error: "Você já possui um plano ativo.", code: "ACTIVE_PLAN" },
+          { status: 409 },
+        )
+      }
     }
 
     // Validate plan exists

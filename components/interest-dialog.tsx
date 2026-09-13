@@ -26,6 +26,7 @@ interface InterestDialogProps {
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
   const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified, phoneVerifiedLoaded, email: authEmail } = useAuth()
+  const hasPaidPlan = isSubscribed || (subscriptionPlan && subscriptionPlan.toLowerCase() !== "free")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
   const [canExpress, setCanExpress] = useState(true)
@@ -161,7 +162,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         return
       }
       
-      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest && !isSubscribed) {
+      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest && !hasPaidPlan) {
         toast({
           title: "Créditos insuficientes",
           description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
@@ -355,7 +356,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
 
               {hookPhoneVerified && (
                 <>
-                  {isProfessional && !isSubscribed && (
+                  {isProfessional && !hasPaidPlan && (
                     <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
                       <p className="text-sm text-gray-700 dark:text-gray-300">
                         <span className="font-semibold">Propostas livres disponíveis:</span> {freeInterestsRemaining}
@@ -366,7 +367,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     </div>
                   )}
 
-                  {isProfessional && !canExpress && !isSubscribed && (
+                  {isProfessional && !canExpress && !hasPaidPlan && (
                     <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                       <div className="flex gap-3">
                         <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
@@ -404,7 +405,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   }
                   onClick={(e) => {
                     // Se telefone validado mas sem créditos, abrir modal
-                    if (hookPhoneVerified && isProfessional && !canExpress) {
+                    if (hookPhoneVerified && isProfessional && !canExpress && !hasPaidPlan) {
                       e.preventDefault()
                       setShowUpgradeModal(true)
                       return
@@ -427,7 +428,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Manifestando...
                     </>
-                  ) : isProfessional && !canExpress ? (
+                  ) : isProfessional && !canExpress && !hasPaidPlan ? (
                     <>
                       <Heart className="h-4 w-4" />
                       Escolher Plano
