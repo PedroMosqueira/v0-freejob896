@@ -24,7 +24,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // Buscar dados do usuário
     const { data: users, error: userError } = await supabase
       .from("users")
-      .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified")
+      .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
       .eq("email", userEmail)
       .limit(1)
 
@@ -76,6 +76,34 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
       console.log("[v0-browser] NON-PROFESSIONAL - Result for", userEmail, ":", result)
       return result
+    }
+
+    // Um plano pago atribuído diretamente ao usuário também libera o fluxo.
+    // A validação é feita no servidor para não depender apenas do estado do frontend.
+    const assignedPlan = typeof user.subscription_plan === "string"
+      ? user.subscription_plan.trim().toLowerCase()
+      : "free"
+
+    if (user.is_professional && assignedPlan !== "free") {
+      const activeCount = await getActiveInterestsCount(userEmail)
+      const simultaneousLimit = PLAN_FEATURES[assignedPlan]?.limits?.simultaneous_interests ?? 8
+
+      if (activeCount >= simultaneousLimit) {
+        return {
+          canExpressInterest: false,
+          reason: `Você atingiu o limite de ${simultaneousLimit} proposta(s) simultânea(s) do seu plano. Aguarde a conclusão de uma.`,
+          isProfessional: true,
+          phoneVerified: true,
+          hasActiveSubscription: true,
+        }
+      }
+
+      return {
+        canExpressInterest: true,
+        isProfessional: true,
+        phoneVerified: true,
+        hasActiveSubscription: true,
+      }
     }
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
