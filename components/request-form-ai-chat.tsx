@@ -174,7 +174,7 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
             const state = locationData.address?.state_code || locationData.address?.state || ""
             const neighborhood = locationData.address?.suburb || locationData.address?.neighbourhood || ""
 
-            const updated = { ...extractedInfo, city, state, neighborhood }
+            const updated = { ...extractedInfo, city, state, neighborhood, latitude, longitude }
             setExtractedInfo(updated)
             setLocationConfirmed(true)
             onExtract(updated)
