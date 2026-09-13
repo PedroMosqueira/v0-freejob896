@@ -15,7 +15,7 @@ export interface InterestReleaseResult {
  * 3. Proposal completed → release immediately (handled elsewhere)
  */
 export async function shouldReleaseInterest(proposalId: string): Promise<InterestReleaseResult> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data: proposal, error } = await supabase
     .from("need_proposals")
@@ -67,7 +67,7 @@ export async function shouldReleaseInterest(proposalId: string): Promise<Interes
  * Only counts proposals that are NOT released yet
  */
 export async function countActiveInterests(professionalEmail: string): Promise<number> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   // Get all proposals that should still count toward simultaneous limit
   const { data: proposals, error } = await supabase
@@ -108,7 +108,7 @@ export async function cancelInterest(
   proposalId: string,
   beforeViewed: boolean = true
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { error } = await supabase
     .from("need_proposals")
@@ -132,7 +132,7 @@ export async function cancelInterest(
  * Mark proposal as viewed by requester
  */
 export async function markProposalAsViewed(proposalId: string): Promise<void> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   await supabase
     .from("need_proposals")
@@ -146,7 +146,7 @@ export async function markProposalAsViewed(proposalId: string): Promise<void> {
  * Complete a proposal (professional finished the work)
  */
 export async function completeProposal(proposalId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { error } = await supabase
     .from("need_proposals")

@@ -11,7 +11,9 @@ export interface UserProfile {
   fullName?: string // Computed from firstName + lastName
   photoUrl?: string
   phone?: string
+  professionalPhone?: string
   phoneVerified: boolean
+  phoneValidated?: boolean
   bio?: string
   profileImageUrl?: string
   city?: string

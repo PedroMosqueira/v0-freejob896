@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 async function handleCheckoutSessionCompleted(session: any) {
   console.log('[v0] Handling checkout.session.completed:', session.id)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   try {
     // Obter user pelo email
@@ -126,7 +126,7 @@ async function handleCheckoutSessionCompleted(session: any) {
 async function handleSubscriptionUpdated(subscription: any) {
   console.log('[v0] Handling customer.subscription.updated:', subscription.id)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   try {
     const { error } = await supabase
@@ -151,7 +151,7 @@ async function handleSubscriptionUpdated(subscription: any) {
 async function handleSubscriptionDeleted(subscription: any) {
   console.log('[v0] Handling customer.subscription.deleted:', subscription.id)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   try {
     // Marcar como cancelada

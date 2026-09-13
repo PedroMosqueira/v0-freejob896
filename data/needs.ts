@@ -15,6 +15,8 @@ export type ProposalStatus =
 
 export type NeedProposal = {
   id: string
+  professional_email?: string
+  bid_amount?: number
   needId: string // ID do serviço ao qual a proposta se refere
   professionalEmail: string
   type: ProposalType
@@ -34,6 +36,7 @@ export type ChatMessage = {
   id: string
   email?: string // Present if type is 'user'
   text: string
+  content?: string
   createdAt: string // ISO string date
   type: ChatMessageType
   metadata?: {
@@ -73,6 +76,9 @@ export type Need = {
   createdAt: string
   proposals: NeedProposal[]
   images?: string[]
+  imageUrl?: string
+  professionalEmail?: string
+  distance?: number
 }
 
 export type NewNeedInput = Omit<Need, "id" | "status" | "createdAt" | "proposals">

@@ -1,6 +1,7 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { getCurrentUser } from "@/lib/auth-actions"
 
 export interface Rating {
   id: string
@@ -54,12 +55,12 @@ export async function canUserRate(
   ratedUserEmail: string,
   needId?: string,
 ): Promise<{ canRate: boolean; message?: string }> {
-  const session = await auth()
-  if (!session?.user?.email) {
+  const user = await getCurrentUser()
+  if (!user?.email) {
     return { canRate: false, message: "Você precisa estar autenticado" }
   }
 
-  if (session.user.email === ratedUserEmail) {
+  if (user.email === ratedUserEmail) {
     return { canRate: false, message: "Você não pode avaliar a si mesmo" }
   }
 
@@ -87,7 +88,7 @@ export async function canUserRate(
     .from("ratings")
     .select("id")
     .eq("rated_user_email", ratedUserEmail)
-    .eq("rater_user_email", session.user.email)
+    .eq("rater_user_email", user.email)
     .eq("need_id", needId || null)
     .single()
 
@@ -103,9 +104,9 @@ export async function createRating(
   formData: FormData,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const session = await auth()
+    const user = await getCurrentUser()
 
-    if (!session?.user?.email) {
+    if (!user?.email) {
       return { success: false, message: "Você precisa estar autenticado" }
     }
 
@@ -122,7 +123,7 @@ export async function createRating(
       return { success: false, message: "Avaliação deve ser entre 1 e 5 estrelas" }
     }
 
-    if (session.user.email === ratedUserEmail) {
+    if (user.email === ratedUserEmail) {
       return { success: false, message: "Você não pode avaliar a si mesmo" }
     }
 
@@ -160,7 +161,7 @@ export async function createRating(
       .from("ratings")
       .select("id")
       .eq("rated_user_email", ratedUserEmail)
-      .eq("rater_user_email", session.user.email)
+      .eq("rater_user_email", user.email)
       .eq("need_id", needId || null)
       .maybeSingle()
 
