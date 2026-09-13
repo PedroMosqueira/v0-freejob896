@@ -21,12 +21,20 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     console.log("[v0-server] canUserExpressInterest - checking email:", userEmail)
     const supabase = await createSupabaseServerClient()
 
-    // Buscar dados do usuário
-    const { data: users, error: userError } = await supabase
+    // Usar o usuário autenticado quando disponível para evitar escolher outro
+    // registro em caso de e-mails duplicados na tabela users.
+    const { data: authData } = await supabase.auth.getUser()
+    const authenticatedUserId = authData.user?.id
+    let usersQuery = supabase
       .from("users")
       .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
-      .eq("email", userEmail)
       .limit(1)
+
+    usersQuery = authenticatedUserId
+      ? usersQuery.eq("id", authenticatedUserId)
+      : usersQuery.eq("email", userEmail)
+
+    const { data: users, error: userError } = await usersQuery
 
     console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message)
     if (users && users.length > 0) {
