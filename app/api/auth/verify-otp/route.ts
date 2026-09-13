@@ -68,20 +68,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Código válido! Agora verificar/criar usuário no Supabase
+    // Usar a chave de serviço para garantir que a validação seja persistida
+    // mesmo quando as políticas RLS bloqueiam a atualização pelo cliente anônimo.
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
-    // Buscar usuário pelo telefone
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("id, email")
-      .eq("phone", phone)
-      .single()
+    const cleanPhone = String(phone).replace(/\D/g, "")
 
-    // Se retornar erro de "not found", é um novo usuário
-    if (userError && userError.code === "PGRST116") {
+    // Buscar tanto em phone quanto em professional_phone, pois os fluxos
+    // antigos salvaram o mesmo número em colunas diferentes.
+    const { data: users, error: userError } = await supabase
+      .from("users")
+      .select("id, email, phone, professional_phone")
+      .or(`phone.eq.${cleanPhone},professional_phone.eq.${cleanPhone},phone.eq.+55${cleanPhone},professional_phone.eq.+55${cleanPhone}`)
+      .limit(1)
+
+    const user = users?.[0]
+
+    // Se não encontrar usuário, é um novo cadastro.
+    if (!userError && !user) {
       // Novo usuário - retornar para que complete o cadastro
       return NextResponse.json({
         success: true,
@@ -98,6 +105,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!user) {
+      return NextResponse.json(
+        { error: "Usuário não encontrado" },
+        { status: 404 },
+      )
+    }
+
     // Usuário existe - marcar como verificado e fazer login
     console.log("[v0] Autenticação com telefone bem-sucedida para:", user.email)
 
@@ -106,8 +120,10 @@ export async function POST(request: NextRequest) {
       .from("users")
       .update({
         phone_verified: true,
+        phone: cleanPhone,
+        professional_phone: cleanPhone,
       })
-      .eq("phone", phone)
+      .eq("id", user.id)
 
     if (updateError) {
       console.error("[v0] Erro ao marcar telefone como verificado:", updateError)
