@@ -9,7 +9,47 @@ const groq = createGroq({
   apiKey: groqApiKey,
 })
 
+const officialCategories = [
+  "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
+  "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
+  "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
+  "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
+  "Professor Particular", "Outros",
+] as const
+
+const categoryKeywords: Record<string, string[]> = {
+  Encanador: ["encan", "torneira", "vazamento", "cano", "pia", "chuveiro"],
+  Eletricista: ["eletric", "tomada", "fiação", "fiacao", "disjuntor", "lâmpada", "lampada"],
+  Pedreiro: ["pedreiro", "alvenaria", "reboco", "parede", "cimento", "obra"],
+  Pintor: ["pintor", "pintura", "pintar", "tinta"],
+  "Montador de Móveis": ["montar móvel", "montagem de móvel", "montador", "móvel planejado", "moveis"],
+  Marceneiro: ["marcen", "madeira", "armário sob medida", "armario sob medida"],
+  Serralheiro: ["serral", "portão", "portao", "grade", "ferro"],
+  Limpeza: ["limpeza", "limpar", "faxina", "faxineir", "higienização", "higienizacao"],
+  Jardinagem: ["jardin", "grama", "poda", "plantas", "jardim"],
+  Diarista: ["diarista", "diária", "diaria"],
+  Dedetização: ["dedet", "praga", "barata", "cupim", "inseto"],
+  "Ar Condicionado": ["ar condicionado", "climatização", "climatizacao", "refriger"],
+  Vidraceiro: ["vidra", "vidro", "box"],
+  Chaveiro: ["chaveiro", "chave", "fechadura", "tranca"],
+  Mudanças: ["mudança", "mudanca", "transportar móveis", "frete"],
+  "Técnico de Informática": ["informática", "informatica", "computador", "notebook", "impressora", "celular"],
+  Cabeleireiro: ["cabelo", "cabeleireiro", "corte de cabelo"],
+  Manicure: ["manicure", "unha", "pedicure"],
+  Costureira: ["costur", "ajuste de roupa", "barra de calça"],
+  "Professor Particular": ["professor", "aula", "reforço", "reforco", "ensino"],
+}
+
+function classifyService(text: string) {
+  const normalized = text.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+  const match = officialCategories.find((category) =>
+    categoryKeywords[category]?.some((keyword) => normalized.includes(keyword.normalize("NFD").replace(/[\\u0300-\\u036f]/g, ""))),
+  )
+  return match || "Outros"
+}
+
 export async function POST(request: NextRequest) {
+  let inputMessage = ""
   try {
     if (!groqApiKey) {
       console.error("[v0] GROQ_API_KEY is not configured")
@@ -19,6 +59,7 @@ export async function POST(request: NextRequest) {
       )
     }
     const { message, conversationHistory = [] } = await request.json()
+    inputMessage = typeof message === "string" ? message.trim() : ""
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -124,39 +165,8 @@ Importante:
     }
 
     // Normalizar a resposta para as categorias oficiais do site.
-    const officialCategories = [
-      "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
-      "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
-      "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
-      "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
-      "Professor Particular", "Outros",
-    ]
     const normalizedText = `${message} ${parsedResponse.extracted.title || ""} ${parsedResponse.extracted.description || ""}`.toLowerCase()
-    const categoryKeywords: Record<string, string[]> = {
-      "Encanador": ["encan", "torneira", "vazamento", "cano", "pia", "chuveiro"],
-      "Eletricista": ["eletric", "tomada", "fiação", "fiacao", "disjuntor", "lâmpada", "lampada"],
-      "Pedreiro": ["pedreiro", "alvenaria", "reboco", "parede", "cimento", "obra"],
-      "Pintor": ["pintor", "pintura", "pintar", "tinta"],
-      "Montador de Móveis": ["montar móvel", "montagem de móvel", "montador", "móvel planejado", "moveis"],
-      "Marceneiro": ["marcen", "madeira", "armário sob medida", "armario sob medida"],
-      "Serralheiro": ["serral", "portão", "portao", "grade", "ferro"],
-      "Limpeza": ["limpeza", "limpar", "faxina", "higienização", "higienizacao"],
-      "Jardinagem": ["jardin", "grama", "poda", "plantas", "jardim"],
-      "Diarista": ["diarista", "diária", "diaria", "casa"],
-      "Dedetização": ["dedet", "praga", "barata", "cupim", "inseto"],
-      "Ar Condicionado": ["ar condicionado", "climatização", "climatizacao", "refriger"],
-      "Vidraceiro": ["vidra", "vidro", "box"],
-      "Chaveiro": ["chaveiro", "chave", "fechadura", "tranca"],
-      "Mudanças": ["mudança", "mudanca", "transportar móveis", "frete"],
-      "Técnico de Informática": ["informática", "informatica", "computador", "notebook", "impressora", "celular"],
-      "Cabeleireiro": ["cabelo", "cabeleireiro", "corte de cabelo"],
-      "Manicure": ["manicure", "unha", "pedicure"],
-      "Costureira": ["costur", "ajuste de roupa", "barra de calça"],
-      "Professor Particular": ["professor", "aula", "reforço", "reforco", "ensino"],
-    }
-    const suggestedCategory = officialCategories.find((category) =>
-      categoryKeywords[category]?.some((keyword) => normalizedText.includes(keyword)),
-    ) || "Outros"
+    const suggestedCategory = classifyService(normalizedText)
     const rawDescription = String(parsedResponse.extracted.description || message).trim()
     const genericDescription = rawDescription.length >= 12
       ? rawDescription
@@ -190,12 +200,17 @@ Importante:
       name: error instanceof Error ? error.name : "UnknownError",
       message: error instanceof Error ? error.message : String(error),
     })
+    const fallbackCategory = classifyService(inputMessage)
+    const fallbackTitle = inputMessage ? `Solicitação de ${inputMessage}` : "Solicitação de serviço"
+    const fallbackDescription = inputMessage
+      ? `Preciso de um profissional para realizar ${inputMessage}. Busco um serviço de qualidade, com orçamento e disponibilidade a combinar.`
+      : "Preciso de um profissional para realizar um serviço. Busco um atendimento de qualidade, com orçamento e disponibilidade a combinar."
     return NextResponse.json({
-      message: "Entendi o que você precisa. Posso ajudar a completar os detalhes. Qual categoria descreve melhor esse serviço?",
+      message: "Criei uma sugestão com base no que você escreveu. Confira os dados e confirme ou corrija antes de continuar.",
       extracted: {
-        title: "Serviço solicitado",
-        description: "",
-        category: "Outros",
+        title: fallbackTitle,
+        description: fallbackDescription,
+        category: fallbackCategory,
       },
       needsLocation: true,
       missingFields: [],
