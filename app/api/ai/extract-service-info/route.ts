@@ -123,6 +123,52 @@ Importante:
       )
     }
 
+    // Normalizar a resposta para as categorias oficiais do site.
+    const officialCategories = [
+      "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
+      "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
+      "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
+      "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
+      "Professor Particular", "Outros",
+    ]
+    const normalizedText = `${message} ${parsedResponse.extracted.title || ""} ${parsedResponse.extracted.description || ""}`.toLowerCase()
+    const categoryKeywords: Record<string, string[]> = {
+      "Encanador": ["encan", "torneira", "vazamento", "cano", "pia", "chuveiro"],
+      "Eletricista": ["eletric", "tomada", "fiação", "fiacao", "disjuntor", "lâmpada", "lampada"],
+      "Pedreiro": ["pedreiro", "alvenaria", "reboco", "parede", "cimento", "obra"],
+      "Pintor": ["pintor", "pintura", "pintar", "tinta"],
+      "Montador de Móveis": ["montar móvel", "montagem de móvel", "montador", "móvel planejado", "moveis"],
+      "Marceneiro": ["marcen", "madeira", "armário sob medida", "armario sob medida"],
+      "Serralheiro": ["serral", "portão", "portao", "grade", "ferro"],
+      "Limpeza": ["limpeza", "limpar", "faxina", "higienização", "higienizacao"],
+      "Jardinagem": ["jardin", "grama", "poda", "plantas", "jardim"],
+      "Diarista": ["diarista", "diária", "diaria", "casa"],
+      "Dedetização": ["dedet", "praga", "barata", "cupim", "inseto"],
+      "Ar Condicionado": ["ar condicionado", "climatização", "climatizacao", "refriger"],
+      "Vidraceiro": ["vidra", "vidro", "box"],
+      "Chaveiro": ["chaveiro", "chave", "fechadura", "tranca"],
+      "Mudanças": ["mudança", "mudanca", "transportar móveis", "frete"],
+      "Técnico de Informática": ["informática", "informatica", "computador", "notebook", "impressora", "celular"],
+      "Cabeleireiro": ["cabelo", "cabeleireiro", "corte de cabelo"],
+      "Manicure": ["manicure", "unha", "pedicure"],
+      "Costureira": ["costur", "ajuste de roupa", "barra de calça"],
+      "Professor Particular": ["professor", "aula", "reforço", "reforco", "ensino"],
+    }
+    const suggestedCategory = officialCategories.find((category) =>
+      categoryKeywords[category]?.some((keyword) => normalizedText.includes(keyword)),
+    ) || "Outros"
+    const rawDescription = String(parsedResponse.extracted.description || message).trim()
+    const genericDescription = rawDescription.length >= 12
+      ? rawDescription
+      : `Solicito um profissional para realizar o serviço de ${message.trim() || "que preciso"}. Procuro um atendimento de qualidade, com orçamento e disponibilidade a combinar.`
+    const genericTitle = String(parsedResponse.extracted.title || "").trim()
+    parsedResponse.extracted = {
+      ...parsedResponse.extracted,
+      title: genericTitle && genericTitle !== "Serviço solicitado" ? genericTitle : `Solicitação de ${message.trim() || "serviço"}`,
+      description: genericDescription,
+      category: suggestedCategory,
+    }
+
     // Garantir que title, description, category são preenchidos na primeira mensagem
     const isFirstMessage = conversationHistory.length === 0
     if (isFirstMessage && (!parsedResponse.extracted.title || !parsedResponse.extracted.description || !parsedResponse.extracted.category)) {
