@@ -20,6 +20,9 @@ interface ExtractedInfo {
   city?: string
   state?: string
   neighborhood?: string
+  latitude?: number
+  longitude?: number
+  locationApproximate?: boolean
   images?: File[]
 }
 
@@ -272,13 +275,42 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     setMessages((prev) => [...prev, { role: "assistant", content: "Perfeito. Agora escolha como deseja informar sua localização." }])
   }
 
-  const handleManualLocationConfirm = () => {
-    const updated = { ...extractedInfo, ...manualLocation }
-    setExtractedInfo(updated)
-    setLocationConfirmed(true)
-    onExtract(updated)
-    setMessages((prev) => [...prev, { role: "assistant", content: "Localização confirmada. Agora você pode adicionar fotos e revisar tudo antes de solicitar o serviço." }])
-    setAskingForPhotos(true)
+  const handleManualLocationConfirm = async () => {
+    const query = [manualLocation.neighborhood, manualLocation.city, manualLocation.state, "Brasil"]
+      .filter(Boolean)
+      .join(", ")
+
+    try {
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`)
+      const results = await response.json()
+      const match = Array.isArray(results) ? results[0] : null
+      const latitude = match?.lat ? Number(match.lat) : undefined
+      const longitude = match?.lon ? Number(match.lon) : undefined
+      const updated = {
+        ...extractedInfo,
+        ...manualLocation,
+        ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : {}),
+        locationApproximate: true,
+      }
+
+      setExtractedInfo(updated)
+      setLocationConfirmed(true)
+      onExtract(updated)
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: match
+          ? "Localização aproximada encontrada pelo bairro e cidade. Agora você pode adicionar fotos e revisar tudo antes de solicitar o serviço."
+          : "Não encontrei as coordenadas desse bairro. Vou manter a cidade e o bairro informados para a revisão final.",
+      }])
+      setAskingForPhotos(true)
+    } catch (error) {
+      console.error("[v0] Erro ao obter distância aproximada:", error)
+      const updated = { ...extractedInfo, ...manualLocation, locationApproximate: false }
+      setExtractedInfo(updated)
+      setLocationConfirmed(true)
+      onExtract(updated)
+      setAskingForPhotos(true)
+    }
   }
 
   const handleEditInForm = () => {
