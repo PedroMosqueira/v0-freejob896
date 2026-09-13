@@ -48,6 +48,19 @@ function classifyService(text: string) {
   return match || "Outros"
 }
 
+function correctContextualSpelling(text: string, category: string) {
+  let corrected = text.trim()
+  const normalizedCategory = category.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+
+  // Em serviços hidráulicos, “concertar” normalmente significa “consertar”.
+  if (normalizedCategory === "encanador") {
+    corrected = corrected.replace(/\\bconcertar\\b/gi, "consertar")
+      .replace(/\\bconcerto\\b/gi, "conserto")
+  }
+
+  return corrected
+}
+
 export async function POST(request: NextRequest) {
   let inputMessage = ""
   try {
@@ -172,10 +185,13 @@ Importante:
       ? rawDescription
       : `Solicito um profissional para realizar o serviço de ${message.trim() || "que preciso"}. Procuro um atendimento de qualidade, com orçamento e disponibilidade a combinar.`
     const genericTitle = String(parsedResponse.extracted.title || "").trim()
+    const correctedTitle = genericTitle && genericTitle !== "Serviço solicitado"
+      ? genericTitle.replace(/^solicitação de\\s+/i, "")
+      : (message.trim() || "Serviço")
     parsedResponse.extracted = {
       ...parsedResponse.extracted,
-      title: genericTitle && genericTitle !== "Serviço solicitado" ? genericTitle.replace(/^solicitação de\s+/i, "") : (message.trim() || "Serviço"),
-      description: genericDescription,
+      title: correctContextualSpelling(correctedTitle, suggestedCategory),
+      description: correctContextualSpelling(genericDescription, suggestedCategory),
       category: suggestedCategory,
     }
 

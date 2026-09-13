@@ -232,6 +232,7 @@ export function useAuth() {
     subscriptionPlan,
     subscription,
     isSubscribed: subscriptionPlan !== "free",
+    isFreeUser: subscriptionPlan === "free",
     session 
   }
 }

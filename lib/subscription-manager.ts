@@ -71,7 +71,7 @@ export const PLAN_FEATURES = {
 export async function getUserSubscription(userEmail: string): Promise<UserSubscription | null> {
   console.log("[v0] Getting subscription for:", userEmail)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   // Get user first to get their ID
   const { data: user, error: userError } = await supabase
@@ -126,7 +126,7 @@ export async function upgradeToPlan(
 ): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
   console.log("[v0] Upgrading user to plan:", userEmail, planSlug, billingCycle)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   try {
     // Get user ID
@@ -203,7 +203,7 @@ export async function upgradeToSimples(userEmail: string, durationMonths = 1): P
 export async function cancelSubscription(userEmail: string): Promise<boolean> {
   console.log("[v0] Canceling subscription for:", userEmail)
 
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   try {
     // Get user ID

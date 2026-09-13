@@ -195,7 +195,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         needId: need.id,
         requesterEmail: need.requesterEmail,
         professionalEmail: userEmail,
-        reason: "interest",
+        reason: "other",
         customText: "Profissional manifestou interesse em seu serviço.",
       })
 

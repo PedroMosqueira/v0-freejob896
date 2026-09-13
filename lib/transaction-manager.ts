@@ -40,7 +40,7 @@ export async function createTransaction(
   clientEmail: string,
   serviceAmount: number,
 ) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
   const fee = calculateTransactionFee(serviceAmount)
 
   const { data, error } = await supabase
@@ -69,7 +69,7 @@ export async function createTransaction(
 }
 
 export async function completeTransaction(transactionId: string) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   // Buscar transação
   const { data: transaction, error: txError } = await supabase
@@ -101,7 +101,7 @@ export async function completeTransaction(transactionId: string) {
 }
 
 async function addProfessionalCommission(professionalEmail: string, amount: number, transactionId: string) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   // Buscar usuário
   const { data: user } = await supabase
@@ -137,7 +137,7 @@ async function addProfessionalCommission(professionalEmail: string, amount: numb
 
 // Adicionar cashback do cliente
 async function addClientCashback(clientEmail: string, amount: number, transactionId: string) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   // Buscar usuário
   const { data: user } = await supabase
@@ -173,7 +173,7 @@ async function addClientCashback(clientEmail: string, amount: number, transactio
 
 // Buscar saldo de cashback/comissão
 export async function getCashbackBalance(userEmail: string) {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data: user } = await supabase
     .from("users")

@@ -140,7 +140,7 @@ export async function canSendInterest(
  * Get active interests for display
  */
 export async function getActiveInterests(professionalEmail: string): Promise<ActiveInterest[]> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { data, error } = await supabase
     .from("need_proposals")
@@ -183,7 +183,7 @@ export async function cancelInterest(
   proposalId: string,
   beforeViewed: boolean = true,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { error } = await supabase
     .from("need_proposals")
@@ -207,7 +207,7 @@ export async function cancelInterest(
  * Mark proposal as viewed by requester
  */
 export async function markProposalAsViewed(proposalId: string): Promise<void> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   await supabase
     .from("need_proposals")
@@ -221,7 +221,7 @@ export async function markProposalAsViewed(proposalId: string): Promise<void> {
  * Complete a proposal (professional finished the work)
  */
 export async function completeProposal(proposalId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = createSupabaseServerClient()
+  const supabase = await createSupabaseServerClient()
 
   const { error } = await supabase
     .from("need_proposals")
