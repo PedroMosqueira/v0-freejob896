@@ -34,9 +34,21 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       ? usersQuery.eq("id", authenticatedUserId)
       : usersQuery.eq("email", userEmail)
 
-    const { data: users, error: userError } = await usersQuery
+    let { data: users, error: userError } = await usersQuery
 
-    console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message)
+    // Algumas bases não usam o mesmo UUID do Supabase Auth na tabela users.
+    // Se a busca pelo id autenticado não encontrar registro, tenta o e-mail.
+    if (!userError && authenticatedUserId && (!users || users.length === 0)) {
+      const fallback = await supabase
+        .from("users")
+        .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
+        .eq("email", userEmail)
+        .limit(1)
+      users = fallback.data
+      userError = fallback.error
+    }
+
+    console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message, "code:", userError?.code)
     if (users && users.length > 0) {
       console.log("[v0-server] User data:", { phone_verified: users[0].phone_verified, is_professional: users[0].is_professional })
     }
