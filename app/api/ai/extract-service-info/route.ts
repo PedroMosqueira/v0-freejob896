@@ -174,7 +174,7 @@ Importante:
     const genericTitle = String(parsedResponse.extracted.title || "").trim()
     parsedResponse.extracted = {
       ...parsedResponse.extracted,
-      title: genericTitle && genericTitle !== "Serviço solicitado" ? genericTitle : `Solicitação de ${message.trim() || "serviço"}`,
+      title: genericTitle && genericTitle !== "Serviço solicitado" ? genericTitle.replace(/^solicitação de\s+/i, "") : (message.trim() || "Serviço"),
       description: genericDescription,
       category: suggestedCategory,
     }
@@ -201,7 +201,7 @@ Importante:
       message: error instanceof Error ? error.message : String(error),
     })
     const fallbackCategory = classifyService(inputMessage)
-    const fallbackTitle = inputMessage ? `Solicitação de ${inputMessage}` : "Solicitação de serviço"
+    const fallbackTitle = inputMessage || "Serviço"
     const fallbackDescription = inputMessage
       ? `Preciso de um profissional para realizar ${inputMessage}. Busco um serviço de qualidade, com orçamento e disponibilidade a combinar.`
       : "Preciso de um profissional para realizar um serviço. Busco um atendimento de qualidade, com orçamento e disponibilidade a combinar."
