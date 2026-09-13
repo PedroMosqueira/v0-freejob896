@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import ImageCompression from "browser-image-compression"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Send, MapPin, Loader2, Camera, Image as ImageIcon } from "lucide-react"
 
@@ -42,7 +43,18 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [locationConfirmed, setLocationConfirmed] = useState(false)
   const [askingForPhotos, setAskingForPhotos] = useState(false)
   const [showingPreview, setShowingPreview] = useState(false)
+  const [detailsConfirmed, setDetailsConfirmed] = useState(false)
+  const [editingDetails, setEditingDetails] = useState(false)
+  const [manualLocation, setManualLocation] = useState({ city: "", neighborhood: "", state: "" })
   const [photos, setPhotos] = useState<File[]>([])
+
+  const officialCategories = [
+    "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
+    "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
+    "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
+    "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
+    "Professor Particular", "Outros",
+  ]
   const [isMobile, setIsMobile] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -109,6 +121,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       if (data.extracted) {
         const updated = { ...extractedInfo, ...data.extracted }
         setExtractedInfo(updated)
+        setDetailsConfirmed(false)
+        setEditingDetails(false)
         onExtract(updated)
         console.log("[v0] Extracted info updated:", updated)
 
@@ -252,6 +266,21 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     }
   }
 
+  const handleConfirmDetails = () => {
+    setDetailsConfirmed(true)
+    setEditingDetails(false)
+    setMessages((prev) => [...prev, { role: "assistant", content: "Perfeito. Agora escolha como deseja informar sua localização." }])
+  }
+
+  const handleManualLocationConfirm = () => {
+    const updated = { ...extractedInfo, ...manualLocation }
+    setExtractedInfo(updated)
+    setLocationConfirmed(true)
+    onExtract(updated)
+    setMessages((prev) => [...prev, { role: "assistant", content: "Localização confirmada. Agora você pode adicionar fotos e revisar tudo antes de solicitar o serviço." }])
+    setAskingForPhotos(true)
+  }
+
   const handleEditInForm = () => {
     const finalInfo = { ...extractedInfo }
     if (photos && photos.length > 0) {
@@ -324,19 +353,49 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           </div>
         )}
 
-        {/* Location Button - Only show if title/description/category extracted but location not yet confirmed */}
-        {!locationConfirmed && !isFirstMessage && extractedInfo.title && extractedInfo.description && extractedInfo.category && !askingForPhotos && !showingPreview && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        {/* Confirmação ou correção dos dados gerados pela IA */}
+        {!detailsConfirmed && extractedInfo.title && extractedInfo.description && extractedInfo.category && !editingDetails && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+            <p className="text-sm font-semibold text-blue-900">Confira os dados do serviço</p>
+            <p className="text-xs text-blue-800">A IA criou um título, uma descrição e escolheu a categoria mais próxima.</p>
+            <div className="flex gap-2">
+              <Button onClick={handleConfirmDetails} className="flex-1 bg-green-600 hover:bg-green-700">Confirmar dados</Button>
+              <Button onClick={() => setEditingDetails(true)} variant="outline" className="flex-1">Corrigir</Button>
+            </div>
+          </div>
+        )}
+
+        {!detailsConfirmed && editingDetails && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
+            <Input value={extractedInfo.title || ""} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, title: e.target.value }))} placeholder="Título do serviço" />
+            <Textarea value={extractedInfo.description || ""} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, description: e.target.value }))} placeholder="Descrição do serviço" rows={4} />
+            <select value={extractedInfo.category || "Outros"} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, category: e.target.value }))} className="w-full rounded-md border bg-white px-3 py-2 text-sm">
+              {officialCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+            <div className="flex gap-2">
+              <Button onClick={() => { onExtract(extractedInfo); handleConfirmDetails() }} className="flex-1">Salvar correção</Button>
+              <Button onClick={() => setEditingDetails(false)} variant="outline" className="flex-1">Cancelar</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Location Button - Only show after service details are confirmed */}
+        {!locationConfirmed && detailsConfirmed && !askingForPhotos && !showingPreview && (
+          <div>
             <p className="text-sm text-blue-900 mb-3">
-              Agora preciso de sua localização:
+              Agora informe onde o serviço será realizado:
             </p>
-            <Button
-              onClick={handleUseLocation}
-              className="w-full bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
-            >
-              <MapPin className="w-4 h-4" />
-              Usar Minha Localização
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Input value={manualLocation.city} onChange={(e) => setManualLocation((prev) => ({ ...prev, city: e.target.value }))} placeholder="Cidade" />
+              <Input value={manualLocation.state} onChange={(e) => setManualLocation((prev) => ({ ...prev, state: e.target.value }))} placeholder="Estado/UF" />
+            </div>
+            <Input value={manualLocation.neighborhood} onChange={(e) => setManualLocation((prev) => ({ ...prev, neighborhood: e.target.value }))} placeholder="Bairro" className="mt-2" />
+            <div className="flex gap-2 mt-3">
+              <Button onClick={handleUseLocation} className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
+                <MapPin className="w-4 h-4" /> Usar localização
+              </Button>
+              <Button onClick={handleManualLocationConfirm} disabled={!manualLocation.city || !manualLocation.state} variant="outline" className="flex-1">Preencher manualmente</Button>
+            </div>
           </div>
         )}
 
