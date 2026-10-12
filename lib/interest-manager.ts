@@ -25,7 +25,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // registro em caso de e-mails duplicados na tabela users.
     const { data: authData } = await supabase.auth.getUser()
     const authenticatedUserId = authData.user?.id
-    const userFields = "id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan"
+    const userFields = "id, is_professional, free_interests_remaining, total_interests_sent, phone_verified"
 
     // O mesmo critério usado pelo frontend: o e-mail é a identidade estável
     // do cadastro em `users`. O auth.uid() pode ser diferente do id legado.
@@ -119,34 +119,6 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       }
       console.log("[v0-browser] NON-PROFESSIONAL - Result for", userEmail, ":", result)
       return result
-    }
-
-    // Um plano pago atribuído diretamente ao usuário também libera o fluxo.
-    // A validação é feita no servidor para não depender apenas do estado do frontend.
-    const assignedPlan = typeof user.subscription_plan === "string"
-      ? user.subscription_plan.trim().toLowerCase()
-      : "free"
-
-    if (user.is_professional && assignedPlan !== "free") {
-      const activeCount = await getActiveInterestsCount(userEmail)
-      const simultaneousLimit = PLAN_FEATURES[assignedPlan]?.limits?.simultaneous_interests ?? 8
-
-      if (activeCount >= simultaneousLimit) {
-        return {
-          canExpressInterest: false,
-          reason: `Você atingiu o limite de ${simultaneousLimit} proposta(s) simultânea(s) do seu plano. Aguarde a conclusão de uma.`,
-          isProfessional: true,
-          phoneVerified: true,
-          hasActiveSubscription: true,
-        }
-      }
-
-      return {
-        canExpressInterest: true,
-        isProfessional: true,
-        phoneVerified: true,
-        hasActiveSubscription: true,
-      }
     }
 
     // Se é profissional, verifica se tem propostas gratuitas restantes
