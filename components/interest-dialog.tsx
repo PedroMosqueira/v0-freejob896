@@ -157,11 +157,29 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       // O endpoint de OTP já confirmou o telefone neste diálogo. Durante a
       // atualização da sessão, o servidor pode retornar o valor anterior por
       // alguns instantes; não peça a validação novamente nesse caso.
-      if (!permissionCheck.phoneVerified && !phoneVerifiedInFlow) {
-        console.log("[v0] BLOCKING - phoneVerified is false from server")
+      // Somente o servidor pode declarar que a validação é necessária.
+      // `phoneVerified: false` também era retornado em erros internos, o que
+      // transformava falhas de consulta em uma notificação incorreta.
+      if (permissionCheck.needsPhoneValidation === true && !phoneVerifiedInFlow) {
+        console.log("[v0] BLOCKING - server explicitly requires phone validation")
         toast({
           title: "Validação necessária",
-          description: "Por favor, valide seu telefone antes de manifestar interesse.",
+          description: permissionCheck.reason || "Por favor, valide seu telefone antes de manifestar interesse.",
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      if (
+        !permissionCheck.canExpressInterest &&
+        permissionCheck.reason &&
+        !permissionCheck.needsUpgrade &&
+        !(permissionCheck.needsPhoneValidation === true && phoneVerifiedInFlow)
+      ) {
+        toast({
+          title: "Não foi possível continuar",
+          description: permissionCheck.reason,
           variant: "destructive",
         })
         setIsSubmitting(false)
