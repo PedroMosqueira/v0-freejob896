@@ -64,7 +64,18 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     if (userError) {
-      throw userError
+      const databaseError = new Error(
+        [userError.message, userError.details, userError.hint, userError.code]
+          .filter(Boolean)
+          .join(" | ") || "Falha ao consultar o cadastro do usuário",
+      )
+      console.error("[v0-server] User query failed:", {
+        message: databaseError.message,
+        code: userError.code,
+        details: userError.details,
+        hint: userError.hint,
+      })
+      throw databaseError
     }
 
     if (!users || users.length === 0) {
@@ -237,10 +248,16 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   } catch (error) {
     console.error("[v0-server] ERROR in canUserExpressInterest for", userEmail, ":", error)
     console.error("[v0-browser] ERROR CAUGHT - Check server logs for details")
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorMessage = error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null
+        ? Object.entries(error as Record<string, unknown>)
+            .map(([key, value]) => `${key}: ${String(value)}`)
+            .join(" | ")
+        : String(error)
     return {
       canExpressInterest: false,
-      reason: `Erro ao verificar sua permissão: ${errorMessage}`,
+      reason: `Não foi possível verificar sua permissão. ${errorMessage || "Tente novamente."}`,
       // Um erro de consulta não significa que o telefone está pendente.
       // `needsPhoneValidation` só deve existir na resposta da checagem real.
     }
