@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
 export type SubscriptionPlan = "free" | "simples" | "agencia"
@@ -14,7 +14,22 @@ interface UserSubscription {
   current_period_end: string
 }
 
-export function useAuth() {
+export type AuthState = {
+  email: string | null
+  logout: () => Promise<boolean>
+  isLoading: boolean
+  phoneVerified: boolean
+  phoneVerifiedLoaded: boolean
+  subscriptionPlan: SubscriptionPlan
+  subscription: UserSubscription | null
+  isSubscribed: boolean
+  isFreeUser: boolean
+  session: any
+}
+
+export const AuthContext = createContext<AuthState | null>(null)
+
+export function useAuthState(): AuthState {
   const [email, setEmail] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [phoneVerified, setPhoneVerified] = useState(false)
@@ -245,4 +260,10 @@ export function useAuth() {
     isFreeUser: subscriptionPlan === "free",
     session 
   }
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context) return context
+  return useAuthState()
 }
