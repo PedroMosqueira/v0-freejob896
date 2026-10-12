@@ -241,7 +241,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     return {
       canExpressInterest: false,
       reason: `Erro ao verificar sua permissão: ${errorMessage}`,
-      phoneVerified: false,
+      // Um erro de consulta não significa que o telefone está pendente.
+      // `needsPhoneValidation` só deve existir na resposta da checagem real.
     }
   }
 }
