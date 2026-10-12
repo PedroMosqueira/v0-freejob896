@@ -155,11 +155,16 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     }
 
     // Se usou todas as propostas gratuitas, verificar se tem plano ativo
+    const subscriptionUserIds = [user.id, authenticatedUserId].filter(
+      (id, index, ids): id is string => Boolean(id) && ids.indexOf(id) === index,
+    )
+
     const { data: subscriptions, error: subError } = await supabase
       .from("user_subscriptions")
-      .select("id, status, plan_id")
-      .eq("user_id", user.id)
+      .select("id, user_id, status, plan_id, current_period_end")
+      .in("user_id", subscriptionUserIds)
       .eq("status", "active")
+      .order("created_at", { ascending: false })
       .limit(1)
 
     const hasActiveSubscription = !subError && subscriptions && subscriptions.length > 0
@@ -175,6 +180,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
       const planSlug = (plan?.slug ?? "free") as any
       const simultaneousLimit = PLAN_FEATURES[planSlug]?.limits?.simultaneous_interests ?? 8
+
+      if (planSlug === "free") {
+        console.warn("[v0-server] Active subscription points to free plan", {
+          userIds: subscriptionUserIds,
+          planId: subscription.plan_id,
+        })
+      }
       
       // Verificar limite de propostas simultâneas
       const activeCount = await getActiveInterestsCount(userEmail)
