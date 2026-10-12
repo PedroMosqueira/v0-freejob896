@@ -36,21 +36,34 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
 
     let { data: users, error: userError } = await usersQuery
 
-    // Algumas bases não usam o mesmo UUID do Supabase Auth na tabela users.
-    // Se a busca pelo id autenticado não encontrar registro, tenta o e-mail.
-    if (!userError && authenticatedUserId && (!users || users.length === 0)) {
-      const fallback = await supabase
+    // O frontend antigo buscava pelo e-mail, enquanto este fluxo buscava pelo
+    // auth.uid(). Quando existem registros duplicados, cada consulta podia
+    // selecionar uma linha diferente (uma validada e outra não validada).
+    // Reúne os registros dos dois identificadores e prioriza a linha validada.
+    if (!userError && authenticatedUserId) {
+      const byEmail = await supabase
         .from("users")
         .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
         .eq("email", userEmail)
-        .limit(1)
-      users = fallback.data
-      userError = fallback.error
+        .order("phone_verified", { ascending: false })
+        .limit(5)
+
+      if (byEmail.error) {
+        userError = byEmail.error
+      } else {
+        const combined = [...(users ?? []), ...(byEmail.data ?? [])]
+        users = combined.filter((user, index, rows) => rows.findIndex((candidate) => candidate.id === user.id) === index)
+          .sort((a, b) => Number(Boolean(b.phone_verified)) - Number(Boolean(a.phone_verified)))
+      }
     }
 
     console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message, "code:", userError?.code)
     if (users && users.length > 0) {
-      console.log("[v0-server] User data:", { phone_verified: users[0].phone_verified, is_professional: users[0].is_professional })
+      console.log("[v0-server] User candidates:", users.map((candidate) => ({
+        id: candidate.id,
+        phone_verified: candidate.phone_verified,
+        is_professional: candidate.is_professional,
+      })))
     }
 
     if (userError) {
