@@ -18,10 +18,10 @@ const officialCategories = [
 ] as const
 
 const categoryKeywords: Record<string, string[]> = {
-  Encanador: ["encan", "torneira", "vazamento", "cano", "pia", "chuveiro"],
-  Eletricista: ["eletric", "tomada", "fiação", "fiacao", "disjuntor", "lâmpada", "lampada"],
-  Pedreiro: ["pedreiro", "alvenaria", "reboco", "parede", "cimento", "obra"],
-  Pintor: ["pintor", "pintura", "pintar", "tinta"],
+  Encanador: ["encanador", "encanamento", "torneira", "vazamento", "cano", "pia", "chuveiro", "descarga"],
+  Eletricista: ["eletricista", "eletrica", "elétrica", "eletricidade", "interruptor", "tomada", "fiação", "fiacao", "disjuntor", "lâmpada", "lampada", "curto circuito", "curto-circuito"],
+  Pedreiro: ["pedreiro", "alvenaria", "reboco", "assentar tijolo", "tijolo", "cimento", "construir parede", "obra estrutural"],
+  Pintor: ["pintor", "pintura", "pintar", "tinta", "parede com tinta", "pintura de parede", "pintura do quarto", "pintura da casa"],
   "Montador de Móveis": ["montar móvel", "montagem de móvel", "montador", "móvel planejado", "moveis"],
   Marceneiro: ["marcen", "madeira", "armário sob medida", "armario sob medida"],
   Serralheiro: ["serral", "portão", "portao", "grade", "ferro"],
@@ -40,12 +40,38 @@ const categoryKeywords: Record<string, string[]> = {
   "Professor Particular": ["professor", "aula", "reforço", "reforco", "ensino"],
 }
 
+function normalizeText(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-/]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 function classifyService(text: string) {
-  const normalized = text.toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
-  const match = officialCategories.find((category) =>
-    categoryKeywords[category]?.some((keyword) => normalized.includes(keyword.normalize("NFD").replace(/[\\u0300-\\u036f]/g, ""))),
-  )
-  return match || "Outros"
+  const normalized = normalizeText(text)
+  const scores = officialCategories
+    .filter((category) => category !== "Outros")
+    .map((category) => {
+      const score = (categoryKeywords[category] || []).reduce((total, keyword) => {
+        const normalizedKeyword = normalizeText(keyword)
+        if (!normalized.includes(normalizedKeyword)) return total
+        return total + (normalizedKeyword.includes(" ") ? 4 : 2)
+      }, 0)
+      return { category, score }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  // Termos explícitos vencem palavras genéricas como “parede” ou “obra”.
+  const explicitCategory = officialCategories.find((category) => {
+    if (category === "Outros") return false
+    return normalizeText(categoryKeywords[category]?.[0] || "") && normalized.includes(normalizeText(categoryKeywords[category][0]))
+  })
+  if (explicitCategory) return explicitCategory
+
+  return scores[0]?.score > 0 ? scores[0].category : "Outros"
 }
 
 function correctContextualSpelling(text: string, category: string) {
@@ -54,8 +80,8 @@ function correctContextualSpelling(text: string, category: string) {
 
   // Em serviços hidráulicos, “concertar” normalmente significa “consertar”.
   if (normalizedCategory === "encanador") {
-    corrected = corrected.replace(/\\bconcertar\\b/gi, "consertar")
-      .replace(/\\bconcerto\\b/gi, "conserto")
+    corrected = corrected.replace(/\bconcertar\b/gi, "consertar")
+      .replace(/\bconcerto\b/gi, "conserto")
   }
 
   return corrected
@@ -178,8 +204,11 @@ Importante:
     }
 
     // Normalizar a resposta para as categorias oficiais do site.
-    const normalizedText = `${message} ${parsedResponse.extracted.title || ""} ${parsedResponse.extracted.description || ""}`.toLowerCase()
-    const suggestedCategory = classifyService(normalizedText)
+    const normalizedText = `${message} ${parsedResponse.extracted.title || ""} ${parsedResponse.extracted.description || ""}`
+    // A mensagem original tem prioridade; texto expandido pela IA não pode
+    // mudar a categoria por mencionar serviços relacionados incidentalmente.
+    const originalCategory = classifyService(message)
+    const suggestedCategory = originalCategory !== "Outros" ? originalCategory : classifyService(normalizedText)
     const rawDescription = String(parsedResponse.extracted.description || message).trim()
     const genericDescription = rawDescription.length >= 12
       ? rawDescription
