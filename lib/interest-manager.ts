@@ -25,36 +25,33 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // registro em caso de e-mails duplicados na tabela users.
     const { data: authData } = await supabase.auth.getUser()
     const authenticatedUserId = authData.user?.id
-    let usersQuery = supabase
+    const userFields = "id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan"
+
+    // O mesmo critério usado pelo frontend: o e-mail é a identidade estável
+    // do cadastro em `users`. O auth.uid() pode ser diferente do id legado.
+    const byEmail = await supabase
       .from("users")
-      .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
-      .limit(1)
+      .select(userFields)
+      .eq("email", userEmail)
+      .order("phone_verified", { ascending: false })
+      .limit(5)
 
-    usersQuery = authenticatedUserId
-      ? usersQuery.eq("id", authenticatedUserId)
-      : usersQuery.eq("email", userEmail)
+    let users = byEmail.data
+    let userError = byEmail.error
 
-    let { data: users, error: userError } = await usersQuery
-
-    // O frontend antigo buscava pelo e-mail, enquanto este fluxo buscava pelo
-    // auth.uid(). Quando existem registros duplicados, cada consulta podia
-    // selecionar uma linha diferente (uma validada e outra não validada).
-    // Reúne os registros dos dois identificadores e prioriza a linha validada.
-    if (!userError && authenticatedUserId) {
-      const byEmail = await supabase
+    // Fallback para bases em que o e-mail do cadastro divergiu do e-mail da sessão.
+    if (!userError && (!users || users.length === 0) && authenticatedUserId) {
+      const byAuthId = await supabase
         .from("users")
-        .select("id, is_professional, free_interests_remaining, total_interests_sent, phone_verified, subscription_plan")
-        .eq("email", userEmail)
-        .order("phone_verified", { ascending: false })
-        .limit(5)
+        .select(userFields)
+        .eq("id", authenticatedUserId)
+        .limit(1)
+      users = byAuthId.data
+      userError = byAuthId.error
+    }
 
-      if (byEmail.error) {
-        userError = byEmail.error
-      } else {
-        const combined = [...(users ?? []), ...(byEmail.data ?? [])]
-        users = combined.filter((user, index, rows) => rows.findIndex((candidate) => candidate.id === user.id) === index)
-          .sort((a, b) => Number(Boolean(b.phone_verified)) - Number(Boolean(a.phone_verified)))
-      }
+    if (!userError && users) {
+      users = users.sort((a, b) => Number(Boolean(b.phone_verified)) - Number(Boolean(a.phone_verified)))
     }
 
     console.log("[v0-server] Query result - found users:", users?.length, "error:", userError?.message, "code:", userError?.code)
@@ -84,7 +81,9 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     const user = users[0]
 
     // Verificar se tem telefone validado
-    if (!user.phone_verified) {
+    const phoneIsVerified = user.phone_verified === true || user.phone_verified === "true" || user.phone_verified === 1
+
+    if (!phoneIsVerified) {
       console.log("[v0-server] Phone not verified - blocking")
       const result = {
         canExpressInterest: false,
