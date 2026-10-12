@@ -26,6 +26,8 @@ interface InterestDialogProps {
 export default function InterestDialog({ need, isOpen, onClose, currentUserEmail, onActionSuccess }: InterestDialogProps) {
   const { toast } = useToast()
   const { subscriptionPlan, isSubscribed, phoneVerified: hookPhoneVerified, phoneVerifiedLoaded, email: authEmail } = useAuth()
+  const [phoneVerifiedInFlow, setPhoneVerifiedInFlow] = useState(false)
+  const phoneVerified = hookPhoneVerified || phoneVerifiedInFlow
   const hasPaidPlan = isSubscribed || (subscriptionPlan && subscriptionPlan.toLowerCase() !== "free")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProfessional, setIsProfessional] = useState(false)
@@ -123,6 +125,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
       setPhoneInput("")
       setVerificationCode("")
       setCodeSent(false)
+      setPhoneVerifiedInFlow(true)
       
       toast({
         title: "Telefone verificado!",
@@ -141,7 +144,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     
     try {
       const userEmail = authEmail || currentUserEmail
-      console.log("[v0] handleManifestInterest - userEmail:", userEmail, "hookPhoneVerified:", hookPhoneVerified)
+      console.log("[v0] handleManifestInterest - userEmail:", userEmail, "phoneVerified:", phoneVerified)
       
       const permissionCheck = await canUserExpressInterest(userEmail)
       console.log("[v0] permissionCheck result:", {
@@ -151,7 +154,10 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         reason: permissionCheck.reason,
       })
       
-      if (!permissionCheck.phoneVerified) {
+      // O endpoint de OTP já confirmou o telefone neste diálogo. Durante a
+      // atualização da sessão, o servidor pode retornar o valor anterior por
+      // alguns instantes; não peça a validação novamente nesse caso.
+      if (!permissionCheck.phoneVerified && !phoneVerifiedInFlow) {
         console.log("[v0] BLOCKING - phoneVerified is false from server")
         toast({
           title: "Validação necessária",
@@ -254,7 +260,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 e.preventDefault()
                 
                 // Se telefone não validado
-                if (!hookPhoneVerified) {
+                if (!phoneVerified) {
                   if (codeSent) {
                     submitPhoneVerification(e)
                   } else {
@@ -268,7 +274,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               }} 
               className="space-y-4"
             >
-              {!hookPhoneVerified && !codeSent && (
+              {!phoneVerified && !codeSent && (
                 <>
                   <div className="space-y-2">
                     <Label>Telefone</Label>
@@ -326,7 +332,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 </>
               )}
 
-              {!hookPhoneVerified && codeSent && (
+              {!phoneVerified && codeSent && (
                 <>
                   <div>
                     <Label htmlFor="code">Código de Verificação</Label>
@@ -354,7 +360,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                 </>
               )}
 
-              {hookPhoneVerified && (
+              {phoneVerified && (
                 <>
                   {isProfessional && !hasPaidPlan && (
                     <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3">
@@ -400,12 +406,12 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   disabled={
                     isSubmitting ||
                     phoneValidationLoading ||
-                    (!hookPhoneVerified && phoneInput.length === 0) ||
-                    (!hookPhoneVerified && !isProfessionalCheckbox)
+                    (!phoneVerified && phoneInput.length === 0) ||
+                    (!phoneVerified && !isProfessionalCheckbox)
                   }
                   onClick={(e) => {
                     // Se telefone validado mas sem créditos, abrir modal
-                    if (hookPhoneVerified && isProfessional && !canExpress && !hasPaidPlan) {
+                    if (phoneVerified && isProfessional && !canExpress && !hasPaidPlan) {
                       e.preventDefault()
                       setShowUpgradeModal(true)
                       return
@@ -418,7 +424,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Verificando...
                     </>
-                  ) : !hookPhoneVerified ? (
+                  ) : !phoneVerified ? (
                     <>
                       <Phone className="h-4 w-4" />
                       {codeSent ? "Verificar Código" : "Enviar Código"}
