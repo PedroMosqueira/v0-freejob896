@@ -26,7 +26,7 @@ export function configureWebPush() {
   if (!keys) return false
 
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:admin@freejob.online",
+    process.env.VAPID_SUBJECT || "mailto:admin@freejob.service",
     keys.publicKey,
     keys.privateKey
   )
