@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] POST /api/subscriptions/create called")
     const body = await request.json()
-    const { email, planSlug, billingCycle } = body
+    const { email, planSlug, billingCycle, needId } = body
+    const pendingNeedId =
+      typeof needId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(needId) ? needId : null
 
     console.log("[v0] Request body:", { email, planSlug, billingCycle })
 
@@ -110,11 +112,17 @@ export async function POST(request: NextRequest) {
     
     // Create Stripe checkout session
     console.log("[v0] Calling createSubscriptionCheckoutSession with product:", product.id)
+    const needQuery = pendingNeedId ? `&need=${encodeURIComponent(pendingNeedId)}` : ""
+    // Canceling returns the user to the need they were looking at.
+    const cancelUrl = pendingNeedId
+      ? `${baseUrl}/?needId=${encodeURIComponent(pendingNeedId)}`
+      : `${baseUrl}/planos?canceled=true`
+
     const session = await createSubscriptionCheckoutSession(
       product.id,
       email,
-      `${baseUrl}/planos?session_id={CHECKOUT_SESSION_ID}`,
-      `${baseUrl}/planos?canceled=true`,
+      `${baseUrl}/planos?session_id={CHECKOUT_SESSION_ID}${needQuery}`,
+      cancelUrl,
       {
         userEmail: email,
         planId: planSlug,

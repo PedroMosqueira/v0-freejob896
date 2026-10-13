@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
+import { CheckoutReturn } from "@/components/checkout-return"
 
 interface Plan {
   id: string
@@ -28,27 +29,8 @@ export function PlansPageWrapper() {
   const [isSubscribing, setIsSubscribing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Verificar se há pendingInterest após pagamento bem-sucedido
-  useEffect(() => {
-    const sessionId = searchParams.get("session_id")
-    if (sessionId) {
-      const pendingInterestData = sessionStorage.getItem("pendingInterest")
-      if (pendingInterestData) {
-        try {
-          const { needId } = JSON.parse(pendingInterestData)
-          console.log("[v0] Continuando com manifestar interesse para needId:", needId)
-
-          // Limpar sessionStorage
-          sessionStorage.removeItem("pendingInterest")
-
-          // Redirecionar de volta para manifestar interesse
-          router.replace(`/?focus-need=${needId}`)
-        } catch (err) {
-          console.error("[v0] Erro ao processar pendingInterest:", err)
-        }
-      }
-    }
-  }, [searchParams, router])
+  const checkoutSessionId = searchParams.get("session_id")
+  const pendingNeedId = searchParams.get("need")
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -114,6 +96,10 @@ export function PlansPageWrapper() {
     } finally {
       setIsSubscribing(false)
     }
+  }
+
+  if (checkoutSessionId) {
+    return <CheckoutReturn sessionId={checkoutSessionId} needId={pendingNeedId} />
   }
 
   if (isLoading) {
