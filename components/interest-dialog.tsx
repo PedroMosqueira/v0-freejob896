@@ -13,6 +13,8 @@ import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
 import { expressInterest } from "@/lib/interest-manager"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
 import { COUNTRIES } from "@/lib/countries"
+import { mutate } from "swr"
+import { ACTIVE_INTERESTS_KEY } from "@/lib/active-interests-client"
 
 interface InterestDialogProps {
   need: Need
@@ -173,6 +175,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         variant: "success",
       })
 
+      void mutate(ACTIVE_INTERESTS_KEY)
       onActionSuccess()
       onClose()
     } catch (error: any) {

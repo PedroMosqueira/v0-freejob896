@@ -1,52 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import { useAuth } from "@/hooks/use-auth"
 import { PLAN_FEATURES } from "@/lib/subscription-manager"
-import type { SubscriptionPlan } from "@/lib/subscription-manager"
+import { ACTIVE_INTERESTS_KEY, fetchActiveInterests } from "@/lib/active-interests-client"
 
 export function InterestsCounter() {
   const { email, subscriptionPlan } = useAuth()
-  const [activeInterests, setActiveInterests] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const isPaidPlan = subscriptionPlan === "simples" || subscriptionPlan === "agencia"
 
-  useEffect(() => {
-    if (!email) return
+  const { data } = useSWR(email && isPaidPlan ? ACTIVE_INTERESTS_KEY : null, fetchActiveInterests, {
+    refreshInterval: 30000,
+    revalidateOnFocus: true,
+  })
 
-    const fetchActiveInterests = async () => {
-      try {
-        const response = await fetch(`/api/interests/active?email=${encodeURIComponent(email)}`)
-        if (response.ok) {
-          const data = await response.json()
-          setActiveInterests(data.count || 0)
-        }
-      } catch (error) {
-        console.error("[v0] Error fetching active interests:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchActiveInterests()
-    const interval = setInterval(fetchActiveInterests, 30000)
-    return () => clearInterval(interval)
-  }, [email])
-
-  // Get plan features based on subscription
-  let limit = -1 // unlimited by default
-  let planName = "Grátis"
-
-  if (subscriptionPlan === "simples") {
-    limit = 2
-    planName = "Plano Simples"
-  } else if (subscriptionPlan === "agencia") {
-    limit = 8
-    planName = "Plano Agência"
+  if (!isPaidPlan || data === undefined) {
+    return null
   }
 
-  if (loading || limit === -1) {
-    return null // Não mostrar para planos ilimitados ou enquanto carrega
-  }
+  const plan = PLAN_FEATURES[subscriptionPlan]
+  const limit = plan.limits.simultaneous_interests
+  const planName = plan.name
+  const activeInterests = data.count
 
   const percentageUsed = (activeInterests / limit) * 100
   const isNearLimit = percentageUsed >= 75

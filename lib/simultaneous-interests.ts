@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "./supabase/server"
+import { createAdminClient } from "./stripe-subscription-sync"
 import { PLAN_FEATURES, type SubscriptionPlan } from "./subscription-manager"
 
 export interface ActiveInterest {
@@ -12,78 +13,82 @@ export interface ActiveInterest {
   viewed_by_requester_at?: string
 }
 
+// Proposal statuses that end an interest and free a simultaneous slot.
+const RELEASED_PROPOSAL_STATUSES = new Set([
+  "declined_by_requester",
+  "declined_by_provider",
+  "declined_by_professional",
+  "cancelled_by_requester",
+  "cancelled_by_provider",
+  "cancelled",
+  "completed",
+])
+
+const ACCEPTED_PROPOSAL_STATUSES = new Set([
+  "accepted_by_requester",
+  "accepted_by_provider",
+  "accepted_by_professional",
+])
+
+// Need statuses where the professional is still waiting or working.
+const OPEN_NEED_STATUSES = new Set(["aberto"])
+const IN_PROGRESS_NEED_STATUSES = new Set(["aceito", "em_andamento"])
+
 /**
- * Check if a cancelled interest should be released from simultaneous limit
- * Release conditions:
- * 1. Cancelled before requester viewed → release immediately
- * 2. Cancelled after requester viewed + 2h has passed → release
- * 3. Completed proposal → release immediately (status check only)
+ * An interest occupies a slot while its need is open and the proposal is
+ * not declined/cancelled, or while the professional was accepted and the
+ * service is in progress. Concluded, cancelled or deleted needs never count,
+ * nor do interests on needs where another professional was chosen.
  */
-async function shouldReleaseInterest(proposal: any): Promise<boolean> {
-  if (proposal.status === "completed") {
-    return true // Completed proposals don't count
-  }
-
-  if (proposal.status !== "cancelled" || !proposal.cancelled_at) {
-    return false // Not cancelled, so doesn't get released
-  }
-
-  // Case 1: Cancelled before requester viewed → release immediately
-  if (proposal.cancelled_before_viewed === true) {
-    return true
-  }
-
-  // Case 2: Cancelled after viewed - check 2h timeout
-  if (proposal.viewed_by_requester_at || proposal.cancelled_before_viewed === false) {
-    const cancelledTime = new Date(proposal.cancelled_at).getTime()
-    const now = new Date().getTime()
-    const twoHoursInMs = 2 * 60 * 60 * 1000
-
-    return now - cancelledTime >= twoHoursInMs
-  }
-
+function occupiesSlot(proposalStatus: string, needStatus: string | undefined): boolean {
+  if (!needStatus || RELEASED_PROPOSAL_STATUSES.has(proposalStatus)) return false
+  if (OPEN_NEED_STATUSES.has(needStatus)) return true
+  if (IN_PROGRESS_NEED_STATUSES.has(needStatus)) return ACCEPTED_PROPOSAL_STATUSES.has(proposalStatus)
   return false
 }
 
 /**
- * Get count of active interests that count toward simultaneous limit
+ * Lists the professional's interests that count toward the simultaneous limit.
+ * Uses the service role because it also runs for counters where RLS on needs
+ * would hide rows; it is always scoped to a single professional email.
  */
-export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
-  const supabase = await createSupabaseServerClient()
+async function fetchSlotOccupyingInterests(professionalEmail: string) {
+  const email = professionalEmail.trim().toLowerCase()
+  if (!email) return []
 
-  const { data, error } = await supabase
+  const supabase = createAdminClient()
+
+  const { data: proposals, error } = await supabase
     .from("need_proposals")
-    .select(
-      "id, status, cancelled_at, cancelled_before_viewed, viewed_by_requester_at, type"
-    )
-    .eq("professional_email", professionalEmail)
+    .select("id, need_id, professional_email, created_at, status")
+    .ilike("professional_email", email)
+    .eq("type", "interest_only")
+    .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("[v0] Error getting active interests count:", error)
-    return 0
+    throw new Error(`Failed to load interests: ${error.message}`)
+  }
+  if (!proposals?.length) return []
+
+  const needIds = [...new Set(proposals.map((p) => p.need_id).filter(Boolean))]
+  const { data: needs, error: needsError } = await supabase.from("needs").select("id, status").in("id", needIds)
+
+  if (needsError) {
+    throw new Error(`Failed to load needs: ${needsError.message}`)
   }
 
-  let activeCount = 0
+  const needStatusById = new Map((needs || []).map((n) => [String(n.id), String(n.status)]))
 
-  for (const proposal of data || []) {
-    // Skip if not an interest
-    if (proposal.type !== "interest_only") {
-      continue
-    }
+  return proposals.filter((p) => occupiesSlot(String(p.status), needStatusById.get(String(p.need_id))))
+}
 
-    // Check if this proposal should be released
-    const isReleased = await shouldReleaseInterest(proposal)
-    if (isReleased) {
-      continue // Don't count released proposals
-    }
-
-    // Count all other statuses that aren't yet released
-    if (proposal.status !== "completed") {
-      activeCount++
-    }
-  }
-
-  return activeCount
+/**
+ * Get count of active interests that count toward simultaneous limit.
+ * Throws on database errors so callers never treat a failure as "0 active".
+ */
+export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
+  const interests = await fetchSlotOccupyingInterests(professionalEmail)
+  return interests.length
 }
 
 /**
@@ -140,40 +145,12 @@ export async function canSendInterest(
  * Get active interests for display
  */
 export async function getActiveInterests(professionalEmail: string): Promise<ActiveInterest[]> {
-  const supabase = await createSupabaseServerClient()
-
-  const { data, error } = await supabase
-    .from("need_proposals")
-    .select(
-      "id, need_id, professional_email, created_at, status, type, cancelled_at, cancelled_before_viewed, viewed_by_requester_at"
-    )
-    .eq("professional_email", professionalEmail)
-    .eq("type", "interest_only")
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("[v0] Error getting active interests:", error)
+  try {
+    return await fetchSlotOccupyingInterests(professionalEmail)
+  } catch (error) {
+    console.error("[simultaneous-interests] Error getting active interests:", error)
     return []
   }
-
-  const activeInterests: ActiveInterest[] = []
-
-  for (const proposal of data || []) {
-    // Skip released proposals
-    const isReleased = await shouldReleaseInterest(proposal)
-    if (isReleased) {
-      continue
-    }
-
-    // Skip completed proposals
-    if (proposal.status === "completed") {
-      continue
-    }
-
-    activeInterests.push(proposal)
-  }
-
-  return activeInterests
 }
 
 /**
