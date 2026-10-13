@@ -29,7 +29,7 @@ Adicione as variáveis no Vercel Project Settings (Settings → Vars):
 ```
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=BG...
 VAPID_PRIVATE_KEY=t...
-VAPID_SUBJECT=mailto:seu-email@freejob.online
+VAPID_SUBJECT=mailto:seu-email@freejob.service
 ```
 
 **Importante:**

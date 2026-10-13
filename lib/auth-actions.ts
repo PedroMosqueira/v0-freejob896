@@ -3,6 +3,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.service").replace(/\/$/, "")
+
 export async function checkUserStatus(prevState: any, formData: FormData) {
   const email = formData.get("email")
 
@@ -143,7 +145,7 @@ export async function signUpWithEmail(prevState: any, formData: FormData): Promi
       email: email.toString(),
       password: password.toString(),
       options: {
-        emailRedirectTo: "https://freejob.online/auth/callback",
+        emailRedirectTo: `${SITE_URL}/auth/callback`,
       },
     })
 
@@ -351,7 +353,7 @@ export async function resendVerificationEmail(prevState: any, formData: FormData
         body: JSON.stringify({
           type: "signup",
           email: email.toString(),
-          redirect_to: "https://freejob.online/auth/callback",
+          redirect_to: `${SITE_URL}/auth/callback`,
         }),
       },
     )
