@@ -7,11 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { addNeedProposal, startChat, type Need } from "@/lib/needs-store"
+import { startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
 import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
-import { createNotificationViaAPI } from "@/lib/notifications-client"
-import { canUserExpressInterest, incrementInterestCount } from "@/lib/interest-manager"
+import { expressInterest } from "@/lib/interest-manager"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
 import { COUNTRIES } from "@/lib/countries"
 
@@ -144,77 +143,21 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
     
     try {
       const userEmail = authEmail || currentUserEmail
-      console.log("[v0] handleManifestInterest - userEmail:", userEmail, "phoneVerified:", phoneVerified)
-      
-      const permissionCheck = await canUserExpressInterest(userEmail)
-      console.log("[v0] permissionCheck result:", {
-        phoneVerified: permissionCheck.phoneVerified,
-        isProfessional: permissionCheck.isProfessional,
-        canExpressInterest: permissionCheck.canExpressInterest,
-        reason: permissionCheck.reason,
-      })
-      
-      // O endpoint de OTP já confirmou o telefone neste diálogo. Durante a
-      // atualização da sessão, o servidor pode retornar o valor anterior por
-      // alguns instantes; não peça a validação novamente nesse caso.
-      // Somente o servidor pode declarar que a validação é necessária.
-      // `phoneVerified: false` também era retornado em erros internos, o que
-      // transformava falhas de consulta em uma notificação incorreta.
-      if (permissionCheck.needsPhoneValidation === true && !phoneVerifiedInFlow) {
-        console.log("[v0] BLOCKING - server explicitly requires phone validation")
-        toast({
-          title: "Validação necessária",
-          description: permissionCheck.reason || "Por favor, valide seu telefone antes de manifestar interesse.",
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
+
+      // Check, insert and credit consumption all happen on the server.
+      const result = await expressInterest(need.id)
+
+      if (!result.success) {
+        if (result.needsUpgrade) {
+          toast({ title: "Créditos insuficientes", description: result.reason, variant: "destructive" })
+          setShowUpgradeModal(true)
+        } else if (result.needsPhoneValidation) {
+          toast({ title: "Validação necessária", description: result.reason, variant: "destructive" })
+        } else {
+          toast({ title: "Não foi possível continuar", description: result.reason, variant: "destructive" })
+        }
         return
       }
-
-      if (
-        !permissionCheck.canExpressInterest &&
-        permissionCheck.reason &&
-        !permissionCheck.needsUpgrade &&
-        !(permissionCheck.needsPhoneValidation === true && phoneVerifiedInFlow)
-      ) {
-        toast({
-          title: "Não foi possível continuar",
-          description: permissionCheck.reason,
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
-      }
-      
-      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest && !hasPaidPlan) {
-        toast({
-          title: "Créditos insuficientes",
-          description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
-          variant: "destructive",
-        })
-        setShowUpgradeModal(true)
-        setIsSubmitting(false)
-        return
-      }
-
-      // Criar proposta de interesse
-      await addNeedProposal({
-        needId: need.id,
-        professionalEmail: userEmail,
-        type: "interest_only",
-      })
-
-      if (permissionCheck.isProfessional) {
-        await incrementInterestCount(userEmail)
-      }
-
-      await createNotificationViaAPI(
-        need.requesterEmail,
-        "Novo interesse em seu serviço",
-        `Um profissional manifestou interesse em "${need.title}"`,
-        "proposal",
-        need.id,
-      )
 
       await startChat({
         needId: need.id,

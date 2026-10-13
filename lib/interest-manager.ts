@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getActiveInterestsCount } from "./simultaneous-interests"
+import { addNeedProposal } from "./needs-store"
 import { PLAN_FEATURES } from "./subscription-manager"
 import { PAID_SUBSCRIPTION_STATUSES, isSubscriptionExpired } from "./subscription-status"
 
@@ -247,6 +248,98 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       reason: `Não foi possível verificar sua permissão. ${errorMessage || "Tente novamente."}`,
       // Um erro de consulta não significa que o telefone está pendente.
       // `needsPhoneValidation` só deve existir na resposta da checagem real.
+    }
+  }
+}
+
+export type ExpressInterestResult =
+  | { success: true; proposalId: string; isProfessional: boolean }
+  | {
+      success: false
+      reason: string
+      needsPhoneValidation?: boolean
+      needsUpgrade?: boolean
+      alreadyInterested?: boolean
+    }
+
+/**
+ * Single server-side entry point for "Tenho interesse": the permission check,
+ * proposal insert and credit consumption run together so the client cannot
+ * skip the check. The identity comes from the session, never from the caller.
+ */
+export async function expressInterest(needId: string): Promise<ExpressInterestResult> {
+  try {
+    if (!needId) {
+      return { success: false, reason: "Pedido inválido." }
+    }
+
+    const supabase = await createSupabaseServerClient()
+    const { data: authData } = await supabase.auth.getUser()
+    const sessionEmail = authData.user?.email
+
+    if (!sessionEmail) {
+      return { success: false, reason: "Sua sessão expirou. Entre novamente para continuar." }
+    }
+
+    const { data: need, error: needError } = await supabase
+      .from("needs")
+      .select("id, requester_email")
+      .eq("id", needId)
+      .maybeSingle()
+
+    if (needError || !need) {
+      return { success: false, reason: "Pedido não encontrado." }
+    }
+
+    if (need.requester_email?.toLowerCase() === sessionEmail.toLowerCase()) {
+      return { success: false, reason: "Você não pode manifestar interesse no seu próprio pedido." }
+    }
+
+    const { data: existing } = await supabase
+      .from("need_proposals")
+      .select("id")
+      .eq("need_id", needId)
+      .eq("professional_email", sessionEmail)
+      .limit(1)
+
+    if (existing && existing.length > 0) {
+      return {
+        success: false,
+        alreadyInterested: true,
+        reason: "Você já manifestou interesse neste pedido.",
+      }
+    }
+
+    const permission = await canUserExpressInterest(sessionEmail)
+
+    if (!permission.canExpressInterest) {
+      return {
+        success: false,
+        reason: permission.reason || "Não foi possível verificar sua permissão. Tente novamente.",
+        needsPhoneValidation: permission.needsPhoneValidation,
+        needsUpgrade: permission.needsUpgrade,
+      }
+    }
+
+    const proposal = await addNeedProposal({
+      needId,
+      professionalEmail: sessionEmail,
+      type: "interest_only",
+    })
+
+    if (permission.isProfessional) {
+      const counter = await incrementInterestCount(sessionEmail)
+      if (!counter.success) {
+        console.error("[v0-server] Interest saved but credit counter failed:", counter.error)
+      }
+    }
+
+    return { success: true, proposalId: proposal.id, isProfessional: Boolean(permission.isProfessional) }
+  } catch (error) {
+    console.error("[v0-server] expressInterest failed:", error)
+    return {
+      success: false,
+      reason: error instanceof Error ? error.message : "Erro ao manifestar interesse.",
     }
   }
 }
