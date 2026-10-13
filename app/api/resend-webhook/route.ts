@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Email ID:", body.data.email_id)
     console.log("[v0] De:", body.data.from)
     console.log("[v0] Para:", body.data.to)
-    console.log("[v0] Criado em:", body.data.created_at)
+    console.log("[v0] Criado em:", body.created_at)
 
     // Processar diferentes tipos de eventos
     switch (body.type) {

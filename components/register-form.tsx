@@ -32,7 +32,7 @@ function SubmitButton() {
   )
 }
 
-function ResendButton({ email }: { email: string }) {
+function ResendButton({ email }: { email?: string }) {
   const { pending } = useFormStatus()
 
   return (
@@ -94,7 +94,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [isProfessional, setIsProfessional] = useState(false)
   const [cpf, setCpf] = useState("")
   const [professionalPhone, setProfessionalPhone] = useState("")
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [signUpState, signUpAction] = useFormState(signUpWithEmail, null)
   const [resendState, resendAction] = useFormState(resendVerificationEmail, null)
   const [clearState, clearAction] = useFormState(clearUnverifiedUser, null)

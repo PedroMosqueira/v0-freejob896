@@ -1,7 +1,9 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
+import { PAID_SUBSCRIPTION_STATUSES } from "@/lib/subscription-status"
 
 export type SubscriptionPlan = "free" | "simples" | "agencia"
 
@@ -9,7 +11,7 @@ interface UserSubscription {
   id: string
   user_id: string
   plan_id: string
-  status: "active" | "canceled" | "past_due" | "trialing"
+  status: string
   stripe_subscription_id: string
   current_period_end: string
 }
@@ -76,7 +78,8 @@ export function useAuthState(): AuthState {
         .from("user_subscriptions")
         .select("id, user_id, plan_id, status, stripe_subscription_id, current_period_end")
         .eq("user_id", userId)
-        .eq("status", "active")
+        .in("status", [...PAID_SUBSCRIPTION_STATUSES])
+        .order("created_at", { ascending: false })
         .limit(1)
 
       if (subscriptionError) {
@@ -194,7 +197,7 @@ export function useAuthState(): AuthState {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
         if (!isMountedRef.current) return
 
         console.log("[v0] Auth change:", event, session?.user?.email)

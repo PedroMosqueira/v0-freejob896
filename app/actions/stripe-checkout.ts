@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { stripe, createSubscriptionCheckoutSession } from '@/lib/stripe'
 import { redirect } from 'next/navigation'
+import { PAID_SUBSCRIPTION_STATUSES } from '@/lib/subscription-status'
 
 export async function startSubscriptionCheckout(
   productId: string,
@@ -29,7 +30,7 @@ export async function startSubscriptionCheckout(
       .from('user_subscriptions')
       .select('id, stripe_subscription_id, status')
       .eq('user_id', user.id)
-      .eq('status', 'active')
+      .in('status', [...PAID_SUBSCRIPTION_STATUSES])
 
     if (existingSubscriptions && existingSubscriptions.length > 0) {
       console.log('[v0] Found', existingSubscriptions.length, 'active subscription(s). Canceling them...')

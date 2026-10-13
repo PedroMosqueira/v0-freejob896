@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "./supabase/server"
+import { PAID_SUBSCRIPTION_STATUSES, isPaidSubscriptionStatus } from "./subscription-status"
 
 export type SubscriptionPlan = "free" | "simples" | "agencia"
 
@@ -90,7 +91,7 @@ export async function getUserSubscription(userEmail: string): Promise<UserSubscr
     .from("user_subscriptions")
     .select("*, subscription_plans(slug, name)")
     .eq("user_id", user.id)
-    .eq("status", "active")
+    .in("status", [...PAID_SUBSCRIPTION_STATUSES])
     .order("created_at", { ascending: false })
     .limit(1)
     .single()
@@ -109,7 +110,7 @@ export async function getUserSubscription(userEmail: string): Promise<UserSubscr
   const planSlug = subscription.subscription_plans?.slug || "free"
   const now = new Date()
   const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end) : null
-  const isActive = subscription.status === "active" && (!currentPeriodEnd || currentPeriodEnd > now)
+  const isActive = isPaidSubscriptionStatus(subscription.status) && (!currentPeriodEnd || currentPeriodEnd > now)
 
   return {
     plan: (planSlug as SubscriptionPlan) || "free",
@@ -223,7 +224,7 @@ export async function cancelSubscription(userEmail: string): Promise<boolean> {
       .from("user_subscriptions")
       .select("id")
       .eq("user_id", user.id)
-      .eq("status", "active")
+      .in("status", [...PAID_SUBSCRIPTION_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
       .single()

@@ -39,7 +39,7 @@ export async function GET() {
     .from('chat_threads')
     .select('id, need_id, professional_email, bid_deadline, client_viewed_at')
     .is('bid_sent_at', null)
-    .not('client_viewed_at', null)
+    .not('client_viewed_at', 'is', null)
     .not('bid_deadline', 'is', null)
     .lte('bid_deadline', now.toISOString())
 

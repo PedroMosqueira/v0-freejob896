@@ -76,7 +76,7 @@ function ChatManagementDialog({
           try {
             const { getUserProfile } = await import("@/lib/user-profile")
             const profile = await getUserProfile(email)
-            profiles[email] = formatUserName(profile)
+            profiles[email] = formatUserName(profile?.fullName, email)
           } catch (error) {
             profiles[email] = formatUserName(null, email)
           }

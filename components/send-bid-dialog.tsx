@@ -44,13 +44,13 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
         bidAmount: amount,
       })
 
-      await createNotificationViaAPI({
-        userEmail: need.requesterEmail,
-        title: "Nova proposta recebida",
-        message: `Você recebeu uma proposta de ${formatCurrency(amount)} para "${need.title}"`,
-        type: "new_proposal",
-        needId: need.id,
-      }).catch((err) => console.error("[v0] Failed to create bid notification:", err))
+      await createNotificationViaAPI(
+        need.requesterEmail,
+        "Nova proposta recebida",
+        `Você recebeu uma proposta de ${formatCurrency(amount)} para "${need.title}"`,
+        "new_proposal",
+        need.id,
+      ).catch((err) => console.error("[v0] Failed to create bid notification:", err))
 
       onSuccess?.()
       onClose()

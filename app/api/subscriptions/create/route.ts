@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSubscriptionCheckoutSession } from "@/lib/stripe"
 import { getProductBySlug } from "@/lib/stripe-products"
+import { PAID_SUBSCRIPTION_STATUSES } from "@/lib/subscription-status"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       .from("user_subscriptions")
       .select("id, current_period_end, subscription_plans(slug)")
       .eq("user_id", user.id)
-      .eq("status", "active")
+      .in("status", [...PAID_SUBSCRIPTION_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()

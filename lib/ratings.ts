@@ -1,7 +1,14 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { getCurrentUser } from "@/lib/auth-actions"
+
+async function getCurrentUser() {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  return user
+}
 
 export interface Rating {
   id: string
@@ -173,7 +180,7 @@ export async function createRating(
       .from("ratings")
       .insert({
         rated_user_email: ratedUserEmail,
-        rater_user_email: session.user.email,
+        rater_user_email: user.email,
         need_id: needId || null,
         rating,
         comment: comment || null,

@@ -6,7 +6,9 @@ import { useAuth } from "@/hooks/use-auth"
 
 interface AdWrapperProps {
   children: React.ReactNode
-}
+  /** Accepted for call-site clarity; visibility is always derived from the auth state. */
+  freeUserOnly?: boolean
+  }
 
 export function AdWrapper({ children }: AdWrapperProps) {
   const { isFreeUser, isLoading } = useAuth()
