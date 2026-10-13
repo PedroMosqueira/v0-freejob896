@@ -1,17 +1,39 @@
 import Stripe from "stripe"
 
-// Usar valor dummy durante build se a chave não estiver definida
-// Em produção, a chave DEVE estar definida nas variáveis de ambiente
-const stripeKey = process.env.Stripe_STRIPE_SECRET_KEY || "sk_test_dummy_for_build"
+// The v0 Stripe integration injects a sandbox (test) key as Stripe_STRIPE_SECRET_KEY.
+// Prefer a live key from any of the configured variables so checkout charges for real;
+// fall back to the first key found only when no live key exists.
+const candidateKeys = [
+  process.env.STRIPE_SECRET_KEY,
+  process.env.Stripe_STRIPE_SECRET_KEY,
+  process.env.STRIPE_ACCESS_TOKEN,
+]
+  .map((key) => key?.trim())
+  .filter((key): key is string => Boolean(key))
 
-export const stripe = new Stripe(stripeKey, {
+const isLiveKey = (key: string) => key.startsWith("sk_live_") || key.startsWith("rk_live_")
+
+const configuredKey = candidateKeys.find(isLiveKey) ?? candidateKeys[0]
+
+export const stripeMode: "live" | "test" | "missing" = !configuredKey
+  ? "missing"
+  : isLiveKey(configuredKey)
+    ? "live"
+    : "test"
+
+if (stripeMode !== "live") {
+  console.warn(`[stripe] Running in ${stripeMode} mode - payments will not be charged for real.`)
+}
+
+// Dummy value only so the build does not fail when no key is set.
+export const stripe = new Stripe(configuredKey || "sk_test_dummy_for_build", {
   apiVersion: "2025-12-15.clover",
   typescript: true,
 })
 
 // Função para validar se o Stripe está configurado corretamente
 export function isStripeConfigured(): boolean {
-  return process.env.Stripe_STRIPE_SECRET_KEY !== undefined && process.env.Stripe_STRIPE_SECRET_KEY !== ""
+  return Boolean(configuredKey)
 }
 
 // Calcular valores do pagamento (0% de taxa - Gratuito no primeiro ano!)
