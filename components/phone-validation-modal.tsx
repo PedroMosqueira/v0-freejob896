@@ -18,6 +18,8 @@ interface PhoneValidationModalProps {
   currentUserEmail: string
   phoneNumber: string
   countryCode?: string
+  /** Whether the user declared "Sou profissional"; required by the server to validate. */
+  isProfessional: boolean
 }
 
 export function PhoneValidationModal({
@@ -27,6 +29,7 @@ export function PhoneValidationModal({
   currentUserEmail,
   phoneNumber,
   countryCode: initialCountryCode = "+55",
+  isProfessional,
 }: PhoneValidationModalProps) {
   const [verificationCode, setVerificationCode] = useState("")
   const [loading, setLoading] = useState(false)
@@ -110,6 +113,7 @@ export function PhoneValidationModal({
           phone: cleanPhone,
           code: verificationCode,
           email: currentUserEmail,
+          isProfessional,
         }),
       })
 

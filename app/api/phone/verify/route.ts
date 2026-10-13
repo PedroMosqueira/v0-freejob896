@@ -4,7 +4,7 @@ import { grantFreeCreditsIfFirstTime } from "@/lib/phone-credits"
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, code, email } = await request.json()
+    const { phone, code, email, isProfessional } = await request.json()
 
     if (!phone || !code || !email) {
       return NextResponse.json(
@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
     if (selectError || !user) {
       return NextResponse.json(
         { message: "Usuário não encontrado" },
+        { status: 400 }
+      )
+    }
+
+    // Validar o telefone exige ser profissional: já marcado no perfil ou declarado agora.
+    if (!user.is_professional && isProfessional !== true) {
+      return NextResponse.json(
+        { message: "Marque \"Sou profissional\" para validar seu telefone." },
         { status: 400 }
       )
     }
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
       .update({
         phone: phone,
         phone_verified: true,
+        is_professional: true,
         phone_verification_code: null,
         phone_verification_expires_at: null,
       })
@@ -71,11 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Grant free credits if this is a professional and first validation
-    let creditsGranted = false
-    if (user.is_professional) {
-      const creditResult = await grantFreeCreditsIfFirstTime(email)
-      creditsGranted = creditResult.creditsGranted
-    }
+    const { creditsGranted } = await grantFreeCreditsIfFirstTime(email)
 
     return NextResponse.json({
       success: true,

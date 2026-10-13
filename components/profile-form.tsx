@@ -449,6 +449,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
         currentUserEmail={userEmail}
         phoneNumber={phone}
         countryCode={countryCode}
+        isProfessional={isProfessional}
       />
     </Card>
   )

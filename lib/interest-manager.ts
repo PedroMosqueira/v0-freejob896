@@ -18,6 +18,8 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
   hasActiveSubscription?: boolean
   needsPhoneValidation?: boolean
   needsUpgrade?: boolean
+  /** True when this interest must consume one free credit (no paid plan). */
+  usesFreeCredit?: boolean
 }> {
   try {
     console.log("[v0-server] canUserExpressInterest - checking email:", userEmail)
@@ -109,54 +111,13 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       return result
     }
 
-    console.log("[v0-server] Phone verified - proceeding")
-    
-    // Se não é profissional, pode expressar interesse
-    if (!user.is_professional) {
-      console.log("[v0-server] Non-professional user - returning success")
-      const result = {
-        canExpressInterest: true,
-        isProfessional: false,
-        phoneVerified: true,
-      }
-      console.log("[v0-browser] NON-PROFESSIONAL - Result for", userEmail, ":", result)
-      return result
-    }
+    // Regra única para todos os usuários (profissionais ou não):
+    // 1) plano pago ativo  -> pode, sem consumir crédito gratuito
+    // 2) créditos gratuitos -> pode, consumindo 1 crédito
+    // 3) nenhum dos dois    -> precisa assinar um plano
+    const isProfessional = Boolean(user.is_professional)
+    const freeInterestsRemaining = Math.max(0, user.free_interests_remaining ?? MAX_FREE_INTERESTS)
 
-    // Se é profissional, verifica se tem propostas gratuitas restantes
-    const freeInterestsRemaining = user.free_interests_remaining ?? 3
-
-    if (freeInterestsRemaining > 0) {
-      // Verificar também limite de propostas simultâneas
-      const activeCount = await getActiveInterestsCount(userEmail)
-      const planLimit = PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
-      
-      if (activeCount >= planLimit) {
-        const result = {
-          canExpressInterest: false,
-          reason: `Você atingiu o limite de ${planLimit} proposta(s) simultânea(s). Aguarde a conclusão de uma para continuar.`,
-          isProfessional: true,
-          phoneVerified: true,
-          freeInterestsRemaining,
-          hasActiveSubscription: false,
-        }
-        console.log("[v0-browser] LIMIT REACHED - Result for", userEmail, ":", result)
-        return result
-      }
-      
-      const result = {
-        canExpressInterest: true,
-        isProfessional: true,
-        freeInterestsUsed: 3 - freeInterestsRemaining,
-        freeInterestsRemaining,
-        phoneVerified: true,
-        hasActiveSubscription: false,
-      }
-      console.log("[v0-browser] PROFESSIONAL WITH FREE INTERESTS - Result for", userEmail, ":", result)
-      return result
-    }
-
-    // Se usou todas as propostas gratuitas, verificar se tem plano ativo
     const subscriptionUserIds = [user.id, authenticatedUserId].filter(
       (id, index, ids): id is string => Boolean(id) && ids.indexOf(id) === index,
     )
@@ -196,43 +157,63 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       const activeCount = await getActiveInterestsCount(userEmail)
       
       if (activeCount >= simultaneousLimit) {
-        const result = {
+        return {
           canExpressInterest: false,
           reason: `Você atingiu o limite de ${simultaneousLimit} proposta(s) simultânea(s) do seu plano. Aguarde a conclusão de uma.`,
-          isProfessional: true,
-          freeInterestsUsed: 3,
-          freeInterestsRemaining: 0,
+          isProfessional,
+          freeInterestsRemaining,
           phoneVerified: true,
           hasActiveSubscription: true,
         }
-        console.log("[v0-browser] SUBSCRIPTION LIMIT REACHED - Result for", userEmail, ":", result)
-        return result
       }
-      
-      const result = {
+
+      return {
         canExpressInterest: true,
-        isProfessional: true,
-        freeInterestsUsed: 3,
-        freeInterestsRemaining: 0,
+        usesFreeCredit: false,
+        isProfessional,
+        freeInterestsRemaining,
         phoneVerified: true,
         hasActiveSubscription: true,
       }
-      console.log("[v0-browser] PROFESSIONAL WITH SUBSCRIPTION - Result for", userEmail, ":", result)
-      return result
     }
 
-    const result = {
+    if (freeInterestsRemaining > 0) {
+      const activeCount = await getActiveInterestsCount(userEmail)
+      const freeLimit = PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
+
+      if (activeCount >= freeLimit) {
+        return {
+          canExpressInterest: false,
+          reason: `Você atingiu o limite de ${freeLimit} proposta(s) simultânea(s). Aguarde a conclusão de uma para continuar.`,
+          isProfessional,
+          freeInterestsRemaining,
+          phoneVerified: true,
+          hasActiveSubscription: false,
+        }
+      }
+
+      return {
+        canExpressInterest: true,
+        usesFreeCredit: true,
+        isProfessional,
+        freeInterestsUsed: MAX_FREE_INTERESTS - freeInterestsRemaining,
+        freeInterestsRemaining,
+        phoneVerified: true,
+        hasActiveSubscription: false,
+      }
+    }
+
+    console.log("[v0-server] No paid plan and no free credits - upgrade required for", userEmail)
+    return {
       canExpressInterest: false,
-      reason: "Você usou suas 3 propostas gratuitas. Para continuar, é necessário um plano de assinatura.",
+      reason: `Você usou suas ${MAX_FREE_INTERESTS} propostas gratuitas. Para continuar, é necessário um plano de assinatura.`,
       needsUpgrade: true,
-      isProfessional: true,
-      freeInterestsUsed: 3,
+      isProfessional,
+      freeInterestsUsed: MAX_FREE_INTERESTS,
       freeInterestsRemaining: 0,
       phoneVerified: true,
       hasActiveSubscription: false,
     }
-    console.log("[v0-browser] NEEDS UPGRADE - Result for", userEmail, ":", result)
-    return result
   } catch (error) {
     console.error("[v0-server] ERROR in canUserExpressInterest for", userEmail, ":", error)
     console.error("[v0-browser] ERROR CAUGHT - Check server logs for details")
@@ -327,11 +308,9 @@ export async function expressInterest(needId: string): Promise<ExpressInterestRe
       type: "interest_only",
     })
 
-    if (permission.isProfessional) {
-      const counter = await incrementInterestCount(sessionEmail)
-      if (!counter.success) {
-        console.error("[v0-server] Interest saved but credit counter failed:", counter.error)
-      }
+    const counter = await incrementInterestCount(sessionEmail, Boolean(permission.usesFreeCredit))
+    if (!counter.success) {
+      console.error("[v0-server] Interest saved but credit counter failed:", counter.error)
     }
 
     return { success: true, proposalId: proposal.id, isProfessional: Boolean(permission.isProfessional) }
@@ -344,7 +323,7 @@ export async function expressInterest(needId: string): Promise<ExpressInterestRe
   }
 }
 
-export async function incrementInterestCount(userEmail: string): Promise<{
+export async function incrementInterestCount(userEmail: string, consumeFreeCredit = true): Promise<{
   success: boolean
   error?: string
   freeInterestsUsed?: number
@@ -369,14 +348,12 @@ export async function incrementInterestCount(userEmail: string): Promise<{
 
     const user = users[0]
 
-    const currentFreeRemaining = user.free_interests_remaining ?? 3
+    const currentFreeRemaining = Math.max(0, user.free_interests_remaining ?? MAX_FREE_INTERESTS)
     const currentTotalSent = user.total_interests_sent ?? 0
 
-    // DECREMENTAR contador de créditos gratuitos
-    let newFreeRemaining = currentFreeRemaining
-    if (user.is_professional && currentFreeRemaining > 0) {
-      newFreeRemaining = currentFreeRemaining - 1  // DECREMENTAR
-    }
+    // Assinantes não gastam crédito gratuito; os demais gastam 1 por interesse.
+    const newFreeRemaining =
+      consumeFreeCredit && currentFreeRemaining > 0 ? currentFreeRemaining - 1 : currentFreeRemaining
 
     const { error: updateError } = await supabase
       .from("users")
