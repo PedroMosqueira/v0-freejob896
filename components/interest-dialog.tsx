@@ -171,28 +171,28 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
         return
       }
 
-      if (
-        !permissionCheck.canExpressInterest &&
-        permissionCheck.reason &&
-        !permissionCheck.needsUpgrade &&
-        !(permissionCheck.needsPhoneValidation === true && phoneVerifiedInFlow)
-      ) {
-        toast({
-          title: "Não foi possível continuar",
-          description: permissionCheck.reason,
-          variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
-      }
-      
-      if (permissionCheck.isProfessional && !permissionCheck.canExpressInterest && !hasPaidPlan) {
+      // The server decision is authoritative. Client-side plan state (hasPaidPlan)
+      // can be stale, e.g. after switching accounts in the same browser, so it
+      // must never override a denial.
+      if (permissionCheck.needsUpgrade) {
         toast({
           title: "Créditos insuficientes",
-          description: "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
+          description:
+            permissionCheck.reason || "Você usou suas 3 propostas gratuitas. Escolha um plano para continuar.",
           variant: "destructive",
         })
         setShowUpgradeModal(true)
+        setIsSubmitting(false)
+        return
+      }
+
+      const phoneJustVerified = permissionCheck.needsPhoneValidation === true && phoneVerifiedInFlow
+      if (!permissionCheck.canExpressInterest && !phoneJustVerified) {
+        toast({
+          title: "Não foi possível continuar",
+          description: permissionCheck.reason || "Não foi possível verificar sua permissão. Tente novamente.",
+          variant: "destructive",
+        })
         setIsSubmitting(false)
         return
       }
