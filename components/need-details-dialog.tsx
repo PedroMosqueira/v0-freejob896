@@ -122,7 +122,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     profileImageUrl: string | null
   } | null>(null)
   const [hasExpressedInterest, setHasExpressedInterest] = useState(false)
-  const [currentNeed, setCurrentNeed] = useState<Need | null>(need || null)
+  const [currentNeed, setCurrentNeed] = useState<Need>(need)
   const [professionalProfiles, setProfessionalProfiles] = useState<
     Record<string, { fullName: string; photoUrl?: string; rating?: number }>
   >({}) // Added rating here
@@ -167,7 +167,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           table: "need_proposals",
           filter: `need_id=eq.${currentNeed.id}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown> }) => {
           console.log("[v0] Proposal updated via Realtime:", payload)
           fetchProposals()
         },
@@ -180,7 +180,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           table: "needs",
           filter: `id=eq.${currentNeed.id}`,
         },
-        (payload) => {
+        (payload: { new: Record<string, unknown> }) => {
           console.log("[v0] Need updated via Realtime:", payload)
           // Update currentNeed state with new data
           if (payload.new) {
@@ -219,7 +219,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       setProposals(data || [])
 
       if (data && data.length > 0) {
-        const professionalEmails = Array.from(new Set(data.map((p) => p.professional_email).filter(Boolean)))
+        const professionalEmails = Array.from(
+          new Set(
+            (data as NeedProposal[])
+              .map((p) => p.professional_email)
+              .filter((e): e is string => Boolean(e)),
+          ),
+        )
         console.log("[v0] Professional emails to fetch:", professionalEmails) // Debug log
         const profiles: Record<string, { fullName: string; photoUrl?: string; rating?: number }> = {} // Added rating here
 
@@ -291,13 +297,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
       const proposal = proposals.find((p) => p.id === proposalId)
       if (proposal?.professional_email) {
-        await createNotificationViaAPI({
-          userEmail: proposal.professional_email,
-          title: "Proposta aceita!",
-          message: `Sua proposta para "${currentNeed.title}" foi aceita`,
-          type: "proposal_accepted",
-          needId: currentNeed.id,
-        }).catch((err) => console.error("[v0] Failed to create acceptance notification:", err))
+        await createNotificationViaAPI(
+          proposal.professional_email,
+          "Proposta aceita!",
+          `Sua proposta para "${currentNeed.title}" foi aceita`,
+          "proposal_accepted",
+          currentNeed.id,
+        ).catch((err) => console.error("[v0] Failed to create acceptance notification:", err))
       }
 
       await fetchProposals()
@@ -345,7 +351,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
       console.log("[v0] Fresh proposals after completion:", freshProposals) // Added debug log
 
-      const acceptedProposal = freshProposals?.find(
+      const acceptedProposal = (freshProposals as NeedProposal[] | null)?.find(
         (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
       )
 
@@ -360,7 +366,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           setProfessionalToRate(acceptedProposal.professional_email)
           setShowRatingDialog(true)
         } else {
-          console.log("[v0] Cannot rate:", canRate.reason)
+          console.log("[v0] Cannot rate:", canRate.message)
         }
       } else {
         console.error("[v0] No professional email found in accepted proposal")
@@ -395,7 +401,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     const acceptedProposal = proposals.find(
       (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
     )
-    if (!acceptedProposal) {
+    if (!acceptedProposal?.professional_email) {
       setCanRateProfessional(false)
       return
     }
@@ -767,11 +773,11 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                       {proposals
                         .filter((p) => p.type !== "interest_only")
                         .map((proposal) => {
+                          const proposalEmail = proposal.professional_email ?? ""
                           const professionalName =
-                            professionalProfiles[proposal.professional_email]?.fullName ||
-                            proposal.professional_email.split("@")[0]
-                          const professionalPhoto = professionalProfiles[proposal.professional_email]?.photoUrl
-                          const professionalRating = professionalProfiles[proposal.professional_email]?.rating || 0
+                            professionalProfiles[proposalEmail]?.fullName || proposalEmail.split("@")[0] || "Profissional"
+                          const professionalPhoto = professionalProfiles[proposalEmail]?.photoUrl
+                          const professionalRating = professionalProfiles[proposalEmail]?.rating || 0
 
                           const firstName = professionalName.split(" ")[0]
 
@@ -1262,8 +1268,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           isOpen={!!selectedNeedForChatManagement}
           onClose={() => setSelectedNeedForChatManagement(null)}
           currentUserEmail={email}
-          onActionSuccess={() => {
-            // Fixed prop name from onActionSuccess to onChatActionSuccess
+          onChatActionSuccess={() => {
             setSelectedNeedForChatManagement(null)
             onStatusUpdate?.()
           }}
@@ -1285,7 +1290,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           isOpen={!!selectedImage}
           onClose={() => setSelectedImage(null)}
           imageUrl={selectedImage.url}
-          imageAlt={selectedImage.alt}
+          alt={selectedImage.alt}
         />
       )}
 

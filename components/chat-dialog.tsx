@@ -193,7 +193,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
           table: "chat_threads",
           filter: `id=eq.${chatThreadId}`,
         },
-        async (payload) => {
+        async (payload: { new: Record<string, unknown> }) => {
           const newMessagesArray = (payload.new as any).messages_json
           if (newMessagesArray && Array.isArray(newMessagesArray)) {
             setMessages((prevMessages) => {
@@ -331,13 +331,13 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
       const otherEmail = need.requesterEmail === currentUserEmail ? need.professionalEmail : need.requesterEmail
       if (otherEmail) {
-        await createNotificationViaAPI({
-          userEmail: otherEmail,
-          title: "Nova mensagem",
-          message: `Você recebeu uma nova mensagem sobre "${need.title}"`,
-          type: "message",
-          needId: need.id,
-        }).catch((err) => console.error("[v0] Failed to create message notification:", err))
+        await createNotificationViaAPI(
+          otherEmail,
+          "Nova mensagem",
+          `Você recebeu uma nova mensagem sobre "${need.title}"`,
+          "message",
+          need.id,
+        ).catch((err) => console.error("[v0] Failed to create message notification:", err))
       }
     } catch (error) {
       console.error("Failed to send message:", error)

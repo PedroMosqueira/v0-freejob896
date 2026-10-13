@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button"
 import { getUserSubscription, type UserSubscription, PLAN_FEATURES } from "@/lib/subscription-manager"
 import { useRouter } from "next/navigation"
 
+const PREMIUM_UPCOMING_FEATURES = [
+  "Destaque nas buscas",
+  "Selo de profissional verificado",
+  "Relatórios de desempenho",
+  "Suporte prioritário",
+]
+
 export function UpgradePageContent() {
   const { email } = useAuth()
   const router = useRouter()
@@ -96,8 +103,8 @@ export function UpgradePageContent() {
             </div>
 
             <ul className="space-y-3 mb-6">
-              {PLAN_FEATURES.premium.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-3">
+              {PREMIUM_UPCOMING_FEATURES.map((feature) => (
+                <li key={feature} className="flex items-start gap-3">
                   <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <span className="text-sm text-muted-foreground">{feature}</span>
                 </li>

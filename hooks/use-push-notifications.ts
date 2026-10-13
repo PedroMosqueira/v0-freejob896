@@ -7,10 +7,11 @@ import {
   unsubscribeFromPushNotifications,
   getPushSubscriptionStatus,
 } from "@/lib/push-notifications-client"
-import { useAuth } from "@/lib/auth"
+import { useAuth } from "@/hooks/use-auth"
 
 export function usePushNotifications() {
-  const { user } = useAuth()
+  const { email } = useAuth()
+  const user = email ? { email } : null
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY

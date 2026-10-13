@@ -187,7 +187,8 @@ function SearchRequests({
     // Implement search logic here
   }, [])
 
-  const getStatusBadgeClass = useCallback((status: NeedStatus) => {
+  // Legacy rows may still carry English status values.
+  const getStatusBadgeClass = useCallback((status: NeedStatus | (string & {})) => {
     switch (status) {
       case "aberto":
         return "bg-green-500 text-white"
@@ -506,10 +507,6 @@ function SearchRequests({
                       </Card>
 
                       {showCourseAd && <CourseBannerAd category={filters.category} />}
-
-                      {showGoogleAd && AFFILIATE_CONFIG.googleAdsense.enabled && (
-                        <GoogleAdSense adSlot={AFFILIATE_CONFIG.googleAdsense.adSlots.inFeed} adFormat="fluid" />
-                      )}
                     </React.Fragment>
                   )
                 })}

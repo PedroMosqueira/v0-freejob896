@@ -255,7 +255,7 @@ export default function MyChatsDialog({ isOpen, onClose, currentUserEmail }: MyC
   const handleOpenSpecificChat = async (thread: ChatThread) => {
     const localNeedDetails = needDetails[thread.needId]
 
-    let needDetailsToUse = localNeedDetails
+    let needDetailsToUse: Need | undefined = localNeedDetails
 
     if (!needDetailsToUse) {
       needDetailsToUse = await getNeed(thread.needId)

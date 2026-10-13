@@ -107,7 +107,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray
 }
 
-export interface PushSubscriptionJSON {
+export interface StoredPushSubscription {
   endpoint: string
   auth: string
   p256dh: string

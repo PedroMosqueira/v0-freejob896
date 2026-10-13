@@ -58,7 +58,7 @@ export function useNotifications() {
               table: "notifications",
               filter: `user_id=eq.${email}`,
             },
-            (payload) => {
+            (payload: { new: Record<string, unknown> }) => {
               const notification = payload.new as {
                 title: string
                 message: string
@@ -80,7 +80,7 @@ export function useNotifications() {
               }
             },
           )
-          .subscribe((status) => {
+          .subscribe((status: string) => {
             if (status === "SUBSCRIBED") {
               console.log("[v0] Notificações realtime ativo para:", email)
             }

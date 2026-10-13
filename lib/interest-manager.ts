@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getActiveInterestsCount } from "./simultaneous-interests"
 import { PLAN_FEATURES } from "./subscription-manager"
+import { PAID_SUBSCRIPTION_STATUSES, isSubscriptionExpired } from "./subscription-status"
 
 const MAX_FREE_INTERESTS = 3
 
@@ -163,30 +164,32 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
       .from("user_subscriptions")
       .select("id, user_id, status, plan_id, current_period_end")
       .in("user_id", subscriptionUserIds)
-      .eq("status", "active")
+      .in("status", [...PAID_SUBSCRIPTION_STATUSES])
       .order("created_at", { ascending: false })
       .limit(1)
 
-    const hasActiveSubscription = !subError && subscriptions && subscriptions.length > 0
+    if (subError) {
+      console.error("[v0-server] Subscription query failed:", subError.message, subError.code)
+    }
 
-    if (hasActiveSubscription) {
-      // Buscar o plano do usuário
-      const subscription = subscriptions[0]
-      const { data: plan, error: planError } = await supabase
+    const subscription = !subError && subscriptions && subscriptions.length > 0 ? subscriptions[0] : null
+    let planSlug = "free"
+
+    if (subscription && !isSubscriptionExpired(subscription.current_period_end)) {
+      const { data: plan } = await supabase
         .from("subscription_plans")
         .select("slug")
         .eq("id", subscription.plan_id)
-        .single()
+        .maybeSingle()
+      planSlug = plan?.slug?.trim().toLowerCase() || "free"
+    }
 
-      const planSlug = (plan?.slug ?? "free") as any
-      const simultaneousLimit = PLAN_FEATURES[planSlug]?.limits?.simultaneous_interests ?? 8
+    // Só concede acesso pago quando o plano vinculado não é o gratuito.
+    const hasActiveSubscription = planSlug !== "free"
 
-      if (planSlug === "free") {
-        console.warn("[v0-server] Active subscription points to free plan", {
-          userIds: subscriptionUserIds,
-          planId: subscription.plan_id,
-        })
-      }
+    if (hasActiveSubscription) {
+      const simultaneousLimit =
+        PLAN_FEATURES[planSlug as keyof typeof PLAN_FEATURES]?.limits?.simultaneous_interests ?? 8
       
       // Verificar limite de propostas simultâneas
       const activeCount = await getActiveInterestsCount(userEmail)

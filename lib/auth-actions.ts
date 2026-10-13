@@ -80,7 +80,18 @@ export async function checkUserStatus(prevState: any, formData: FormData) {
   }
 }
 
-export async function signUpWithEmail(prevState: any, formData: FormData) {
+export type SignUpResult = {
+  error?: string
+  success?: string
+  email?: string
+  showStatusCheck?: boolean
+  isDuplicateEmail?: boolean
+  rateLimited?: boolean
+  isPendingConfirmation?: boolean
+  showResendOption?: boolean
+}
+
+export async function signUpWithEmail(prevState: any, formData: FormData): Promise<SignUpResult> {
   const email = formData.get("email")
   const password = formData.get("password")
   const confirmPassword = formData.get("confirmPassword")
@@ -92,6 +103,10 @@ export async function signUpWithEmail(prevState: any, formData: FormData) {
   const isProfessional = formData.get("isProfessional") === "true"
   const cpf = formData.get("cpf")
   const professionalPhone = formData.get("professionalPhone")
+
+  if (!email || !password) {
+    return { error: "Email e senha são obrigatórios" }
+  }
 
   // Validate environment variables
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {

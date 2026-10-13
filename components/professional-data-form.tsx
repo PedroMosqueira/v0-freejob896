@@ -18,7 +18,7 @@ export function ProfessionalDataForm({ profile, onUpdate }: ProfessionalDataForm
   const { toast } = useToast()
   const [isProfessional, setIsProfessional] = useState(profile.isProfessional || false)
   const [professionalPhone, setProfessionalPhone] = useState(profile.professionalPhone || profile.phone || "")
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
 

@@ -32,7 +32,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
   const [skills, setSkills] = useState(profile.skills?.join(", ") || "")
   const [city, setCity] = useState(profile.city || "")
   const [bio, setBio] = useState(profile.bio || "")
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const [showPhoneModal, setShowPhoneModal] = useState(false)
   const [phoneValidated, setPhoneValidated] = useState(profile.phoneValidated || false)
   const [isSubmitting, setIsSubmitting] = useState(false)
