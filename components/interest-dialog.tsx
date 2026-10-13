@@ -281,13 +281,15 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     <input
                       id="professional-checkbox"
                       type="checkbox"
+                      required
+                      aria-required="true"
                       checked={isProfessionalCheckbox}
                       onChange={(e) => setIsProfessionalCheckbox(e.target.checked)}
                       className="w-4 h-4 rounded"
                       disabled={phoneValidationLoading}
                     />
                     <Label htmlFor="professional-checkbox" className="cursor-pointer mb-0">
-                      Sou profissional
+                      Sou profissional <span className="text-muted-foreground">(obrigatório)</span>
                     </Label>
                   </div>
                 </>

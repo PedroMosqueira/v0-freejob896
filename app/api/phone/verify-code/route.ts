@@ -13,6 +13,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validar o telefone exige se declarar profissional. Checado antes de
+    // consumir o código para que o usuário possa marcar a opção e reenviar.
+    if (isProfessional !== true) {
+      return NextResponse.json(
+        { message: "Marque \"Sou profissional\" para validar seu telefone." },
+        { status: 400 }
+      )
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       process.env.SUPABASE_SERVICE_ROLE_KEY || ""
@@ -59,7 +68,7 @@ export async function POST(request: NextRequest) {
       .update({
         phone_verified: true,
         professional_phone: cleanPhone,
-        is_professional: isProfessional === true ? true : false,
+        is_professional: true,
         phone_verification_code: null,
         phone_verification_expires_at: null,
       })
@@ -74,11 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Grant free credits if this is the first phone validation for a professional
-    let creditsGranted = false
-    if (isProfessional === true) {
-      const creditResult = await grantFreeCreditsIfFirstTime(email)
-      creditsGranted = creditResult.creditsGranted
-    }
+    const { creditsGranted } = await grantFreeCreditsIfFirstTime(email)
 
     return NextResponse.json({
       success: true,
