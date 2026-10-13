@@ -26,28 +26,27 @@ export async function POST(request: NextRequest) {
     console.log("[v0] Supabase client created")
 
     // Validate user exists
+    // users has no subscription_plan column; selecting it made this query fail
+    // and returned a misleading 404. Paid-plan status lives in user_subscriptions.
     const { data: user, error: userError } = await supabase
       .from("users")
-      .select("id, subscription_plan")
+      .select("id")
       .eq("email", email)
-      .single()
+      .limit(1)
+      .maybeSingle()
 
     console.log("[v0] User lookup result:", { user: user?.id, error: userError?.message })
 
-    if (userError || !user) {
-      console.error("[v0] User not found:", userError)
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (userError) {
+      console.error("[v0] User lookup failed:", userError)
+      return NextResponse.json({ error: "Não foi possível verificar sua conta." }, { status: 500 })
     }
 
-    // Nunca iniciar uma nova cobrança para um usuário que já tem plano pago atribuído.
-    const assignedPlan = typeof user.subscription_plan === "string" ? user.subscription_plan.trim().toLowerCase() : "free"
-    if (assignedPlan && assignedPlan !== "free") {
-      return NextResponse.json(
-        { error: "Você já possui um plano ativo.", code: "ACTIVE_PLAN" },
-        { status: 409 },
-      )
+    if (!user) {
+      return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 })
     }
 
+    // Nunca iniciar uma nova cobrança para quem já tem plano pago ativo.
     const { data: activeSubscription } = await supabase
       .from("user_subscriptions")
       .select("id, current_period_end, subscription_plans(slug)")
