@@ -799,14 +799,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                           {formatCurrency(proposal.bid_amount)}
                                         </span>
                                       </div>
-                                      <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                                        <span>Taxa da plataforma (15%):</span>
-                                        <span>{formatCurrency(proposal.bid_amount * 0.15)}</span>
-                                      </div>
-                                      <div className="flex justify-between font-bold pt-1.5 border-t border-gray-200 dark:border-gray-600">
+                                      <div className="flex justify-between font-bold pt-1.5">
                                         <span className="text-gray-700 dark:text-gray-300">Você pagará:</span>
                                         <span className="text-blue-600 dark:text-blue-400">
-                                          {formatCurrency(proposal.bid_amount * 1.15)}
+                                          {formatCurrency(proposal.bid_amount)}
                                         </span>
                                       </div>
                                     </div>
@@ -920,14 +916,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                       {formatCurrency(proposal.bid_amount)}
                                     </span>
                                   </div>
-                                  <div className="flex justify-between text-gray-500 dark:text-gray-400 text-[10px]">
-                                    <span>Taxa (15%):</span>
-                                    <span>{formatCurrency(proposal.bid_amount * 0.15)}</span>
-                                  </div>
                                   <div className="flex justify-between font-semibold border-t border-gray-200 dark:border-gray-600 pt-1">
                                     <span className="text-gray-700 dark:text-gray-300">Você paga:</span>
                                     <span className="text-blue-600 dark:text-blue-400">
-                                      {formatCurrency(proposal.bid_amount * 1.15)}
+                                      {formatCurrency(proposal.bid_amount)}
                                     </span>
                                   </div>
                                 </div>
@@ -1049,14 +1041,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                                 <span>Seu lance:</span>
                                 <span>{formatCurrency(Number(visitBidAmount))}</span>
                               </div>
-                              <div className="flex justify-between text-gray-500 dark:text-gray-400">
-                                <span>Taxa (15%):</span>
-                                <span>{formatCurrency(Number(visitBidAmount) * 0.15)}</span>
-                              </div>
                               <div className="flex justify-between font-semibold border-t border-blue-200 dark:border-blue-800 pt-1">
                                 <span>Cliente pagará:</span>
                                 <span className="text-blue-600 dark:text-blue-400">
-                                  {formatCurrency(Number(visitBidAmount) * 1.15)}
+                                  {formatCurrency(Number(visitBidAmount))}
                                 </span>
                               </div>
                             </div>

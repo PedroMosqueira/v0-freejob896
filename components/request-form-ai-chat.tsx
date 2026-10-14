@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import ImageCompression from "browser-image-compression"
+import { compressImages } from "@/lib/image-compress"
+import { describeGeolocationError, detectLocation } from "@/lib/geolocation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -50,6 +51,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const [editingDetails, setEditingDetails] = useState(false)
   const [manualLocation, setManualLocation] = useState({ city: "", neighborhood: "", state: "" })
   const [photos, setPhotos] = useState<File[]>([])
+  const [isLocating, setIsLocating] = useState(false)
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
 
   const officialCategories = [
     "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
@@ -153,66 +156,42 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     }
   }
 
-  const handleUseLocation = () => {
-    if (navigator.geolocation) {
+  const handleUseLocation = async () => {
+    if (isLocating) return
+    setIsLocating(true)
+    try {
+      const location = await detectLocation()
+      if (!location.city) {
+        setManualLocation({ city: "", state: location.state, neighborhood: location.neighborhood })
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Peguei suas coordenadas, mas não o nome da cidade. Digite a cidade e o bairro." },
+        ])
+        return
+      }
+
+      const updated = { ...extractedInfo, ...location }
+      setExtractedInfo(updated)
+      setLocationConfirmed(true)
+      onExtract(updated)
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Obtendo sua localização...",
+          content: `Localização detectada: ${location.neighborhood ? `${location.neighborhood}, ` : ""}${location.city} - ${location.state}\n\nAgora adicione pelo menos uma foto do serviço.`,
         },
       ])
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const { latitude, longitude } = position.coords
-
-          try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-            )
-            const locationData = await response.json()
-
-            const city = locationData.address?.city || locationData.address?.town || ""
-            const state = locationData.address?.state_code || locationData.address?.state || ""
-            const neighborhood = locationData.address?.suburb || locationData.address?.neighbourhood || ""
-
-            const updated = { ...extractedInfo, city, state, neighborhood, latitude, longitude }
-            setExtractedInfo(updated)
-            setLocationConfirmed(true)
-            onExtract(updated)
-
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: `Ótimo! Sua localização foi detectada: ${neighborhood ? `${neighborhood}, ` : ""}${city} - ${state}\n\nAgora vamos adicionar algumas fotos do serviço.`,
-              },
-            ])
-
-            setAskingForPhotos(true)
-          } catch (error) {
-            console.error("[v0] Reverse geocoding error:", error)
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: "Não consegui determinar sua localização. Por favor, digite sua cidade e bairro.",
-              },
-            ])
-          }
+      setAskingForPhotos(true)
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: error instanceof Error && !("code" in error) ? error.message : describeGeolocationError(error),
         },
-        (error) => {
-          console.error("[v0] Geolocation error:", error)
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "Permissão de localização negada. Por favor, digite sua cidade e bairro.",
-            },
-          ])
-        }
-      )
+      ])
+    } finally {
+      setIsLocating(false)
     }
   }
 
@@ -229,11 +208,21 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     }
   }
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.currentTarget.files
-    if (files && files.length > 0) {
-      // Combinar fotos antigas com novas - usando array simples
-      const newFiles = Array.from(files)
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget
+    const selected = input.files ? Array.from(input.files) : []
+    input.value = ""
+    if (selected.length === 0) return
+
+    setIsProcessingPhotos(true)
+    let newFiles: File[]
+    try {
+      newFiles = await compressImages(selected)
+    } finally {
+      setIsProcessingPhotos(false)
+    }
+    const files = newFiles
+    if (files.length > 0) {
       const allPhotos = [...photos, ...newFiles]
 
       setPhotos(allPhotos)
@@ -423,8 +412,13 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
             </div>
             <Input value={manualLocation.neighborhood} onChange={(e) => setManualLocation((prev) => ({ ...prev, neighborhood: e.target.value }))} placeholder="Bairro" className="mt-2" />
             <div className="flex gap-2 mt-3">
-              <Button onClick={handleUseLocation} className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
-                <MapPin className="w-4 h-4" /> Usar localização
+              <Button
+                onClick={handleUseLocation}
+                disabled={isLocating}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              >
+                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                {isLocating ? "Localizando..." : "Usar localização"}
               </Button>
               <Button onClick={handleManualLocationConfirm} disabled={!manualLocation.city || !manualLocation.state} variant="outline" className="flex-1">Preencher manualmente</Button>
             </div>
@@ -459,7 +453,12 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
                 Galeria
               </Button>
             </div>
-            {!photos || photos.length === 0 && (
+            {isProcessingPhotos && (
+              <p className="flex items-center gap-2 text-xs text-amber-800">
+                <Loader2 className="w-3 h-3 animate-spin" /> Processando foto...
+              </p>
+            )}
+            {!isProcessingPhotos && photos.length === 0 && (
               <p className="text-xs text-amber-700">Você deve adicionar pelo menos uma foto para continuar.</p>
             )}
           </div>
@@ -557,7 +556,11 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent.isComposing || e.keyCode === 229) return
+                e.preventDefault()
+                handleSendMessage()
+              }}
               placeholder="Descreva o serviço que precisa..."
               disabled={loading}
               className="flex-1"

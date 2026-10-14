@@ -15,6 +15,7 @@ import { Loader2, MapPin, AlertCircle } from "lucide-react"
 import { CategoryCombobox } from "@/components/category-combobox"
 import { ImageCaptureInput } from "@/components/image-capture-input"
 import { RequestFormAIChat } from "@/components/request-form-ai-chat"
+import { describeGeolocationError, detectLocation } from "@/lib/geolocation"
 
 const stateNameToAbbr: Record<string, string> = {
   Acre: "AC",
@@ -145,65 +146,31 @@ export default function RequestForm() {
   }
 
   const handleUseMyLocation = async () => {
-    if (!navigator.geolocation) {
+    setIsLoadingLocation(true)
+    try {
+      const location = await detectLocation()
+      setLatitude(location.latitude)
+      setLongitude(location.longitude)
+      if (location.neighborhood) setNeighborhood(location.neighborhood)
+      if (location.city) setCity(location.city)
+      if (location.state) setState(location.state)
+
       toast({
-        title: "Geolocalização não disponível",
-        description: "Seu navegador não suporta geolocalização.",
+        title: "Localização obtida!",
+        description: location.city
+          ? `${location.neighborhood ? location.neighborhood + ", " : ""}${location.city} - ${location.state}`
+          : "Coordenadas obtidas. Confira a cidade e o bairro.",
+        variant: "success",
+      })
+    } catch (error) {
+      toast({
+        title: "Erro de geolocalização",
+        description: error instanceof Error && !("code" in error) ? error.message : describeGeolocationError(error),
         variant: "destructive",
       })
-      return
+    } finally {
+      setIsLoadingLocation(false)
     }
-
-    setIsLoadingLocation(true)
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords
-
-        setLatitude(latitude)
-        setLongitude(longitude)
-
-        try {
-          const response = await fetch(`/api/geocode?q=${latitude},${longitude}&reverse=true`)
-          const data = await response.json()
-
-          if (data.address) {
-            const neighborhood = data.address.suburb || data.address.neighbourhood || data.address.district || ""
-            const city = data.address.city || data.address.town || data.address.village || ""
-            const stateName = data.address.state || ""
-            const stateAbbr = stateNameToAbbr[stateName] || stateName
-
-            setNeighborhood(neighborhood)
-            setCity(city)
-            setState(stateAbbr)
-
-            toast({
-              title: "Localização obtida!",
-              description: `${neighborhood ? neighborhood + ", " : ""}${city} - ${stateAbbr}`,
-              variant: "success",
-            })
-          }
-        } catch (error) {
-          console.error("Geocoding error:", error)
-          toast({
-            title: "Erro ao obter localização",
-            description: "Não foi possível obter o endereço. Tente preencher manualmente.",
-            variant: "destructive",
-          })
-        } finally {
-          setIsLoadingLocation(false)
-        }
-      },
-      (error) => {
-        console.error("Geolocation error:", error)
-        setIsLoadingLocation(false)
-        toast({
-          title: "Erro de geolocalização",
-          description: "Não foi possível acessar sua localização. Verifique as permissões do navegador.",
-          variant: "destructive",
-        })
-      },
-    )
   }
 
   const geocodeAddress = async (

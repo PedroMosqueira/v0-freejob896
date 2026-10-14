@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import ImageCompression from "browser-image-compression"
+import { compressImages } from "@/lib/image-compress"
 import { Button } from "@/components/ui/button"
 import { Camera, Upload } from "lucide-react"
 import { useRef, useState } from "react"
@@ -11,38 +11,6 @@ interface ImageCaptureInputProps {
   multiple?: boolean
   disabled?: boolean
   label?: string
-}
-
-async function compressImage(file: File): Promise<File> {
-  try {
-    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    
-    const originalSize = file.size / 1024 / 1024
-    console.log(`[v0] Original: ${originalSize.toFixed(2)}MB`)
-    
-    // Comprimir com JPEG (mais compatível que WebP)
-    const compressed = await ImageCompression(file, {
-      maxSizeMB: isMobileDevice ? 0.5 : 0.8,
-      maxWidthOrHeight: isMobileDevice ? 800 : 1600,
-      useWebWorker: true,
-      fileType: "image/jpeg",
-      initialQuality: isMobileDevice ? 0.65 : 0.85,
-    })
-    
-    const compressedSize = compressed.size / 1024 / 1024
-    console.log(`[v0] Comprimida: ${compressedSize.toFixed(2)}MB`)
-    
-    // Garantir que sempre retorna um File (não Blob)
-    if (compressed instanceof File) {
-      return compressed
-    }
-    
-    // Se for Blob, converter para File
-    return new File([compressed], file.name, { type: "image/jpeg" })
-  } catch (error) {
-    console.error("[v0] Erro na compressão:", error)
-    return file
-  }
 }
 
 export function ImageCaptureInput({
@@ -65,48 +33,14 @@ export function ImageCaptureInput({
     setIsCompressing(true)
 
     try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      
-      // Processar TODAS as fotos, uma por vez para não sobrecarregar memória
-      const filesToProcess = Array.from(files)
+      const compressedFiles = await compressImages(Array.from(files))
+      if (compressedFiles.length === 0) return
 
-      const compressedFiles: File[] = []
-
-      for (const file of filesToProcess) {
-        if (!file.type.startsWith("image/")) {
-          console.warn("[v0] Arquivo ignorado:", file.name)
-          continue
-        }
-
-        try {
-          const compressed = await compressImage(file)
-          compressedFiles.push(compressed)
-          
-          // Liberar GC entre arquivos (agressivo em mobile)
-          await new Promise((resolve) => setTimeout(resolve, isMobileDevice ? 300 : 100))
-        } catch (error) {
-          console.error("[v0] Falha ao comprimir:", error)
-          compressedFiles.push(file)
-        }
-      }
-
-      if (compressedFiles.length === 0) {
-        return
-      }
-      
-      // Criar novo FileList com os arquivos comprimidos
       const dataTransfer = new DataTransfer()
-      for (const file of compressedFiles) {
-        try {
-          dataTransfer.items.add(file)
-        } catch (error) {
-          console.error("[v0] Erro ao adicionar arquivo:", error)
-        }
-      }
-
+      for (const file of compressedFiles) dataTransfer.items.add(file)
       onCapture(dataTransfer.files)
     } catch (error) {
-      console.error("[v0] Erro fatal:", error)
+      console.error("Erro ao processar fotos:", error)
       onCapture(files)
     } finally {
       setIsCompressing(false)
