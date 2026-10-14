@@ -13,20 +13,34 @@ import { createRating } from "@/lib/ratings"
 interface RatingDialogProps {
   isOpen: boolean
   onClose: () => void
-  professionalEmail: string
-  requesterEmail: string
+  ratedUserEmail: string
   needId: string
+  ratedRole?: "professional" | "requester"
   onSuccess?: () => void
+}
+
+const ROLE_COPY = {
+  professional: {
+    title: "Avaliar Profissional",
+    description: "Sua avaliação ajuda outros usuários a conhecer melhor este profissional.",
+    placeholder: "Conte sobre sua experiência com este profissional...",
+  },
+  requester: {
+    title: "Avaliar Cliente",
+    description: "Sua avaliação ajuda outros profissionais a conhecer melhor este cliente.",
+    placeholder: "Como foi atender este cliente? Pontualidade, comunicação, pagamento...",
+  },
 }
 
 export default function RatingDialog({
   isOpen,
   onClose,
-  professionalEmail,
-  requesterEmail,
+  ratedUserEmail,
   needId,
+  ratedRole = "professional",
   onSuccess,
 }: RatingDialogProps) {
+  const copy = ROLE_COPY[ratedRole]
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [comment, setComment] = useState("")
@@ -46,8 +60,7 @@ export default function RatingDialog({
 
     try {
       const formData = new FormData()
-      formData.append("ratedUserEmail", professionalEmail)
-      formData.append("raterEmail", requesterEmail)
+      formData.append("ratedUserEmail", ratedUserEmail)
       formData.append("rating", rating.toString())
       formData.append("needId", needId)
       if (comment) {
@@ -76,10 +89,8 @@ export default function RatingDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md dark:bg-gray-900 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="dark:text-gray-100">Avaliar Profissional</DialogTitle>
-          <DialogDescription className="dark:text-gray-400">
-            Sua avaliação ajuda outros usuários a conhecer melhor este profissional.
-          </DialogDescription>
+          <DialogTitle className="dark:text-gray-100">{copy.title}</DialogTitle>
+          <DialogDescription className="dark:text-gray-400">{copy.description}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -120,7 +131,7 @@ export default function RatingDialog({
               id="comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Conte sobre sua experiência com este profissional..."
+              placeholder={copy.placeholder}
               rows={4}
               className="dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
             />
