@@ -72,16 +72,8 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
     setError(null)
 
     try {
-      // Se há um needId, salvar em sessionStorage para continuar após pagamento
-      if (needId) {
-        sessionStorage.setItem("pendingInterest", JSON.stringify({
-          needId,
-          userEmail,
-          timestamp: Date.now(),
-        }))
-        console.log("[v0] Pending interest salvo em sessionStorage para needId:", needId)
-      }
-
+      // needId travels through the Stripe return URL so the interest is
+      // completed automatically after payment, even in a different tab.
       const response = await fetch("/api/subscriptions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,6 +81,7 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
           email: userEmail,
           planSlug: plan.slug || plan.id,
           billingCycle: "monthly",
+          needId,
         }),
       })
 

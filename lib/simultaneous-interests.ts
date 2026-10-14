@@ -1,89 +1,140 @@
-import { createSupabaseServerClient } from "./supabase/server"
+import { createAdminClient } from "./stripe-subscription-sync"
 import { PLAN_FEATURES, type SubscriptionPlan } from "./subscription-manager"
 
-export interface ActiveInterest {
-  id: string
-  need_id: string
-  professional_email: string
-  created_at: string
-  status: string
-  cancelled_at?: string
-  cancelled_before_viewed?: boolean
-  viewed_by_requester_at?: string
+/** How long a slot stays occupied after the professional cancels on their own. */
+export const PROFESSIONAL_CANCEL_HOLD_MS = 2 * 60 * 60 * 1000
+
+export interface ActiveInterestsSummary {
+  /** Services occupying a slot right now (active + held after cancelling). */
+  count: number
+  /** Of those, how many are only held by the 2h post-cancellation rule. */
+  heldCount: number
+  /** ISO time when the earliest held slot is released, if any. */
+  nextReleaseAt: string | null
+}
+
+// The professional ended it: the slot stays held for 2h so cancelling a
+// service arranged over chat cannot be used to take on unlimited work.
+const PROFESSIONAL_CANCELLED_STATUSES = new Set([
+  "declined_by_professional",
+  "declined_by_provider",
+  "cancelled_by_provider",
+  "cancelled",
+])
+
+// The requester ended it or the work is done: released immediately.
+const RELEASED_STATUSES = new Set(["declined_by_requester", "cancelled_by_requester", "completed"])
+
+const ACCEPTED_STATUSES = new Set(["accepted_by_requester", "accepted_by_provider", "accepted_by_professional"])
+
+const OPEN_NEED_STATUSES = new Set(["aberto"])
+const IN_PROGRESS_NEED_STATUSES = new Set(["aceito", "em_andamento"])
+// The requester cancelled the whole request: everyone gets their slot back.
+const REQUESTER_CANCELLED_NEED_STATUSES = new Set(["cancelado"])
+
+type SlotState = { kind: "free" } | { kind: "active" } | { kind: "held"; until: number }
+
+interface ProposalRow {
+  need_id: string | null
+  status: string | null
+  cancelled_at: string | null
+}
+
+function slotStateFor(proposal: ProposalRow, needStatus: string | undefined, now: number): SlotState {
+  const status = String(proposal.status ?? "")
+
+  if (!needStatus || REQUESTER_CANCELLED_NEED_STATUSES.has(needStatus)) return { kind: "free" }
+
+  if (PROFESSIONAL_CANCELLED_STATUSES.has(status)) {
+    const cancelledAt = proposal.cancelled_at ? Date.parse(proposal.cancelled_at) : Number.NaN
+    // Rows cancelled before cancelled_at existed have no timestamp; treat them as released.
+    if (Number.isNaN(cancelledAt)) return { kind: "free" }
+    const until = cancelledAt + PROFESSIONAL_CANCEL_HOLD_MS
+    return until > now ? { kind: "held", until } : { kind: "free" }
+  }
+
+  if (RELEASED_STATUSES.has(status)) return { kind: "free" }
+  if (OPEN_NEED_STATUSES.has(needStatus)) return { kind: "active" }
+  // Once a request is in progress only the chosen professional keeps the slot.
+  if (IN_PROGRESS_NEED_STATUSES.has(needStatus) && ACCEPTED_STATUSES.has(status)) return { kind: "active" }
+  return { kind: "free" }
 }
 
 /**
- * Check if a cancelled interest should be released from simultaneous limit
- * Release conditions:
- * 1. Cancelled before requester viewed → release immediately
- * 2. Cancelled after requester viewed + 2h has passed → release
- * 3. Completed proposal → release immediately (status check only)
+ * Counts slots per service (need), not per proposal: interest, visit and bid
+ * proposals on the same request occupy a single slot. Uses the service role
+ * because RLS on needs would hide rows; always scoped to one professional.
+ * Throws on database errors so callers never treat a failure as "0 active".
  */
-async function shouldReleaseInterest(proposal: any): Promise<boolean> {
-  if (proposal.status === "completed") {
-    return true // Completed proposals don't count
-  }
+export async function getActiveInterestsSummary(professionalEmail: string): Promise<ActiveInterestsSummary> {
+  const email = professionalEmail.trim().toLowerCase()
+  const empty: ActiveInterestsSummary = { count: 0, heldCount: 0, nextReleaseAt: null }
+  if (!email) return empty
 
-  if (proposal.status !== "cancelled" || !proposal.cancelled_at) {
-    return false // Not cancelled, so doesn't get released
-  }
+  const supabase = createAdminClient()
 
-  // Case 1: Cancelled before requester viewed → release immediately
-  if (proposal.cancelled_before_viewed === true) {
-    return true
-  }
-
-  // Case 2: Cancelled after viewed - check 2h timeout
-  if (proposal.viewed_by_requester_at || proposal.cancelled_before_viewed === false) {
-    const cancelledTime = new Date(proposal.cancelled_at).getTime()
-    const now = new Date().getTime()
-    const twoHoursInMs = 2 * 60 * 60 * 1000
-
-    return now - cancelledTime >= twoHoursInMs
-  }
-
-  return false
-}
-
-/**
- * Get count of active interests that count toward simultaneous limit
- */
-export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
-  const supabase = await createSupabaseServerClient()
-
-  const { data, error } = await supabase
+  const { data: proposals, error } = await supabase
     .from("need_proposals")
-    .select(
-      "id, status, cancelled_at, cancelled_before_viewed, viewed_by_requester_at, type"
-    )
-    .eq("professional_email", professionalEmail)
+    .select("need_id, status, cancelled_at")
+    .ilike("professional_email", email)
 
-  if (error) {
-    console.error("[v0] Error getting active interests count:", error)
-    return 0
-  }
+  if (error) throw new Error(`Failed to load proposals: ${error.message}`)
+  if (!proposals?.length) return empty
 
-  let activeCount = 0
+  const needIds = [...new Set(proposals.map((p) => p.need_id).filter((id): id is string => Boolean(id)))]
+  if (!needIds.length) return empty
 
-  for (const proposal of data || []) {
-    // Skip if not an interest
-    if (proposal.type !== "interest_only") {
+  const { data: needs, error: needsError } = await supabase.from("needs").select("id, status").in("id", needIds)
+  if (needsError) throw new Error(`Failed to load needs: ${needsError.message}`)
+
+  const needStatusById = new Map((needs || []).map((n) => [String(n.id), String(n.status)]))
+  const now = Date.now()
+  const stateByNeed = new Map<string, SlotState>()
+
+  for (const proposal of proposals as ProposalRow[]) {
+    if (!proposal.need_id) continue
+    const needId = String(proposal.need_id)
+    const next = slotStateFor(proposal, needStatusById.get(needId), now)
+    const current = stateByNeed.get(needId) ?? { kind: "free" }
+
+    if (current.kind === "active" || next.kind === "free") {
+      if (!stateByNeed.has(needId)) stateByNeed.set(needId, current)
       continue
     }
-
-    // Check if this proposal should be released
-    const isReleased = await shouldReleaseInterest(proposal)
-    if (isReleased) {
-      continue // Don't count released proposals
+    if (next.kind === "active" || current.kind === "free") {
+      stateByNeed.set(needId, next)
+      continue
     }
+    stateByNeed.set(needId, { kind: "held", until: Math.max(current.until, next.until) })
+  }
 
-    // Count all other statuses that aren't yet released
-    if (proposal.status !== "completed") {
-      activeCount++
+  let count = 0
+  let heldCount = 0
+  let nextRelease: number | null = null
+
+  for (const state of stateByNeed.values()) {
+    if (state.kind === "free") continue
+    count++
+    if (state.kind === "held") {
+      heldCount++
+      nextRelease = nextRelease === null ? state.until : Math.min(nextRelease, state.until)
     }
   }
 
-  return activeCount
+  return { count, heldCount, nextReleaseAt: nextRelease === null ? null : new Date(nextRelease).toISOString() }
+}
+
+export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
+  const summary = await getActiveInterestsSummary(professionalEmail)
+  return summary.count
+}
+
+function formatReleaseTime(iso: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date(iso))
 }
 
 /**
@@ -96,145 +147,27 @@ export async function canSendInterest(
   const planLimits = PLAN_FEATURES[userPlan]?.limits
 
   if (!planLimits) {
-    return {
-      allowed: false,
-      reason: "Plano não encontrado",
-    }
+    return { allowed: false, reason: "Plano não encontrado" }
   }
 
-  // Get current active interests
-  const activeCount = await getActiveInterestsCount(professionalEmail)
   const simultaneousLimit = planLimits.simultaneous_interests
+  const summary = await getActiveInterestsSummary(professionalEmail)
 
-  console.log(
-    `[v0] Active interests check: ${activeCount}/${simultaneousLimit} for ${professionalEmail} on ${userPlan} plan`,
-  )
-
-  // If limit is -1, it's unlimited
   if (simultaneousLimit === -1) {
-    return {
-      allowed: true,
-      currentCount: activeCount,
-      limit: -1,
-    }
+    return { allowed: true, currentCount: summary.count, limit: -1 }
   }
 
-  // Check if reached limit
-  if (activeCount >= simultaneousLimit) {
+  if (summary.count >= simultaneousLimit) {
+    const holdNote = summary.nextReleaseAt
+      ? ` Serviços que você cancelou continuam ocupando a vaga por 2h; a próxima vaga libera às ${formatReleaseTime(summary.nextReleaseAt)}.`
+      : " Conclua um serviço ou aguarde o cliente encerrar um pedido para liberar uma vaga."
     return {
       allowed: false,
-      reason: `Você atingiu o limite de ${simultaneousLimit} propostas simultâneas. Finalize ou decline algumas propostas para enviar mais.`,
-      currentCount: activeCount,
+      reason: `Você atingiu o limite de ${simultaneousLimit} serviços simultâneos.${holdNote}`,
+      currentCount: summary.count,
       limit: simultaneousLimit,
     }
   }
 
-  return {
-    allowed: true,
-    currentCount: activeCount,
-    limit: simultaneousLimit,
-  }
-}
-
-/**
- * Get active interests for display
- */
-export async function getActiveInterests(professionalEmail: string): Promise<ActiveInterest[]> {
-  const supabase = await createSupabaseServerClient()
-
-  const { data, error } = await supabase
-    .from("need_proposals")
-    .select(
-      "id, need_id, professional_email, created_at, status, type, cancelled_at, cancelled_before_viewed, viewed_by_requester_at"
-    )
-    .eq("professional_email", professionalEmail)
-    .eq("type", "interest_only")
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("[v0] Error getting active interests:", error)
-    return []
-  }
-
-  const activeInterests: ActiveInterest[] = []
-
-  for (const proposal of data || []) {
-    // Skip released proposals
-    const isReleased = await shouldReleaseInterest(proposal)
-    if (isReleased) {
-      continue
-    }
-
-    // Skip completed proposals
-    if (proposal.status === "completed") {
-      continue
-    }
-
-    activeInterests.push(proposal)
-  }
-
-  return activeInterests
-}
-
-/**
- * Cancel an interest and mark if it was before requester viewed
- */
-export async function cancelInterest(
-  proposalId: string,
-  beforeViewed: boolean = true,
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createSupabaseServerClient()
-
-  const { error } = await supabase
-    .from("need_proposals")
-    .update({
-      status: "cancelled",
-      cancelled_at: new Date().toISOString(),
-      cancelled_before_viewed: beforeViewed,
-    })
-    .eq("id", proposalId)
-
-  if (error) {
-    console.error("[v0] Error cancelling interest:", error)
-    return { success: false, error: error.message }
-  }
-
-  console.log(`[v0] Interest cancelled: ${proposalId}, before viewed: ${beforeViewed}`)
-  return { success: true }
-}
-
-/**
- * Mark proposal as viewed by requester
- */
-export async function markProposalAsViewed(proposalId: string): Promise<void> {
-  const supabase = await createSupabaseServerClient()
-
-  await supabase
-    .from("need_proposals")
-    .update({
-      viewed_by_requester_at: new Date().toISOString(),
-    })
-    .eq("id", proposalId)
-}
-
-/**
- * Complete a proposal (professional finished the work)
- */
-export async function completeProposal(proposalId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createSupabaseServerClient()
-
-  const { error } = await supabase
-    .from("need_proposals")
-    .update({
-      status: "completed",
-    })
-    .eq("id", proposalId)
-
-  if (error) {
-    console.error("[v0] Error completing proposal:", error)
-    return { success: false, error: error.message }
-  }
-
-  console.log(`[v0] Proposal completed: ${proposalId}`)
-  return { success: true }
+  return { allowed: true, currentCount: summary.count, limit: simultaneousLimit }
 }
