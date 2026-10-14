@@ -402,7 +402,7 @@ export async function addChatMessage(params: {
       throw new Error(`Falha ao adicionar mensagem de chat: ${String(error.message || "Erro desconhecido")}`)
     }
 
-    const senderEmail = msg.email.toLowerCase()
+    const senderEmail = String(msg.email || "").toLowerCase()
     const recipientEmail =
       String(currentThread.requester_email).toLowerCase() === senderEmail
         ? currentThread.professional_email
