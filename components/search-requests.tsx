@@ -437,7 +437,9 @@ function SearchRequests({
                       ? need.proposals.some(
                           (p: any) =>
                             p.professionalEmail === email &&
-                            (p.status === "pending" || p.status === "accepted_by_requester"),
+                            (p.status === "interested" ||
+                              p.status === "pending" ||
+                              p.status === "accepted_by_requester"),
                         )
                       : false
 

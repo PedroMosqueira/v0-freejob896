@@ -17,6 +17,7 @@ import {
   markChatAsRead,
   acceptProposal,
   declineProposal,
+  getProfessionalWithdrawStatus,
   type Need,
 } from "@/lib/needs-store"
 import type { ChatMessage } from "@/data/needs"
@@ -26,7 +27,8 @@ import { toast } from "@/components/ui/use-toast"
 import { getUserProfile } from "@/lib/user-profile"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { formatCurrency } from "@/lib/pricing"
-import { WithdrawInterestControl } from "@/components/withdraw-interest-control"
+import useSWR from "swr"
+import { WithdrawInterestControl, withdrawStatusKey } from "@/components/withdraw-interest-control"
 
 const MESSAGES_PER_PAGE = 50
 
@@ -364,6 +366,13 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
   const isProfessional = chatThreadProfessionalEmail === currentUserEmail
 
+  // Shares the SWR cache with WithdrawInterestControl. null = no open interest (withdrawn).
+  const watchesInterest = isProfessional && need.status === "aberto"
+  const { data: withdrawPolicy } = useSWR(watchesInterest ? withdrawStatusKey(need.id) : null, () =>
+    getProfessionalWithdrawStatus(need.id),
+  )
+  const isChatClosed = watchesInterest && withdrawPolicy === null
+
   // Changes when a bid is sent, declined or cancelled, refreshing the withdraw lock.
   const bidStateSignature = messages.reduce(
     (acc, msg) => (msg.type === "bid" ? acc + 1 + (msg.metadata?.status === "pending" ? 0 : 1000) : acc),
@@ -576,7 +585,12 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
               )}
             </div>
           </div>
-          {isProfessional && need.status === "aberto" && (
+          {isChatClosed && (
+            <p className="mt-2 rounded-md border border-dashed px-3 py-2 text-center text-xs leading-relaxed text-muted-foreground">
+              Você desistiu deste serviço. Manifeste interesse novamente no pedido para voltar a conversar.
+            </p>
+          )}
+          {watchesInterest && !isChatClosed && (
             <div className="flex flex-col gap-2 pt-2">
               <Button
                 onClick={() => setShowSendBidDialog(true)}
@@ -593,12 +607,13 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
           )}
           <form onSubmit={handleSendMessage} className="flex gap-2 pt-4">
             <Input
-              placeholder="Digite sua mensagem..."
+              placeholder={isChatClosed ? "Chat encerrado" : "Digite sua mensagem..."}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              disabled={isSending}
+              disabled={isSending || isChatClosed}
+              aria-label="Mensagem"
             />
-            <Button type="submit" disabled={isSending}>
+            <Button type="submit" disabled={isSending || isChatClosed}>
               <Send className="h-4 w-4" />
               <span className="sr-only">Enviar</span>
             </Button>

@@ -276,11 +276,13 @@ export async function expressInterest(needId: string): Promise<ExpressInterestRe
       return { success: false, reason: "Você não pode manifestar interesse no seu próprio pedido." }
     }
 
+    // A withdrawn interest (declined_by_professional) does not block expressing interest again.
     const { data: existing } = await supabase
       .from("need_proposals")
       .select("id")
       .eq("need_id", needId)
-      .eq("professional_email", sessionEmail)
+      .ilike("professional_email", sessionEmail)
+      .neq("status", "declined_by_professional")
       .limit(1)
 
     if (existing && existing.length > 0) {
