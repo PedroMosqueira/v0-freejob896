@@ -60,7 +60,7 @@ export function WithdrawInterestControl({ needId, revalidationKey, onWithdrawn }
       await professionalWithdrawInterest({ needId })
       toast({
         title: "Você desistiu do serviço",
-        description: "A vaga de serviço simultâneo fica ocupada por 2h.",
+        description: "Sua vaga foi liberada. O pedido voltou a ficar disponível para você.",
       })
       setConfirming(false)
       void mutate()
@@ -94,10 +94,9 @@ export function WithdrawInterestControl({ needId, revalidationKey, onWithdrawn }
   return (
     <div className="flex flex-col gap-2 rounded-md border border-destructive/40 p-3" role="group" aria-label="Confirmar desistência">
       <p className="text-xs leading-relaxed text-muted-foreground">
-        {policy.reason === "bid_timeout"
-          ? "Seu lance será cancelado. "
-          : ""}
-        Ao desistir, a vaga de serviço simultâneo continua ocupada por 2h.
+        {policy.reason === "bid_timeout" ? "Seu lance será cancelado. " : ""}
+        Sua vaga de serviço simultâneo é liberada na hora e o chat é encerrado. Você pode manifestar interesse
+        novamente depois.
       </p>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => setConfirming(false)} disabled={submitting}>

@@ -358,6 +358,31 @@ export async function addNeedProposal(params: {
   }
 }
 
+const OPEN_PROPOSAL_STATUSES = ["interested", "pending", "accepted_by_requester", "accepted_by_professional"]
+
+/**
+ * On an open request, the professional may only chat while holding an active
+ * interest/bid. Once they withdraw, the chat stays read-only until they
+ * express interest again. After acceptance the chat is always allowed.
+ */
+async function professionalHasOpenInterest(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  thread: { need_id: string; professional_email: string },
+): Promise<boolean> {
+  const { data: need } = await supabase.from("needs").select("status").eq("id", thread.need_id).maybeSingle()
+  if (!need || need.status !== "aberto") return true
+
+  const { data: open } = await supabase
+    .from("need_proposals")
+    .select("id")
+    .eq("need_id", thread.need_id)
+    .ilike("professional_email", thread.professional_email)
+    .in("status", OPEN_PROPOSAL_STATUSES)
+    .limit(1)
+
+  return Boolean(open?.length)
+}
+
 export async function addChatMessage(params: {
   chatThreadId: string
   email: string
@@ -375,6 +400,12 @@ export async function addChatMessage(params: {
 
     if (fetchError || !currentThread) {
       throw new Error("Thread de chat não encontrada ou erro ao buscar.")
+    }
+
+    const isThreadProfessional =
+      String(currentThread.professional_email || "").toLowerCase() === String(params.email).toLowerCase()
+    if (isThreadProfessional && !(await professionalHasOpenInterest(supabase, currentThread))) {
+      throw new Error("Você desistiu deste serviço. Manifeste interesse novamente para voltar a conversar.")
     }
 
     const msg: ChatMessage = {
@@ -1296,7 +1327,9 @@ export async function professionalWithdrawInterest(params: { needId: string; rea
 
   const { error: updateError } = await supabase
     .from("need_proposals")
-    .update({ status: "declined_by_professional", cancelled_at: now })
+    // No cancelled_at: withdrawing from an open request frees the slot immediately.
+    // The 2h rule only applies before the requester views the interest (see withdraw-policy).
+    .update({ status: "declined_by_professional" })
     .in("id", openProposalIds)
 
   if (updateError) throw new Error(`Falha ao desistir: ${updateError.message}`)

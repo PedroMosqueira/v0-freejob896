@@ -552,7 +552,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   )
   const canRespondToVisit = !!professionalVisitProposal && currentNeed.status === "aceito"
 
-  const hasShownInterest = proposals.some((p) => p.professional_email === email && p.type === "interest_only")
+  // A withdrawn interest puts the card back to its initial "Tenho Interesse" state.
+  const hasShownInterest = proposals.some(
+    (p) =>
+      p.professional_email?.toLowerCase() === email?.toLowerCase() &&
+      p.type === "interest_only" &&
+      p.status !== "declined_by_professional",
+  )
 
   const canMarkAsCompleted =
     email === currentNeed.requesterEmail &&
@@ -1266,7 +1272,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
         <ChatManagementDialog
           need={selectedNeedForChatManagement}
           isOpen={!!selectedNeedForChatManagement}
-          onClose={() => setSelectedNeedForChatManagement(null)}
+          onClose={() => {
+            setSelectedNeedForChatManagement(null)
+            void fetchProposals()
+          }}
           currentUserEmail={email}
           onChatActionSuccess={() => {
             setSelectedNeedForChatManagement(null)
