@@ -1060,7 +1060,9 @@ export async function professionalRespondToVisit(params: {
       const { error: updateProposalError } = await supabase
         .from("need_proposals")
         .update({ status: "declined_by_professional", cancelled_at: new Date().toISOString() })
-        .eq("id", params.proposalId)
+        .eq("need_id", params.needId)
+        .eq("professional_email", params.professionalEmail)
+        .in("status", ["pending", "accepted_by_requester"])
 
       if (updateProposalError) {
         throw new Error(`Falha ao atualizar proposta: ${String(updateProposalError.message || "Erro desconhecido")}`)
@@ -1166,10 +1168,13 @@ export async function professionalCancelService(params: {
     }
 
     // cancelled_at keeps the simultaneous slot held for 2h after a professional cancels.
+    // Also closes their original pending interest/bid so it stops holding a slot.
     const { error: updateProposalError } = await supabase
       .from("need_proposals")
       .update({ status: "declined_by_professional", cancelled_at: new Date().toISOString() })
-      .eq("id", proposalData.id)
+      .eq("need_id", params.needId)
+      .eq("professional_email", params.professionalEmail)
+      .in("status", ["pending", "accepted_by_requester", "accepted_by_professional"])
 
     if (updateProposalError) {
       throw new Error(`Falha ao cancelar serviço: ${updateProposalError.message}`)
