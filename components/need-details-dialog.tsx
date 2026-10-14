@@ -152,14 +152,17 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       fetchRequesterProfile()
       setHasMarkedAsCompleted(false)
     }
-    if (
-      isOpen &&
-      (currentNeed.status === "concluido" || currentNeed.status === "aguardando_avaliacao") &&
-      email === currentNeed.requesterEmail
-    ) {
-      checkCanRate()
-    }
   }, [isOpen, currentNeed?.id, email, currentNeed?.status, currentNeed?.requesterEmail])
+
+  // Runs after proposals load so the accepted professional is known.
+  useEffect(() => {
+    if (!isOpen || !email) return
+    if (currentNeed.status !== "concluido" && currentNeed.status !== "aguardando_avaliacao") {
+      setCanRateProfessional(false)
+      return
+    }
+    checkCanRate()
+  }, [isOpen, email, currentNeed?.id, currentNeed?.status, proposals])
 
   useEffect(() => {
     if (!isOpen || !currentNeed) return
@@ -398,18 +401,31 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
   }
 
-  const checkCanRate = async () => {
-    const acceptedProposal = proposals.find(
+  const getRatingTarget = () => {
+    const accepted = proposals.find(
       (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
     )
-    if (!acceptedProposal?.professional_email) {
+    if (!accepted?.professional_email || !email) return null
+
+    if (email === currentNeed.requesterEmail) {
+      return { email: accepted.professional_email, role: "professional" as const }
+    }
+    if (accepted.professional_email.toLowerCase() === email.toLowerCase() && currentNeed.requesterEmail) {
+      return { email: currentNeed.requesterEmail, role: "requester" as const }
+    }
+    return null
+  }
+
+  const checkCanRate = async () => {
+    const target = getRatingTarget()
+    if (!target) {
       setCanRateProfessional(false)
       return
     }
 
     setIsCheckingRating(true)
     try {
-      const result = await canUserRate(acceptedProposal.professional_email, currentNeed.id)
+      const result = await canUserRate(target.email, currentNeed.id)
       setCanRateProfessional(result.canRate)
     } catch (error) {
       console.error("Erro ao verificar se pode avaliar:", error)
@@ -569,22 +585,35 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const canCancelService = email === currentNeed.requesterEmail && !isClosedStatus
   const isRequester = email === currentNeed.requesterEmail
-  const isAwaitingReview = isRequester && currentNeed.status === "aguardando_avaliacao" && !!acceptedProposal
+  const isAwaitingReview =
+    isRequester && currentNeed.status === "aguardando_avaliacao" && !!acceptedProposal && canRateProfessional
   const canRate = isRequester && currentNeed.status === "concluido" && canRateProfessional
+  const canRateRequester =
+    !isRequester &&
+    !!professionalAcceptedProposal &&
+    (currentNeed.status === "aguardando_avaliacao" || currentNeed.status === "concluido") &&
+    canRateProfessional
 
   const handleRateClick = () => {
-    if (!acceptedProposal?.professional_email) {
-      alert("Erro: Não foi possível encontrar o profissional para avaliar.")
+    const target = getRatingTarget()
+    if (!target) {
+      alert("Erro: Não foi possível encontrar o usuário para avaliar.")
       return
     }
 
-    setProfessionalToRate(acceptedProposal.professional_email)
+    setProfessionalToRate(target.email)
     setShowRatingDialog(true)
   }
 
   const handleRatingSuccess = () => {
     setShowRatingDialog(false)
     setProfessionalToRate(null)
+    setCanRateProfessional(false)
+    setShowNotDoneConfirmation(false)
+    // The server closes the request when the requester rates; mirror it so the review prompt disappears now.
+    if (isRequester && currentNeed.status === "aguardando_avaliacao") {
+      setCurrentNeed({ ...currentNeed, status: "concluido" })
+    }
     onStatusUpdate?.()
   }
 
@@ -1212,6 +1241,22 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                 </div>
               )}
 
+              {canRateRequester && (
+                <div className="flex flex-col gap-2 p-3 border-t dark:border-gray-700 bg-blue-50 dark:bg-gray-900/50">
+                  <p className="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
+                    Como foi atender este cliente? Sua avaliação ajuda outros profissionais.
+                  </p>
+                  <Button
+                    onClick={handleRateClick}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white h-9"
+                    size="sm"
+                  >
+                    <Star className="h-4 w-4 mr-2 fill-current" />
+                    Avaliar Cliente
+                  </Button>
+                </div>
+              )}
+
               {canProfessionalCancel && (
                 <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
                   {!showProfessionalCancelConfirmation ? (
@@ -1384,8 +1429,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
             setShowRatingDialog(false)
             setProfessionalToRate(null)
           }}
-          professionalEmail={professionalToRate}
-          requesterEmail={email || ""}
+          ratedUserEmail={professionalToRate}
+          ratedRole={isRequester ? "professional" : "requester"}
           needId={currentNeed.id}
           onSuccess={handleRatingSuccess}
         />

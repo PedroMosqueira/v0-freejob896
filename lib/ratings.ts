@@ -74,36 +74,79 @@ export async function canUserRate(
   const supabase = await createSupabaseServerClient()
 
   if (needId) {
-    const { data: proposal } = await supabase
-      .from("need_proposals")
-      .select("status")
-      .eq("need_id", needId)
-      .eq("professional_email", ratedUserEmail)
-      .in("status", ["accepted_by_requester", "accepted_by_professional"])
-      .single()
-
-    if (!proposal) {
-      return {
-        canRate: false,
-        message: "Você só pode avaliar profissionais cujas propostas foram aceitas",
-      }
+    const relationshipError = await validateRatingRelationship(supabase, needId, user.email, ratedUserEmail)
+    if (relationshipError) {
+      return { canRate: false, message: relationshipError }
     }
   }
 
-  // Verificar se já avaliou
-  const { data: existingRating } = await supabase
-    .from("ratings")
-    .select("id")
-    .eq("rated_user_email", ratedUserEmail)
-    .eq("rater_user_email", user.email)
-    .eq("need_id", needId || null)
-    .single()
-
-  if (existingRating) {
+  if (await hasAlreadyRated(supabase, user.email, ratedUserEmail, needId)) {
     return { canRate: false, message: "Você já avaliou este usuário" }
   }
 
   return { canRate: true }
+}
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>
+
+const ACCEPTED_PROPOSAL_STATUSES = ["accepted_by_requester", "accepted_by_professional"]
+
+// Ratings go both ways on a job: the requester rates the accepted professional,
+// and the accepted professional rates the requester.
+async function validateRatingRelationship(
+  supabase: SupabaseServerClient,
+  needId: string,
+  raterEmail: string,
+  ratedEmail: string,
+): Promise<string | null> {
+  const { data: need } = await supabase.from("needs").select("requester_email").eq("id", needId).maybeSingle()
+
+  if (!need?.requester_email) {
+    return "Pedido não encontrado"
+  }
+
+  const requesterEmail = need.requester_email.toLowerCase()
+  const raterIsRequester = raterEmail.toLowerCase() === requesterEmail
+  const professionalEmail = raterIsRequester ? ratedEmail : raterEmail
+
+  if (!raterIsRequester && ratedEmail.toLowerCase() !== requesterEmail) {
+    return "Você só pode avaliar o solicitante de um serviço que você realizou"
+  }
+
+  const { data: proposal } = await supabase
+    .from("need_proposals")
+    .select("id")
+    .eq("need_id", needId)
+    .ilike("professional_email", professionalEmail)
+    .in("status", ACCEPTED_PROPOSAL_STATUSES)
+    .limit(1)
+    .maybeSingle()
+
+  if (!proposal) {
+    return raterIsRequester
+      ? "Você só pode avaliar profissionais cujas propostas foram aceitas"
+      : "Você só pode avaliar o solicitante de um serviço que você realizou"
+  }
+
+  return null
+}
+
+async function hasAlreadyRated(
+  supabase: SupabaseServerClient,
+  raterEmail: string,
+  ratedEmail: string,
+  needId?: string | null,
+): Promise<boolean> {
+  let query = supabase
+    .from("ratings")
+    .select("id")
+    .ilike("rated_user_email", ratedEmail)
+    .ilike("rater_user_email", raterEmail)
+
+  query = needId ? query.eq("need_id", needId) : query.is("need_id", null)
+
+  const { data } = await query.limit(1).maybeSingle()
+  return !!data
 }
 
 export async function createRating(
@@ -144,35 +187,17 @@ export async function createRating(
 
     if (userCheckError || !ratedUser) {
       console.error("Rated user not found:", ratedUserEmail, userCheckError)
-      return { success: false, message: "Profissional não encontrado no sistema" }
+      return { success: false, message: "Usuário não encontrado no sistema" }
     }
 
     if (needId) {
-      const { data: proposal, error: proposalError } = await supabase
-        .from("need_proposals")
-        .select("status")
-        .eq("need_id", needId)
-        .eq("professional_email", ratedUserEmail)
-        .in("status", ["accepted_by_requester", "accepted_by_professional"])
-        .single()
-
-      if (!proposal) {
-        return {
-          success: false,
-          message: "Você só pode avaliar profissionais cujas propostas foram aceitas",
-        }
+      const relationshipError = await validateRatingRelationship(supabase, needId, user.email, ratedUserEmail)
+      if (relationshipError) {
+        return { success: false, message: relationshipError }
       }
     }
 
-    const { data: existingRating, error: existingError } = await supabase
-      .from("ratings")
-      .select("id")
-      .eq("rated_user_email", ratedUserEmail)
-      .eq("rater_user_email", user.email)
-      .eq("need_id", needId || null)
-      .maybeSingle()
-
-    if (existingRating) {
+    if (await hasAlreadyRated(supabase, user.email, ratedUserEmail, needId)) {
       return { success: false, message: "Você já avaliou este usuário" }
     }
 
