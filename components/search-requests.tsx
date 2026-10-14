@@ -18,6 +18,7 @@ import { CourseBannerAd } from "./course-banner-ad"
 import { GoogleAdSense } from "./google-adsense"
 import { AFFILIATE_CONFIG } from "@/lib/affiliate-config"
 import { FilterForm } from "./filter-form"
+import { getNeedStatusLabel } from "@/data/needs"
 
 interface SearchRequestsProps {
   initialShowMyRequests?: boolean
@@ -206,6 +207,9 @@ function SearchRequests({
         return "bg-purple-500 text-white"
       case "completed":
         return "bg-purple-500 text-white"
+      case "aguardando_avaliacao":
+        return "bg-amber-500 text-white"
+      case "nao_realizado":
       case "cancelado":
         return "bg-red-500 text-white"
       case "cancelled":
@@ -494,7 +498,7 @@ function SearchRequests({
                                   <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] ${getStatusBadgeClass(need.status)}`}
                                   >
-                                    {need.status}
+                                    {getNeedStatusLabel(need.status)}
                                   </span>
                                   {hasProposedInterest && (
                                     <span className="text-green-400 font-semibold text-[10px]">✓ Interesse</span>

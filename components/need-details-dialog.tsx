@@ -21,6 +21,8 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import {
   updateNeedStatus,
+  professionalMarkCompleted,
+  requesterReportServiceNotDone,
   cancelNeed,
   acceptProposal,
   professionalRespondToVisit,
@@ -42,6 +44,7 @@ import InterestDialog from "@/components/interest-dialog"
 import EditNeedDialog from "@/components/edit-need-dialog"
 import { formatDistance } from "@/lib/calculate-distance"
 import RatingDialog from "@/components/rating-dialog"
+import { getNeedStatusLabel } from "@/data/needs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
@@ -98,6 +101,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [isLoadingProposals, setIsLoadingProposals] = useState(false)
   const [acceptingProposalId, setAcceptingProposalId] = useState<string | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
+  const [showNotDoneConfirmation, setShowNotDoneConfirmation] = useState(false)
+  const [notDoneDetails, setNotDoneDetails] = useState("")
   const [professionalToRate, setProfessionalToRate] = useState<string | null>(null)
   const [canRateProfessional, setCanRateProfessional] = useState(false)
   const [isCheckingRating, setIsCheckingRating] = useState(false)
@@ -147,7 +152,11 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       fetchRequesterProfile()
       setHasMarkedAsCompleted(false)
     }
-    if (isOpen && currentNeed.status === "concluido" && email === currentNeed.requesterEmail) {
+    if (
+      isOpen &&
+      (currentNeed.status === "concluido" || currentNeed.status === "aguardando_avaliacao") &&
+      email === currentNeed.requesterEmail
+    ) {
       checkCanRate()
     }
   }, [isOpen, currentNeed?.id, email, currentNeed?.status, currentNeed?.requesterEmail])
@@ -326,8 +335,11 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
         return "bg-yellow-500 text-white"
       case "aceito":
         return "bg-blue-500 text-white"
+      case "aguardando_avaliacao":
+        return "bg-amber-500 text-white"
       case "concluido":
         return "bg-purple-500 text-white"
+      case "nao_realizado":
       case "cancelado":
         return "bg-red-500 text-white"
       default:
@@ -341,40 +353,29 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     setHasMarkedAsCompleted(true)
     setIsUpdatingStatus(true)
     try {
-      await updateNeedStatus(currentNeed.id, "concluido", email)
+      await professionalMarkCompleted(currentNeed.id)
       setShowConfirmation(false)
       onStatusUpdate?.()
       await fetchProposals()
-
-      const supabase = createSupabaseBrowserClient()
-      const { data: freshProposals } = await supabase.from("need_proposals").select("*").eq("need_id", currentNeed.id)
-
-      console.log("[v0] Fresh proposals after completion:", freshProposals) // Added debug log
-
-      const acceptedProposal = (freshProposals as NeedProposal[] | null)?.find(
-        (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
-      )
-
-      console.log("[v0] Accepted proposal for rating:", acceptedProposal)
-      console.log("[v0] Professional email from proposal:", acceptedProposal?.professional_email)
-      console.log("[v0] All fields in accepted proposal:", JSON.stringify(acceptedProposal, null, 2)) // Added detailed log
-
-      if (acceptedProposal?.professional_email) {
-        const canRate = await canUserRate(acceptedProposal.professional_email, currentNeed.id)
-        console.log("[v0] Can rate result:", canRate)
-        if (canRate.canRate) {
-          setProfessionalToRate(acceptedProposal.professional_email)
-          setShowRatingDialog(true)
-        } else {
-          console.log("[v0] Cannot rate:", canRate.message)
-        }
-      } else {
-        console.error("[v0] No professional email found in accepted proposal")
-        console.error("[v0] Proposal object keys:", acceptedProposal ? Object.keys(acceptedProposal) : "no proposal") // Log available keys
-      }
     } catch (error) {
+      setHasMarkedAsCompleted(false)
       console.error("Erro ao marcar como concluído:", error)
-      alert("Erro ao marcar serviço como concluído. Tente novamente.")
+      alert(error instanceof Error ? error.message : "Erro ao marcar serviço como concluído. Tente novamente.")
+    } finally {
+      setIsUpdatingStatus(false)
+    }
+  }
+
+  const handleReportNotDone = async () => {
+    setIsUpdatingStatus(true)
+    try {
+      await requesterReportServiceNotDone(currentNeed.id, notDoneDetails)
+      setShowNotDoneConfirmation(false)
+      setNotDoneDetails("")
+      onStatusUpdate?.()
+    } catch (error) {
+      console.error("Erro ao informar serviço não realizado:", error)
+      alert(error instanceof Error ? error.message : "Erro ao registrar. Tente novamente.")
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -544,8 +545,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       p.professional_email === email &&
       (p.status === "accepted_by_requester" || p.status === "accepted_by_professional"),
   )
-  const canProfessionalCancel =
-    !!professionalAcceptedProposal && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
+  const isClosedStatus = ["aguardando_avaliacao", "concluido", "nao_realizado", "cancelado"].includes(
+    currentNeed.status,
+  )
+  const canProfessionalCancel = !!professionalAcceptedProposal && !isClosedStatus
 
   const professionalVisitProposal = proposals.find(
     (p) => p.professional_email === email && p.status === "accepted_by_requester" && p.type === "visit_proposal",
@@ -560,42 +563,21 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
       p.status !== "declined_by_professional",
   )
 
-  const canMarkAsCompleted =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    !professionalAcceptedVisitProposal &&
-    !hasMarkedAsCompleted
+  // The chosen professional marks the job done first; the requester then rates it or reports it was not done.
+  const canProfessionalMarkCompleted =
+    !!professionalAcceptedProposal && currentNeed.status === "aceito" && !hasMarkedAsCompleted
 
-  const canMarkAsCompletedRevised =
-    email === currentNeed.requesterEmail &&
-    currentNeed.status === "aceito" &&
-    !!acceptedProposal &&
-    acceptedProposal.status === "accepted_by_requester" &&
-    !hasMarkedAsCompleted
-
-  const canCancelService =
-    email === currentNeed.requesterEmail && currentNeed.status !== "concluido" && currentNeed.status !== "cancelado"
+  const canCancelService = email === currentNeed.requesterEmail && !isClosedStatus
   const isRequester = email === currentNeed.requesterEmail
-  const canRate = email === currentNeed.requesterEmail && currentNeed.status === "concluido" && canRateProfessional
+  const isAwaitingReview = isRequester && currentNeed.status === "aguardando_avaliacao" && !!acceptedProposal
+  const canRate = isRequester && currentNeed.status === "concluido" && canRateProfessional
 
   const handleRateClick = () => {
-    console.log("[v0] handleRateClick - acceptedProposal:", acceptedProposal)
-    console.log("[v0] handleRateClick - professional_email:", acceptedProposal?.professional_email)
-
-    if (!acceptedProposal) {
-      console.error("[v0] No accepted proposal found")
-      alert("Erro: Não foi possível encontrar uma proposta aceita.")
-      return
-    }
-
-    if (!acceptedProposal.professional_email) {
-      console.error("[v0] Accepted proposal missing professional email", acceptedProposal)
+    if (!acceptedProposal?.professional_email) {
       alert("Erro: Não foi possível encontrar o profissional para avaliar.")
       return
     }
 
-    console.log("[v0] Opening rating dialog for:", acceptedProposal.professional_email)
     setProfessionalToRate(acceptedProposal.professional_email)
     setShowRatingDialog(true)
   }
@@ -716,7 +698,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   </Badge>
                 )}
                 <Badge className={`${getStatusBadgeClass(currentNeed.status)} text-xs`}>
-                  {currentNeed.status.charAt(0).toUpperCase() + currentNeed.status.slice(1).replace(/-/g, " ")}
+                  {getNeedStatusLabel(currentNeed.status)}
                 </Badge>
               </div>
 
@@ -1128,7 +1110,68 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                 </div>
               )}
 
-              {canMarkAsCompletedRevised && ( // Use the revised logic for canMarkAsCompleted
+              {isAwaitingReview && (
+                <div className="flex flex-col gap-2 p-3 border-t dark:border-gray-700 bg-amber-50 dark:bg-gray-900/50">
+                  <p className="text-xs leading-relaxed text-gray-700 dark:text-gray-300">
+                    O profissional marcou este serviço como concluído. Avalie o serviço ou informe se ele não foi feito.
+                  </p>
+                  {!showNotDoneConfirmation ? (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRateClick}
+                        className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white h-9"
+                        size="sm"
+                      >
+                        <Star className="h-4 w-4 mr-2 fill-current" />
+                        Avaliar serviço
+                      </Button>
+                      <Button
+                        onClick={() => setShowNotDoneConfirmation(true)}
+                        variant="outline"
+                        className="flex-1 border-red-500 text-red-600 h-9 dark:text-red-400"
+                        size="sm"
+                      >
+                        <Ban className="h-4 w-4 mr-2" />
+                        Não foi feito
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Isso conta como avaliação de 1 estrela para o profissional. Conte o que aconteceu (opcional):
+                      </p>
+                      <Textarea
+                        placeholder="O que aconteceu?"
+                        value={notDoneDetails}
+                        onChange={(e) => setNotDoneDetails(e.target.value)}
+                        maxLength={500}
+                        className="min-h-16 text-sm"
+                        aria-label="Detalhes de serviço não realizado"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleReportNotDone}
+                          disabled={isUpdatingStatus}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isUpdatingStatus ? "Enviando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => setShowNotDoneConfirmation(false)}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {canProfessionalMarkCompleted && (
                 <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                   {!showConfirmation ? (
                     <Button
@@ -1141,7 +1184,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                     </Button>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar conclusão do serviço?</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Confirmar conclusão? Sua vaga de serviço simultâneo é liberada e o cliente será avisado para
+                        avaliar.
+                      </p>
                       <div className="flex gap-2">
                         <Button
                           onClick={handleMarkAsCompleted}

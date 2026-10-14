@@ -71,8 +71,10 @@ export function FilterForm({
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="aberto">Aberto</SelectItem>
               <SelectItem value="visita-proposta">Visita Proposta</SelectItem>
-              <SelectItem value="aceito">Aceito</SelectItem>
+              <SelectItem value="aceito">Em execução</SelectItem>
+              <SelectItem value="aguardando_avaliacao">Aguardando avaliação</SelectItem>
               <SelectItem value="concluido">Concluído</SelectItem>
+              <SelectItem value="nao_realizado">Não realizado</SelectItem>
               <SelectItem value="cancelado">Cancelado</SelectItem>
             </SelectContent>
           </Select>
