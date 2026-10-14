@@ -402,6 +402,15 @@ export async function addChatMessage(params: {
       throw new Error(`Falha ao adicionar mensagem de chat: ${String(error.message || "Erro desconhecido")}`)
     }
 
+    const senderEmail = msg.email.toLowerCase()
+    const recipientEmail =
+      String(currentThread.requester_email).toLowerCase() === senderEmail
+        ? currentThread.professional_email
+        : currentThread.requester_email
+    if (recipientEmail) {
+      await notifyNewChatMessage(String(recipientEmail), String(currentThread.need_id), msg.text)
+    }
+
     return msg
   } catch (e) {
     throw new Error(`Falha ao adicionar mensagem de chat: ${String(e)}`)
@@ -1246,7 +1255,10 @@ async function loadWithdrawContext(needId: string): Promise<WithdrawContext | nu
 
   if (proposalsError) throw new Error(`Falha ao carregar propostas: ${proposalsError.message}`)
 
-  const openProposalIds = (proposals || []).filter((p) => p.status === "pending").map((p) => String(p.id))
+  // Interests are saved as "interested"; bids, visits and quotes as "pending".
+  const openProposalIds = (proposals || [])
+    .filter((p) => p.status === "pending" || p.status === "interested")
+    .map((p) => String(p.id))
   if (!openProposalIds.length) return null
 
   const bids = (proposals || []).filter((p) => p.type === "direct_acceptance" && p.bid_amount != null)
@@ -1315,6 +1327,46 @@ export async function professionalWithdrawInterest(params: { needId: string; rea
     need.id,
     openProposalIds[0],
   )
+}
+
+/**
+ * Notifies the other party about a new chat message. Skips when they already
+ * have an unread message notification for this request, so a conversation
+ * produces one alert until it is read instead of one per message.
+ */
+async function notifyNewChatMessage(recipientEmail: string, needId: string, text: string): Promise<void> {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !supabaseServiceKey) return
+
+    const admin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { count } = await admin
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", recipientEmail)
+      .eq("related_need_id", needId)
+      .eq("type", "message")
+      .eq("is_read", false)
+
+    if (count && count > 0) return
+
+    const { data: need } = await admin.from("needs").select("title").eq("id", needId).single()
+    const preview = text.length > 80 ? `${text.slice(0, 80)}...` : text
+
+    await createNotification(
+      recipientEmail,
+      need?.title ? `Nova mensagem em "${need.title}"` : "Nova mensagem",
+      preview,
+      "message",
+      needId,
+    )
+  } catch (error) {
+    console.error("[needs-store] Failed to notify new chat message:", error)
+  }
 }
 
 async function createNotification(
