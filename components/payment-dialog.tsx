@@ -65,10 +65,6 @@ function CheckoutForm({
           <span>Valor do lance:</span>
           <span className="font-medium">{formatCurrency(amounts.bidAmount)}</span>
         </div>
-        <div className="flex justify-between">
-          <span>Taxa da plataforma (15%):</span>
-          <span className="font-medium">{formatCurrency(amounts.platformFee)}</span>
-        </div>
         <div className="border-t border-blue-200 dark:border-blue-800 pt-2 flex justify-between font-semibold text-base">
           <span>Total a pagar:</span>
           <span className="text-blue-600 dark:text-blue-400">{formatCurrency(amounts.totalAmount)}</span>
