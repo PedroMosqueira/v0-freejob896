@@ -22,29 +22,48 @@ export function InterestsCounter() {
   const limit = plan.limits.simultaneous_interests
   const planName = plan.name
   const activeInterests = data.count
+  const heldCount = Math.min(data.heldCount, activeInterests)
+  const workingCount = activeInterests - heldCount
 
   const percentageUsed = (activeInterests / limit) * 100
   const isNearLimit = percentageUsed >= 75
 
-  // Criar array de slots para visualizar seccionado
-  const slots = Array.from({ length: limit }, (_, i) => i < activeInterests)
+  // Working slots first, then slots held by the 2h post-cancellation rule.
+  const slots = Array.from({ length: limit }, (_, i) =>
+    i < workingCount ? "active" : i < activeInterests ? "held" : "free",
+  )
+
+  const releaseTime = data.nextReleaseAt
+    ? new Date(data.nextReleaseAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    : null
+  const tooltip = [
+    `Serviços simultâneos: ${activeInterests}/${limit} - ${planName}`,
+    heldCount > 0 && releaseTime
+      ? `${heldCount} vaga(s) retida(s) por cancelamento. Próxima libera às ${releaseTime}.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
 
   return (
     <div
-      title={`Propostas Ativas: ${activeInterests}/${limit} - ${planName}`}
+      title={tooltip}
+      aria-label={tooltip}
       className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-help group"
     >
       {/* Barra seccionada */}
       <div className="flex gap-1">
-        {slots.map((isActive, index) => (
+        {slots.map((slot, index) => (
           <div
             key={index}
             className={`h-3 w-2 rounded-sm transition-colors ${
-              isActive
+              slot === "active"
                 ? isNearLimit
                   ? "bg-orange-500"
                   : "bg-blue-500"
-                : "bg-gray-300 dark:bg-gray-600"
+                : slot === "held"
+                  ? "border border-dashed border-orange-500 bg-orange-500/20"
+                  : "bg-gray-300 dark:bg-gray-600"
             }`}
           />
         ))}

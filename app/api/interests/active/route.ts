@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { getActiveInterestsCount } from "@/lib/simultaneous-interests"
+import { getActiveInterestsSummary } from "@/lib/simultaneous-interests"
 
 export const dynamic = "force-dynamic"
 
@@ -17,8 +17,8 @@ export async function GET() {
   }
 
   try {
-    const count = await getActiveInterestsCount(user.email)
-    return NextResponse.json({ count })
+    const summary = await getActiveInterestsSummary(user.email)
+    return NextResponse.json(summary)
   } catch (error) {
     console.error("[interests/active] Failed to count active interests:", error)
     return NextResponse.json({ error: "Não foi possível carregar as propostas ativas." }, { status: 500 })
