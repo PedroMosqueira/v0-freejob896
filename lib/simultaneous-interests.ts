@@ -28,6 +28,8 @@ const RELEASED_STATUSES = new Set(["declined_by_requester", "cancelled_by_reques
 const ACCEPTED_STATUSES = new Set(["accepted_by_requester", "accepted_by_provider", "accepted_by_professional"])
 
 const OPEN_NEED_STATUSES = new Set(["aberto"])
+// "aguardando_avaliacao" is deliberately absent: once the professional marks the
+// job done, the slot is released while the requester reviews it.
 const IN_PROGRESS_NEED_STATUSES = new Set(["aceito", "em_andamento"])
 // The requester cancelled the whole request: everyone gets their slot back.
 const REQUESTER_CANCELLED_NEED_STATUSES = new Set(["cancelado"])

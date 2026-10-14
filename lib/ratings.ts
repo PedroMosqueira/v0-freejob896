@@ -192,6 +192,16 @@ export async function createRating(
       return { success: false, message: `Erro ao criar avaliação: ${error.message}` }
     }
 
+    // Rating a job the professional marked as done closes the request.
+    if (needId) {
+      await supabase
+        .from("needs")
+        .update({ status: "concluido" })
+        .eq("id", needId)
+        .eq("status", "aguardando_avaliacao")
+        .ilike("requester_email", user.email)
+    }
+
     return { success: true, message: "Avaliação criada com sucesso!" }
   } catch (error) {
     console.error("Unexpected error creating rating:", error)
