@@ -12,6 +12,7 @@ import type {
   ProposalStatus,
   ProposalType,
 } from "@/data/needs"
+import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
 
 // Helper para mapear uma linha do Supabase para o tipo Need
 // Não inclui mais o chat, pois ele está em uma tabela separada
@@ -1202,6 +1203,113 @@ export async function professionalCancelService(params: {
   } catch (e) {
     throw new Error(`Falha ao cancelar serviço: ${String(e)}`)
   }
+}
+
+type WithdrawContext = {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
+  professionalEmail: string
+  need: { id: string; requester_email: string; title: string; status: string }
+  openProposalIds: string[]
+  policy: WithdrawPolicy
+}
+
+/**
+ * Loads everything needed to decide if the signed-in professional can withdraw
+ * from an open request. Returns null when there is nothing to withdraw.
+ */
+async function loadWithdrawContext(needId: string): Promise<WithdrawContext | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data: authData } = await supabase.auth.getUser()
+  const professionalEmail = authData.user?.email
+  if (!professionalEmail) throw new Error("Faça login para continuar.")
+
+  const { data: need, error: needError } = await supabase
+    .from("needs")
+    .select("id, requester_email, title, status")
+    .eq("id", needId)
+    .single()
+
+  // Once accepted, cancelling goes through professionalCancelService instead.
+  if (needError || !need || need.status !== "aberto") return null
+
+  const { data: proposals, error: proposalsError } = await supabase
+    .from("need_proposals")
+    .select("id, type, status, created_at, bid_amount")
+    .eq("need_id", needId)
+    .ilike("professional_email", professionalEmail)
+    .order("created_at", { ascending: true })
+
+  if (proposalsError) throw new Error(`Falha ao carregar propostas: ${proposalsError.message}`)
+
+  const openProposalIds = (proposals || []).filter((p) => p.status === "pending").map((p) => String(p.id))
+  if (!openProposalIds.length) return null
+
+  const bids = (proposals || []).filter((p) => p.type === "direct_acceptance" && p.bid_amount != null)
+  const latestBid = bids.at(-1)
+  const thread = await getChatThread(needId, need.requester_email, professionalEmail)
+
+  const policy = getWithdrawPolicy({
+    interestSentAt: String(proposals![0].created_at),
+    requesterViewedAt: thread?.lastReadByRequester ? String(thread.lastReadByRequester) : null,
+    latestBid: latestBid ? { sentAt: String(latestBid.created_at), status: String(latestBid.status) } : null,
+  })
+
+  return { supabase, professionalEmail, need, openProposalIds, policy }
+}
+
+/** Whether the signed-in professional can withdraw from this request right now. */
+export async function getProfessionalWithdrawStatus(needId: string): Promise<WithdrawPolicy | null> {
+  const context = await loadWithdrawContext(needId)
+  return context?.policy ?? null
+}
+
+/**
+ * Professional withdraws interest (and any pending bid) from an open request.
+ * Enforced server-side with the same policy shown in the UI. The slot stays
+ * held for 2h via cancelled_at.
+ */
+export async function professionalWithdrawInterest(params: { needId: string; reason?: string }): Promise<void> {
+  const context = await loadWithdrawContext(params.needId)
+  if (!context) throw new Error("Não há interesse ativo para desistir neste pedido.")
+
+  const { supabase, professionalEmail, need, openProposalIds, policy } = context
+  if (!policy.allowed) throw new Error(describeWithdrawLock(policy))
+
+  const now = new Date().toISOString()
+
+  const { error: updateError } = await supabase
+    .from("need_proposals")
+    .update({ status: "declined_by_professional", cancelled_at: now })
+    .in("id", openProposalIds)
+
+  if (updateError) throw new Error(`Falha ao desistir: ${updateError.message}`)
+
+  const thread = await getChatThread(need.id, need.requester_email, professionalEmail)
+  if (thread) {
+    const reason = params.reason?.trim()
+    const messages: ChatMessage[] = (thread.messages || []).map((msg) =>
+      msg.type === "bid" && msg.email === professionalEmail && msg.metadata?.status === "pending"
+        ? { ...msg, metadata: { ...msg.metadata, status: "cancelled" } }
+        : msg,
+    )
+    messages.push({
+      id: (globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)) as string,
+      text: reason ? `O profissional desistiu do serviço: ${reason}` : "O profissional desistiu do serviço.",
+      createdAt: now,
+      type: "system",
+    })
+
+    await supabase.from("chat_threads").update({ messages_json: messages, updated_at: now }).eq("id", thread.id)
+  }
+
+  await createNotification(
+    need.requester_email,
+    "Profissional desistiu",
+    `Um profissional desistiu do seu pedido "${need.title}".`,
+    "cancellation",
+    need.id,
+    openProposalIds[0],
+  )
 }
 
 async function createNotification(

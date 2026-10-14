@@ -26,6 +26,7 @@ import { toast } from "@/components/ui/use-toast"
 import { getUserProfile } from "@/lib/user-profile"
 import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { formatCurrency } from "@/lib/pricing"
+import { WithdrawInterestControl } from "@/components/withdraw-interest-control"
 
 const MESSAGES_PER_PAGE = 50
 
@@ -363,6 +364,12 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
   const isProfessional = chatThreadProfessionalEmail === currentUserEmail
 
+  // Changes when a bid is sent, declined or cancelled, refreshing the withdraw lock.
+  const bidStateSignature = messages.reduce(
+    (acc, msg) => (msg.type === "bid" ? acc + 1 + (msg.metadata?.status === "pending" ? 0 : 1000) : acc),
+    messages.length,
+  )
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -570,7 +577,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
             </div>
           </div>
           {isProfessional && need.status === "aberto" && (
-            <div className="pt-2">
+            <div className="flex flex-col gap-2 pt-2">
               <Button
                 onClick={() => setShowSendBidDialog(true)}
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
@@ -578,6 +585,10 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
               >
                 💰 Enviar Lance
               </Button>
+              <WithdrawInterestControl
+                needId={need.id}
+                revalidationKey={bidStateSignature}
+              />
             </div>
           )}
           <form onSubmit={handleSendMessage} className="flex gap-2 pt-4">
