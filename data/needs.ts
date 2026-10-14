@@ -1,6 +1,29 @@
 // This file defines the types and initial seed data for the needs store.
 
-export type NeedStatus = "aberto" | "visita-proposta" | "aceito" | "concluido" | "cancelado"
+// aguardando_avaliacao: the professional marked the job done; the requester rates it or reports it was not done.
+// nao_realizado: the requester reported the job was not done (recorded as a 1-star rating).
+export type NeedStatus =
+  | "aberto"
+  | "visita-proposta"
+  | "aceito"
+  | "aguardando_avaliacao"
+  | "concluido"
+  | "nao_realizado"
+  | "cancelado"
+
+export const NEED_STATUS_LABELS: Record<string, string> = {
+  aberto: "Aberto",
+  "visita-proposta": "Visita proposta",
+  aceito: "Em execução",
+  aguardando_avaliacao: "Aguardando avaliação",
+  concluido: "Concluído",
+  nao_realizado: "Não realizado",
+  cancelado: "Cancelado",
+}
+
+export function getNeedStatusLabel(status: string): string {
+  return NEED_STATUS_LABELS[status] ?? status
+}
 
 // Novo tipo para propostas de profissionais
 export type ProposalType = "visit_proposal" | "direct_acceptance" | "interest_only"

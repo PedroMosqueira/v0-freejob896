@@ -13,6 +13,7 @@ import type {
   ProposalType,
 } from "@/data/needs"
 import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
+import { createAdminClient } from "@/lib/stripe-subscription-sync"
 
 // Helper para mapear uma linha do Supabase para o tipo Need
 // Não inclui mais o chat, pois ele está em uma tabela separada
@@ -701,6 +702,124 @@ export async function updateNeedStatus(needId: string, newStatus: NeedStatus, re
   } catch (e) {
     throw new Error(`Falha ao atualizar status: ${String(e)}`)
   }
+}
+
+const ACCEPTED_PROPOSAL_STATUSES = ["accepted_by_requester", "accepted_by_professional"]
+
+/**
+ * The chosen professional marks the job as done. The request moves to
+ * "aguardando_avaliacao", which frees their simultaneous-service slot right away
+ * (see lib/simultaneous-interests.ts); the requester then rates it or reports it
+ * was not done, which only affects the professional's reputation.
+ */
+export async function professionalMarkCompleted(needId: string): Promise<void> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const email = user?.email?.toLowerCase()
+  if (!email) throw new Error("Você precisa estar autenticado.")
+
+  // Professionals cannot update needs under RLS; access is verified below before writing.
+  const admin = createAdminClient()
+
+  const { data: need } = await admin
+    .from("needs")
+    .select("id, title, status, requester_email")
+    .eq("id", needId)
+    .maybeSingle()
+  if (!need) throw new Error("Pedido não encontrado.")
+  if (need.status !== "aceito") throw new Error("Só é possível concluir um serviço em execução.")
+
+  const { data: accepted } = await admin
+    .from("need_proposals")
+    .select("id")
+    .eq("need_id", needId)
+    .ilike("professional_email", email)
+    .in("status", ACCEPTED_PROPOSAL_STATUSES)
+    .limit(1)
+  if (!accepted?.length) throw new Error("Apenas o profissional escolhido pode concluir este serviço.")
+
+  const { error } = await admin
+    .from("needs")
+    .update({ status: "aguardando_avaliacao", completed_by_professional_at: new Date().toISOString() })
+    .eq("id", needId)
+    .eq("status", "aceito")
+  if (error) throw new Error(`Falha ao concluir o serviço: ${error.message}`)
+
+  await createNotification(
+    String(need.requester_email),
+    "Serviço concluído pelo profissional",
+    `O profissional marcou "${need.title}" como concluído. Avalie o serviço ou informe se ele não foi feito.`,
+    "completion",
+    needId,
+  )
+}
+
+/**
+ * The requester reports that the job marked as done was not actually done.
+ * Recorded as a 1-star rating so it weighs on the professional's reputation,
+ * without touching their simultaneous-service slots.
+ */
+export async function requesterReportServiceNotDone(needId: string, details?: string): Promise<void> {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.email) throw new Error("Você precisa estar autenticado.")
+
+  const { data: need } = await supabase
+    .from("needs")
+    .select("id, title, status, requester_email")
+    .eq("id", needId)
+    .maybeSingle()
+  if (!need || String(need.requester_email).toLowerCase() !== user.email.toLowerCase()) {
+    throw new Error("Apenas o solicitante pode informar que o serviço não foi feito.")
+  }
+  if (need.status !== "aguardando_avaliacao") {
+    throw new Error("Este serviço não está aguardando avaliação.")
+  }
+
+  const { data: accepted } = await supabase
+    .from("need_proposals")
+    .select("professional_email")
+    .eq("need_id", needId)
+    .in("status", ACCEPTED_PROPOSAL_STATUSES)
+    .limit(1)
+    .maybeSingle()
+  if (!accepted?.professional_email) throw new Error("Profissional do serviço não encontrado.")
+
+  const trimmed = details?.trim().slice(0, 500)
+  const { data: existingRating } = await supabase
+    .from("ratings")
+    .select("id")
+    .eq("need_id", needId)
+    .eq("rater_user_email", user.email)
+    .maybeSingle()
+
+  if (!existingRating) {
+    const { error: ratingError } = await supabase.from("ratings").insert({
+      rated_user_email: accepted.professional_email,
+      rater_user_email: user.email,
+      need_id: needId,
+      rating: 1,
+      comment: trimmed
+        ? `Serviço não realizado: ${trimmed}`
+        : "O cliente informou que o serviço não foi realizado.",
+    })
+    if (ratingError) throw new Error(`Falha ao registrar a avaliação: ${ratingError.message}`)
+  }
+
+  const { error } = await supabase.from("needs").update({ status: "nao_realizado" }).eq("id", needId)
+  if (error) throw new Error(`Falha ao atualizar o pedido: ${error.message}`)
+
+  await createNotification(
+    String(accepted.professional_email),
+    "Cliente informou que o serviço não foi feito",
+    `O cliente informou que "${need.title}" não foi realizado. Isso foi registrado na sua avaliação.`,
+    "completion",
+    needId,
+  )
 }
 
 export async function cancelNeed(needId: string, requesterEmail: string): Promise<void> {
