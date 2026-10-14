@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Camera, Upload } from "lucide-react"
 import { useRef, useState } from "react"
 import { useHasCamera } from "@/lib/use-has-camera"
+import { InAppCamera, isInAppCameraSupported } from "@/components/in-app-camera"
 
 interface ImageCaptureInputProps {
   onCapture: (files: FileList) => void
@@ -57,6 +58,30 @@ export function ImageCaptureInput({
     }
   }
 
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
+
+  const handleCameraClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isCompressing || disabled) return
+    if (isInAppCameraSupported()) {
+      setIsCameraOpen(true)
+    } else {
+      cameraInputRef.current?.click()
+    }
+  }
+
+  const handleInAppCapture = (file: File) => {
+    const dataTransfer = new DataTransfer()
+    dataTransfer.items.add(file)
+    onCapture(dataTransfer.files)
+  }
+
+  const handleCameraUnavailable = () => {
+    setIsCameraOpen(false)
+    cameraInputRef.current?.click()
+  }
+
   const isMobile = useHasCamera()
 
   return (
@@ -87,7 +112,7 @@ export function ImageCaptureInput({
           <Button
             type="button"
             variant="outline"
-            onClick={handleButtonClick(cameraInputRef)}
+            onClick={handleCameraClick}
             disabled={disabled || isCompressing}
             className="flex-1 gap-2 bg-transparent"
           >
@@ -102,6 +127,13 @@ export function ImageCaptureInput({
             onChange={handleFileSelect}
             className="hidden"
             disabled={disabled || isCompressing}
+          />
+          <InAppCamera
+            open={isCameraOpen}
+            onClose={() => setIsCameraOpen(false)}
+            onCapture={handleInAppCapture}
+            onUnavailable={handleCameraUnavailable}
+            allowMultiple={multiple}
           />
         </>
       )}
