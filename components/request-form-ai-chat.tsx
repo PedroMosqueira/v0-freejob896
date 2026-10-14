@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { compressImages } from "@/lib/image-compress"
 import { useHasCamera } from "@/lib/use-has-camera"
+import { InAppCamera, isInAppCameraSupported } from "@/components/in-app-camera"
 import { describeGeolocationError, detectLocation } from "@/lib/geolocation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,6 +67,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
+  const [isCameraOpen, setIsCameraOpen] = useState(false)
+  const capturedBatchRef = useRef<File[]>([])
 
   const fieldTranslations: Record<string, string> = {
     title: "título do serviço",
@@ -190,14 +193,27 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   }
 
   const handlePhotoCapture = (source: "camera" | "gallery") => {
+    if (source === "camera" && isInAppCameraSupported()) {
+      setIsCameraOpen(true)
+      return
+    }
     const input = source === "camera" ? cameraInputRef.current : fileInputRef.current
     input?.click()
   }
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCameraUnavailable = () => {
+    setIsCameraOpen(false)
+    cameraInputRef.current?.click()
+  }
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget
     const selected = input.files ? Array.from(input.files) : []
     input.value = ""
+    addPhotoFiles(selected)
+  }
+
+  const addPhotoFiles = async (selected: File[]) => {
     if (selected.length === 0) return
 
     setIsProcessingPhotos(true)
@@ -581,6 +597,18 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           accept="image/*"
           capture="environment"
           className="hidden"
+        />
+        {/* Photos taken in one camera session are added together, so the chat gets a single message. */}
+        <InAppCamera
+          open={isCameraOpen}
+          onCapture={(file) => capturedBatchRef.current.push(file)}
+          onClose={() => {
+            setIsCameraOpen(false)
+            const batch = capturedBatchRef.current
+            capturedBatchRef.current = []
+            addPhotoFiles(batch)
+          }}
+          onUnavailable={handleCameraUnavailable}
         />
       </div>
     </div>
