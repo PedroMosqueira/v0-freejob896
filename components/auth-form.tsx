@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { GoogleSignInButton } from "@/components/google-sign-in-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,19 +17,22 @@ export function AuthForm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showEmailInput, setShowEmailInput] = useState(false)
+  // Google only accepts its native button on origins registered in Google Cloud;
+  // previews and other hosts keep the Supabase redirect flow.
+  const [useNativeGoogleButton, setUseNativeGoogleButton] = useState(false)
+
+  useEffect(() => {
+    const host = window.location.hostname
+    setUseNativeGoogleButton(host === "freejob.services" || host.endsWith(".freejob.services"))
+  }, [])
 
   const handleGoogleLogin = async () => {
     setLoading(true)
     setError("")
 
     try {
-      console.log("[v0] Window origin:", window.location.origin)
-      // Usar origin dinâmico para funcionar em qualquer domínio
       const redirectUrl = `${window.location.origin}/auth/callback`
-      console.log("[v0] Redirect URL:", redirectUrl)
-      console.log("[v0] Iniciando login com Google")
-      
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
+      const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
@@ -86,7 +90,9 @@ export function AuthForm() {
     <Card>
       <CardContent className="pt-6">
         <div className="grid gap-4">
-          {/* Google OAuth Button */}
+          {useNativeGoogleButton ? (
+            <GoogleSignInButton onError={setError} onLoadingChange={setLoading} />
+          ) : (
           <Button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -100,6 +106,7 @@ export function AuthForm() {
             </svg>
             Entrar com Google
           </Button>
+          )}
 
           {/* Divider */}
           <div className="relative">
