@@ -5,6 +5,7 @@ import { compressImages } from "@/lib/image-compress"
 import { Button } from "@/components/ui/button"
 import { Camera, Upload } from "lucide-react"
 import { useRef, useState } from "react"
+import { useHasCamera } from "@/lib/use-has-camera"
 
 interface ImageCaptureInputProps {
   onCapture: (files: FileList) => void
@@ -56,9 +57,7 @@ export function ImageCaptureInput({
     }
   }
 
-  const isMobile =
-    typeof window !== "undefined" &&
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  const isMobile = useHasCamera()
 
   return (
     <div className="flex flex-col sm:flex-row gap-2 w-full">
@@ -100,7 +99,6 @@ export function ImageCaptureInput({
             type="file"
             accept="image/*"
             capture="environment"
-            multiple={multiple}
             onChange={handleFileSelect}
             className="hidden"
             disabled={disabled || isCompressing}

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { compressImages } from "@/lib/image-compress"
+import { useHasCamera } from "@/lib/use-has-camera"
 import { describeGeolocationError, detectLocation } from "@/lib/geolocation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,17 +62,10 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
     "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
     "Professor Particular", "Outros",
   ]
-  const [isMobile, setIsMobile] = useState(false)
+  const isMobile = useHasCamera()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    // Detectar se é mobile
-    const checkMobile = () => {
-      setIsMobile(/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent))
-    }
-    checkMobile()
-  }, [])
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const fieldTranslations: Record<string, string> = {
     title: "título do serviço",
@@ -196,16 +190,8 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
   }
 
   const handlePhotoCapture = (source: "camera" | "gallery") => {
-    if (fileInputRef.current) {
-      fileInputRef.current.accept = "image/*"
-      // Remover o atributo capture ou definir corretamente apenas para câmera
-      if (source === "camera") {
-        fileInputRef.current.capture = "environment"
-      } else {
-        fileInputRef.current.removeAttribute("capture")
-      }
-      fileInputRef.current.click()
-    }
+    const input = source === "camera" ? cameraInputRef.current : fileInputRef.current
+    input?.click()
   }
 
   const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -586,6 +572,15 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
           accept="image/*"
           className="hidden"
           multiple
+        />
+        {/* Android ignores capture on inputs with multiple and opens the file picker, so the camera gets its own single-file input. */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          onChange={handlePhotoSelect}
+          accept="image/*"
+          capture="environment"
+          className="hidden"
         />
       </div>
     </div>
