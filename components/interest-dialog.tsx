@@ -5,14 +5,13 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { startChat, type Need } from "@/lib/needs-store"
 import { useToast } from "@/hooks/use-toast"
-import { AlertCircle, Loader2, Heart, Phone } from "lucide-react"
+import { AlertCircle, Loader2, Heart } from "lucide-react"
 import { expressInterest } from "@/lib/interest-manager"
 import { UpgradePlansModal } from "@/components/upgrade-plans-modal"
-import { COUNTRIES } from "@/lib/countries"
+import { WhatsAppVerificationPanel } from "@/components/whatsapp-verification-panel"
 import { mutate } from "swr"
 import { ACTIVE_INTERESTS_KEY } from "@/lib/active-interests-client"
 
@@ -35,109 +34,8 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
   const [canExpress, setCanExpress] = useState(true)
   const [freeInterestsRemaining, setFreeInterestsRemaining] = useState(3)
   const [isCheckingPermission, setIsCheckingPermission] = useState(false)
-  const [phoneInput, setPhoneInput] = useState("")
-  const [verificationCode, setVerificationCode] = useState("")
-  const [codeSent, setCodeSent] = useState(false)
-  const [phoneValidationLoading, setPhoneValidationLoading] = useState(false)
-  const [phoneValidationError, setPhoneValidationError] = useState("")
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [isProfessionalCheckbox, setIsProfessionalCheckbox] = useState(false)
-  const [countryCode, setCountryCode] = useState("+55")
-
-  // Format phone input with DDD parentheses
-  const formatPhoneInput = (value: string) => {
-    const cleaned = value.replace(/\D/g, "")
-    if (cleaned.length <= 2) return cleaned
-    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`
-  }
-
-
-
-  const requestPhoneVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    setPhoneValidationError("")
-    setPhoneValidationLoading(true)
-
-    try {
-      const cleanPhone = phoneInput.replace(/\D/g, "")
-
-      if (cleanPhone.length < 10) {
-        throw new Error("Telefone inválido. Use o formato (11) 99999-9999")
-      }
-
-      const response = await fetch("/api/phone/request-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          email: currentUserEmail,
-          countryCode: countryCode,
-        }),
-      })
-      
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || `Erro ao enviar código (${response.status})`)
-      }
-
-      setCodeSent(true)
-      toast({
-        title: "Código enviado",
-        description: "Verifique seu WhatsApp para o código de verificação.",
-      })
-    } catch (err: any) {
-      setPhoneValidationError(err.message || "Erro ao solicitar verificação")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
-
-  const submitPhoneVerification = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    setPhoneValidationError("")
-    setPhoneValidationLoading(true)
-
-    try {
-      const cleanPhone = phoneInput.replace(/\D/g, "")
-
-      const response = await fetch("/api/phone/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          email: currentUserEmail,
-          code: verificationCode,
-          isProfessional: isProfessionalCheckbox,
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.message || `Erro ao verificar código (${response.status})`)
-      }
-
-      const data = await response.json()
-      setPhoneValidationError("")
-      setPhoneInput("")
-      setVerificationCode("")
-      setCodeSent(false)
-      setPhoneVerifiedInFlow(true)
-      
-      toast({
-        title: "Telefone verificado!",
-        description: "Você pode agora manifestar interesse.",
-      })
-    } catch (err: any) {
-      setPhoneValidationError(err.message || "Erro ao verificar código")
-    } finally {
-      setPhoneValidationLoading(false)
-    }
-  }
 
   const handleManifestInterest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -223,107 +121,42 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
               onSubmit={(e) => {
                 e.preventDefault()
                 
-                // Se telefone não validado
-                if (!phoneVerified) {
-                  if (codeSent) {
-                    submitPhoneVerification(e)
-                  } else {
-                    requestPhoneVerification(e)
-                  }
-                  return
-                }
+                // Phone validation happens inside WhatsAppVerificationPanel.
+                if (!phoneVerified) return
                 
                 // Se telefone validado, verificar créditos e manifestar interesse
                 handleManifestInterest(e)
               }} 
               className="space-y-4"
             >
-              {!phoneVerified && !codeSent && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <div className="flex gap-2 items-end">
-                      <div className="flex-shrink-0">
-                        <select
-                          id="country"
-                          value={countryCode}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                          disabled={phoneValidationLoading}
-                          className="px-2 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 h-10"
-                        >
-                          {COUNTRIES.map((country) => (
-                            <option key={`${country.code}-${country.name}`} value={country.code}>
-                              {country.flag} {country.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="11 99123-4567"
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(formatPhoneInput(e.target.value))}
-                        disabled={phoneValidationLoading}
-                        className="text-base flex-1"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Digite seu telefone com DDD
-                    </p>
-                  </div>
-                  {phoneValidationError && (
-                    <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                      <div className="flex gap-3">
-                        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+              {!phoneVerified && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
                     <input
                       id="professional-checkbox"
                       type="checkbox"
-                      required
-                      aria-required="true"
                       checked={isProfessionalCheckbox}
                       onChange={(e) => setIsProfessionalCheckbox(e.target.checked)}
-                      className="w-4 h-4 rounded"
-                      disabled={phoneValidationLoading}
+                      className="h-4 w-4 rounded"
                     />
-                    <Label htmlFor="professional-checkbox" className="cursor-pointer mb-0">
+                    <Label htmlFor="professional-checkbox" className="mb-0 cursor-pointer">
                       Sou profissional <span className="text-muted-foreground">(obrigatório)</span>
                     </Label>
                   </div>
-                </>
-              )}
-
-              {!phoneVerified && codeSent && (
-                <>
-                  <div>
-                    <Label htmlFor="code">Código de Verificação</Label>
-                    <Input
-                      id="code"
-                      type="text"
-                      placeholder="000000"
-                      value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      maxLength={6}
-                      disabled={phoneValidationLoading}
+                  {isProfessionalCheckbox ? (
+                    <WhatsAppVerificationPanel
+                      isProfessional
+                      onVerified={(_phone, message) => {
+                        setPhoneVerifiedInFlow(true)
+                        toast({ title: "Telefone verificado!", description: message, variant: "success" })
+                      }}
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Código enviado para {phoneInput} via WhatsApp
+                  ) : (
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Para manifestar interesse, confirme que é profissional e valide seu WhatsApp.
                     </p>
-                  </div>
-                  {phoneValidationError && (
-                    <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                      <div className="flex gap-3">
-                        <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-700 dark:text-red-300">{phoneValidationError}</p>
-                      </div>
-                    </div>
                   )}
-                </>
+                </div>
               )}
 
               {phoneVerified && (
@@ -363,18 +196,14 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   variant="outline"
                   onClick={onClose}
                   className="flex-1"
-                  disabled={isSubmitting || phoneValidationLoading}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </Button>
+                {phoneVerified && (
                 <Button
                   type="submit"
-                  disabled={
-                    isSubmitting ||
-                    phoneValidationLoading ||
-                    (!phoneVerified && phoneInput.length === 0) ||
-                    (!phoneVerified && !isProfessionalCheckbox)
-                  }
+                  disabled={isSubmitting}
                   onClick={(e) => {
                     // Se telefone validado mas sem créditos, abrir modal
                     if (phoneVerified && isProfessional && !canExpress && !hasPaidPlan) {
@@ -385,17 +214,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                   }}
                   className="flex-1 gap-2"
                 >
-                  {phoneValidationLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Verificando...
-                    </>
-                  ) : !phoneVerified ? (
-                    <>
-                      <Phone className="h-4 w-4" />
-                      {codeSent ? "Verificar Código" : "Enviar Código"}
-                    </>
-                  ) : isSubmitting ? (
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Manifestando...
@@ -412,6 +231,7 @@ export default function InterestDialog({ need, isOpen, onClose, currentUserEmail
                     </>
                   )}
                 </Button>
+                )}
               </div>
             </form>
           </DialogContent>
