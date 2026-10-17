@@ -8,7 +8,9 @@ import {
   generateVerificationCode,
 } from "@/lib/whatsapp-verification"
 
-export async function POST() {
+export async function POST(request: Request) {
+  const { fresh } = (await request.json().catch(() => ({}))) as { fresh?: boolean }
+
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -20,6 +22,26 @@ export async function POST() {
 
   const admin = createServiceClient()
   const email = user.email.toLowerCase()
+
+  // Coming back from WhatsApp remounts the panel (and mobile browsers often reload the tab),
+  // so resume the open attempt instead of discarding a number that already arrived.
+  if (!fresh) {
+    const { data: open } = await admin
+      .from("whatsapp_phone_verifications")
+      .select("id, code, status, expires_at")
+      .eq("user_email", email)
+      .in("status", ["pending", "received"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const isUsable = open && (open.status === "received" || new Date(open.expires_at) > new Date())
+    const link = open ? buildWhatsAppLink(open.code) : null
+    if (isUsable && link) {
+      return NextResponse.json({ id: open.id, code: open.code, link, expiresAt: open.expires_at })
+    }
+  }
+
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 
   const { count } = await admin

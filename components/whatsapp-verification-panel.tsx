@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, CheckCircle2, Loader2, MessageCircle, RefreshCw } from "lucide-react"
+import { buildAndroidAppLink, isAndroid } from "@/lib/whatsapp-app-link"
 
 type Status = "pending" | "received" | "confirmed" | "rejected" | "expired"
 
@@ -34,6 +35,7 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
   const [isStarting, setIsStarting] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
   const [error, setError] = useState("")
+  const [onAndroid, setOnAndroid] = useState(false)
   const startedRef = useRef(false)
 
   const { data, mutate } = useSWR<StatusResponse>(
@@ -47,11 +49,15 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
 
   const status: Status | undefined = data?.status
 
-  const start = async () => {
+  const start = async (fresh = false) => {
     setIsStarting(true)
     setError("")
     try {
-      const res = await fetch("/api/phone/whatsapp-verification/start", { method: "POST" })
+      const res = await fetch("/api/phone/whatsapp-verification/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fresh }),
+      })
       const body = await res.json()
       if (!res.ok) throw new Error(body.message || "Não foi possível gerar o código.")
       setAttempt({ id: body.id, code: body.code, link: body.link })
@@ -65,6 +71,7 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
   useEffect(() => {
     if (startedRef.current) return
     startedRef.current = true
+    setOnAndroid(isAndroid())
     start()
   }, [])
 
@@ -145,7 +152,7 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
                 : "O código expirou. Gere um novo para continuar."}
             </p>
           )}
-          <Button type="button" variant="outline" className="gap-2" disabled={isStarting} onClick={start}>
+          <Button type="button" variant="outline" className="gap-2" disabled={isStarting} onClick={() => start(true)}>
             {isStarting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Gerar novo código
           </Button>
@@ -163,12 +170,29 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
             <span className="font-mono text-2xl font-semibold tracking-widest">{attempt.code}</span>
           </div>
 
-          <Button asChild className="gap-2 bg-[#25D366] text-[#0b141a] hover:bg-[#1ebe5b]">
-            <a href={attempt.link} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4" />
-              Enviar pelo WhatsApp
-            </a>
-          </Button>
+          {onAndroid ? (
+            <div className="flex flex-col gap-2">
+              <Button asChild className="gap-2 bg-[#25D366] text-[#0b141a] hover:bg-[#1ebe5b]">
+                <a href={buildAndroidAppLink(attempt.link, "personal")}>
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar pelo WhatsApp
+                </a>
+              </Button>
+              <Button asChild variant="outline" className="gap-2">
+                <a href={buildAndroidAppLink(attempt.link, "business")}>
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar pelo WhatsApp Business
+                </a>
+              </Button>
+            </div>
+          ) : (
+            <Button asChild className="gap-2 bg-[#25D366] text-[#0b141a] hover:bg-[#1ebe5b]">
+              <a href={attempt.link} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-4 w-4" />
+                Enviar pelo WhatsApp
+              </a>
+            </Button>
+          )}
 
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-live="polite">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
