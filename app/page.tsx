@@ -146,7 +146,7 @@ export default function Home() {
         </div>
       )}
 
-      <section className="relative overflow-hidden flex-grow">
+      <section className="relative overflow-clip flex-grow">
         {isLogged ? (
           <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
         ) : (
@@ -158,9 +158,15 @@ export default function Home() {
               <div className="w-full max-w-sm">
                 <div className="text-center mb-6">
                   <div className="flex justify-center mb-4">
-                    <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
+                    <Image
+                      src="/logo.png"
+                      alt="Freejob Logo"
+                      width={80}
+                      height={80}
+                      className="rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.6),0_0_0_4px_rgba(5,13,31,0.55)]"
+                    />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight drop-shadow-md">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.85),0_4px_16px_rgba(0,0,0,0.7)]">
                     <span className="text-[#6B93FF]" translate="no">
                       Freejob
                     </span>
@@ -168,12 +174,14 @@ export default function Home() {
                       prático e do seu jeito
                     </span>
                   </h1>
-                  <p className="text-sm text-blue-100/80 mt-2 text-pretty drop-shadow">
+                  <p className="text-sm text-blue-100/80 mt-2 text-pretty [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_12px_rgba(0,0,0,0.7)]">
                     Solicite ou procure serviço com facilidade
                   </p>
                 </div>
 
-                <AuthForm />
+                <div className="rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.65),0_2px_8px_rgba(0,0,0,0.45)]">
+                  <AuthForm />
+                </div>
               </div>
             </div>
           ) : (
