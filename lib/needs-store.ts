@@ -356,19 +356,30 @@ export async function addNeedProposal(params: {
   whenISO?: string
   bidAmount?: number
 }): Promise<NeedProposal> {
+  // Interests consume credits, so they must go through expressInterest (interest-manager).
+  if (params.type === "interest_only") {
+    throw new Error("Use a manifestação de interesse para registrar interesse.")
+  }
+
   try {
     const supabase = await createSupabaseServerClient()
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser()
+    if (!sessionUser?.email) {
+      throw new Error("Sua sessão expirou. Entre novamente para continuar.")
+    }
     const now = new Date().toISOString()
 
     const { data, error } = await supabase
       .from("need_proposals")
       .insert({
         need_id: params.needId,
-        professional_email: params.professionalEmail,
+        professional_email: sessionUser.email,
         type: params.type,
         message: params.message || undefined,
         when_iso: params.whenISO || undefined,
-        status: params.type === "interest_only" ? "interested" : "pending",
+        status: "pending",
         created_at: now,
         bid_amount: params.bidAmount,
       })
@@ -379,26 +390,7 @@ export async function addNeedProposal(params: {
       throw new Error(`Falha ao adicionar proposta: ${String(error.message || "Erro desconhecido")}`)
     }
 
-    if (params.type === "interest_only") {
-      const { data: needData } = await supabase
-        .from("needs")
-        .select("requester_email, title")
-        .eq("id", params.needId)
-        .single()
-
-      if (needData) {
-        console.log("[v0] Creating interest notification for:", needData.requester_email)
-        const notificationResult = await createNotification(
-          needData.requester_email,
-          "Novo interesse em seu serviço",
-          `Um profissional demonstrou interesse em "${needData.title}"`,
-          "interest",
-          params.needId,
-          data.id,
-        )
-        console.log("[v0] Interest notification result:", notificationResult)
-      }
-    } else {
+    {
       const { data: needData } = await supabase
         .from("needs")
         .select("requester_email, title")

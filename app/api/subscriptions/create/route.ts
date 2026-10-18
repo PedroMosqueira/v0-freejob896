@@ -8,7 +8,17 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] POST /api/subscriptions/create called")
     const body = await request.json()
-    const { email, planSlug, billingCycle, needId } = body
+    const { planSlug, billingCycle, needId } = body
+
+    const authClient = await createSupabaseServerClient()
+    const {
+      data: { user: sessionUser },
+    } = await authClient.auth.getUser()
+    if (!sessionUser?.email) {
+      return NextResponse.json({ error: "Entre na sua conta para assinar um plano." }, { status: 401 })
+    }
+    // The checkout is always for the logged-in account, never an email sent by the browser.
+    const email = sessionUser.email
     const pendingNeedId =
       typeof needId === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(needId) ? needId : null
 

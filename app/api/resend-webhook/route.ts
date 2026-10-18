@@ -1,100 +1,57 @@
-// app/api/resend-webhook/route.ts
-// Webhook para receber eventos do Resend e registrar logs detalhados
+import { createHmac, timingSafeEqual } from "crypto"
+import { type NextRequest, NextResponse } from "next/server"
 
-import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
-
-// Tipos de eventos do Resend
 interface ResendEvent {
-  type: "email.sent" | "email.bounced" | "email.complained" | "email.failed" | "email.delivered" | "email.clicked" | "email.opened"
+  type: string
   created_at: string
   data: {
     email_id: string
-    from: string
-    to: string
-    subject?: string
-    message?: string
+    to: string | string[]
     reason?: string
   }
 }
 
+const MAX_CLOCK_SKEW_SECONDS = 5 * 60
+
+// Resend signs webhooks with Svix: HMAC-SHA256 over "id.timestamp.body", keyed by the
+// base64 part of the "whsec_..." secret from the Resend dashboard.
+function isValidSignature(secret: string, id: string, timestamp: string, body: string, header: string) {
+  const timestampSeconds = Number(timestamp)
+  if (!Number.isFinite(timestampSeconds)) return false
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > MAX_CLOCK_SKEW_SECONDS) return false
+
+  const key = Buffer.from(secret.replace(/^whsec_/, ""), "base64")
+  const expected = createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest()
+
+  return header.split(" ").some((part) => {
+    const [version, signature] = part.split(",")
+    if (version !== "v1" || !signature) return false
+    const received = Buffer.from(signature, "base64")
+    return received.length === expected.length && timingSafeEqual(received, expected)
+  })
+}
+
 export async function POST(request: NextRequest) {
-  try {
-    console.log("[v0] ========== WEBHOOK RESEND RECEBIDO ==========")
-    console.log("[v0] Timestamp:", new Date().toISOString())
+  const secret = process.env.RESEND_WEBHOOK_SECRET
+  const id = request.headers.get("svix-id")
+  const timestamp = request.headers.get("svix-timestamp")
+  const signature = request.headers.get("svix-signature")
+  const rawBody = await request.text()
 
-    const body = (await request.json()) as ResendEvent
-
-    console.log("[v0] Tipo de evento:", body.type)
-    console.log("[v0] Email ID:", body.data.email_id)
-    console.log("[v0] De:", body.data.from)
-    console.log("[v0] Para:", body.data.to)
-    console.log("[v0] Criado em:", body.created_at)
-
-    // Processar diferentes tipos de eventos
-    switch (body.type) {
-      case "email.sent":
-        console.log("[v0] ✅ EMAIL ENVIADO COM SUCESSO")
-        console.log("[v0] Email foi aceito pelo provedor de email")
-        break
-
-      case "email.delivered":
-        console.log("[v0] 📬 EMAIL ENTREGUE")
-        console.log("[v0] Email chegou na caixa de entrada do destinatário")
-        break
-
-      case "email.bounced":
-        console.log("[v0] ⚠️ EMAIL REJEITADO (BOUNCE)")
-        console.log("[v0] Razão:", body.data.reason || "Desconhecida")
-        console.log("[v0] Possíveis motivos:")
-        console.log("[v0]   - Email de destino não existe")
-        console.log("[v0]   - Domínio de destino não existe")
-        console.log("[v0]   - Servidor de destino rejeitou temporariamente")
-        console.log("[v0]   - Email está na lista negra")
-        break
-
-      case "email.complained":
-        console.log("[v0] 🚨 EMAIL MARCADO COMO SPAM")
-        console.log("[v0] Destinatário marcou como spam/reclamação")
-        break
-
-      case "email.failed":
-        console.log("[v0] ❌ FALHA NO ENVIO DO EMAIL")
-        console.log("[v0] Razão:", body.data.reason || "Desconhecida")
-        console.log("[v0] Possíveis motivos:")
-        console.log("[v0]   - Erro temporário no Resend")
-        console.log("[v0]   - Serviço de email indisponível")
-        console.log("[v0]   - Limite de taxa atingido")
-        console.log("[v0]   - Configuração SMTP incorreta")
-        break
-
-      case "email.opened":
-        console.log("[v0] 👁️ EMAIL ABERTO")
-        console.log("[v0] Destinatário abriu o email")
-        break
-
-      case "email.clicked":
-        console.log("[v0] 🖱️ LINK CLICADO")
-        console.log("[v0] Destinatário clicou em um link no email")
-        break
-
-      default:
-        console.log("[v0] ❓ Tipo de evento desconhecido:", body.type)
-    }
-
-    console.log("[v0] ✅ Webhook processado com sucesso")
-    return NextResponse.json({ success: true, received: true })
-  } catch (error) {
-    console.error("[v0] ❌ ERRO ao processar webhook:")
-    console.error("[v0] Tipo:", error instanceof Error ? error.constructor.name : typeof error)
-    console.error("[v0] Mensagem:", error instanceof Error ? error.message : String(error))
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    )
+  if (!secret || !id || !timestamp || !signature || !isValidSignature(secret, id, timestamp, rawBody, signature)) {
+    return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 })
   }
+
+  let event: ResendEvent
+  try {
+    event = JSON.parse(rawBody) as ResendEvent
+  } catch {
+    return NextResponse.json({ error: "Corpo inválido" }, { status: 400 })
+  }
+
+  if (["email.bounced", "email.complained", "email.failed"].includes(event.type)) {
+    console.warn("[resend-webhook]", event.type, event.data?.email_id, event.data?.reason ?? "")
+  }
+
+  return NextResponse.json({ received: true })
 }

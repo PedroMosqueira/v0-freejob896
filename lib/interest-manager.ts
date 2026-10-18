@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { getActiveInterestsCount } from "./simultaneous-interests"
-import { addNeedProposal } from "./needs-store"
+import { consumeInterestCredit, insertInterestProposal } from "./interest-proposal"
 import { PLAN_FEATURES } from "./subscription-manager"
 import { PAID_SUBSCRIPTION_STATUSES, isSubscriptionExpired } from "./subscription-status"
 
@@ -304,13 +304,9 @@ export async function expressInterest(needId: string): Promise<ExpressInterestRe
       }
     }
 
-    const proposal = await addNeedProposal({
-      needId,
-      professionalEmail: sessionEmail,
-      type: "interest_only",
-    })
+    const proposal = await insertInterestProposal(needId, sessionEmail)
 
-    const counter = await incrementInterestCount(sessionEmail, Boolean(permission.usesFreeCredit))
+    const counter = await consumeInterestCredit(sessionEmail, Boolean(permission.usesFreeCredit))
     if (!counter.success) {
       console.error("[v0-server] Interest saved but credit counter failed:", counter.error)
     }
@@ -321,68 +317,6 @@ export async function expressInterest(needId: string): Promise<ExpressInterestRe
     return {
       success: false,
       reason: error instanceof Error ? error.message : "Erro ao manifestar interesse.",
-    }
-  }
-}
-
-export async function incrementInterestCount(userEmail: string, consumeFreeCredit = true): Promise<{
-  success: boolean
-  error?: string
-  freeInterestsUsed?: number
-  freeInterestsRemaining?: number
-}> {
-  try {
-    const supabase = await createSupabaseServerClient()
-
-    // Buscar dados do usuário
-    const { data: users, error: userError } = await supabase
-      .from("users")
-      .select("is_professional, free_interests_remaining, total_interests_sent")
-      .eq("email", userEmail)
-      .limit(1)
-
-    if (userError || !users || users.length === 0) {
-      return {
-        success: false,
-        error: "Usuário não encontrado",
-      }
-    }
-
-    const user = users[0]
-
-    const currentFreeRemaining = Math.max(0, user.free_interests_remaining ?? 0)
-    const currentTotalSent = user.total_interests_sent ?? 0
-
-    // Assinantes não gastam crédito gratuito; os demais gastam 1 por interesse.
-    const newFreeRemaining =
-      consumeFreeCredit && currentFreeRemaining > 0 ? currentFreeRemaining - 1 : currentFreeRemaining
-
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({
-        free_interests_remaining: newFreeRemaining,
-        total_interests_sent: currentTotalSent + 1,
-      })
-      .eq("email", userEmail)
-
-    if (updateError) {
-      console.error("Erro ao atualizar contadores:", updateError)
-      return {
-        success: false,
-        error: "Erro ao registrar seu interesse",
-      }
-    }
-
-    return {
-      success: true,
-      freeInterestsUsed: 3 - newFreeRemaining,
-      freeInterestsRemaining: newFreeRemaining,
-    }
-  } catch (error) {
-    console.error("Erro ao incrementar contador de interesses:", error)
-    return {
-      success: false,
-      error: "Erro ao registrar seu interesse",
     }
   }
 }

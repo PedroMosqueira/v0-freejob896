@@ -21,6 +21,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServerClient()
 
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser()
+    if (!sessionUser?.email) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
+    }
+
     // Buscar proposta
     console.log("[v0] Creating checkout session for proposal:", proposalId)
     const { data: proposal, error: proposalError } = await supabase
@@ -39,6 +46,13 @@ export async function POST(request: NextRequest) {
       bidAmount: proposal.bid_amount,
       status: proposal.status,
     })
+
+    if (
+      proposal.need_id !== needId ||
+      proposal.needs?.requester_email?.toLowerCase() !== sessionUser.email.toLowerCase()
+    ) {
+      return NextResponse.json({ error: "Você não pode pagar esta proposta" }, { status: 403 })
+    }
 
     // Verificar se proposta foi aceita
     if (proposal.status !== "accepted_by_requester") {
