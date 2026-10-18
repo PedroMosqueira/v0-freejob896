@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/whatsapp-verification"
-import { grantFreeCreditsIfFirstTime } from "@/lib/phone-credits"
+import { grantFreeCreditsForPhone } from "@/lib/phone-credits"
+
+const PHONE_IN_USE_MESSAGE = "Este número já está cadastrado em outra conta. Tente com outro número."
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -70,7 +72,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from("whatsapp_phone_verifications")
       .update({ status: "rejected", resolved_at: now })
       .eq("id", id)
-    return NextResponse.json({ message: "Este número já está validado em outra conta." }, { status: 409 })
+    return NextResponse.json(
+      { message: PHONE_IN_USE_MESSAGE, phoneInUse: true },
+      { status: 409 },
+    )
   }
 
   // Claim the attempt first so a double click can't validate twice.
@@ -99,15 +104,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .ilike("email", email)
 
   if (updateError) {
+    await admin.from("whatsapp_phone_verifications").update({ status: "rejected" }).eq("id", id)
+
+    // The unique index on verified phones catches a race with another account validating the same number.
+    if (updateError.code === "23505") {
+      return NextResponse.json({ message: PHONE_IN_USE_MESSAGE, phoneInUse: true }, { status: 409 })
+    }
     return NextResponse.json({ message: "Erro ao salvar o telefone validado." }, { status: 500 })
   }
 
-  const { creditsGranted } = await grantFreeCreditsIfFirstTime(user.email)
+  const { creditsGranted } = await grantFreeCreditsForPhone(email, phone)
 
   return NextResponse.json({
     success: true,
     phone,
     creditsGranted,
-    message: creditsGranted ? "Telefone validado! Você recebeu 3 propostas gratuitas." : "Telefone validado com sucesso!",
+    message: creditsGranted
+      ? "Telefone validado! Você recebeu 3 propostas gratuitas."
+      : "Telefone validado! As propostas gratuitas deste número já foram concedidas antes.",
   })
 }
