@@ -1,6 +1,61 @@
 "use server"
 
+import { createClient } from "@supabase/supabase-js"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
+
+/**
+ * Tells the rated user they received a review: a bell entry plus its own push.
+ * Uses the service role because the rater can't insert notifications for someone else.
+ * Failures are logged and never block the rating itself.
+ */
+async function notifyRatingReceived(
+  ratedEmail: string,
+  stars: number,
+  comment: string | null,
+  needId: string | null,
+): Promise<void> {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) return
+
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
+    const { data: need } = needId
+      ? await admin.from("needs").select("title").eq("id", needId).maybeSingle()
+      : { data: null }
+
+    const title = `Você recebeu uma avaliação de ${stars} ${stars === 1 ? "estrela" : "estrelas"}`
+    const trimmedComment = comment?.trim()
+    const context = need?.title ? `em "${need.title}"` : ""
+    const message = trimmedComment
+      ? `${context ? `${context}: ` : ""}"${trimmedComment.length > 100 ? `${trimmedComment.slice(0, 100)}...` : trimmedComment}"`
+      : context
+        ? `Seu trabalho ${context} foi avaliado.`
+        : "Confira sua nova avaliação no seu perfil."
+
+    const { error } = await admin.from("notifications").insert({
+      user_id: ratedEmail,
+      title,
+      message,
+      type: "rating",
+      related_need_id: needId || null,
+      is_read: false,
+    })
+    if (error) console.error("[ratings] Failed to create rating notification:", error.message)
+
+    await safeSendPush(ratedEmail, {
+      title,
+      body: message,
+      data: { url: buildNotificationUrl(needId) },
+    })
+  } catch (error) {
+    console.error("[ratings] Failed to notify rating:", error)
+  }
+}
 
 async function getCurrentUser() {
   const supabase = await createSupabaseServerClient()
@@ -226,6 +281,8 @@ export async function createRating(
         .eq("status", "aguardando_avaliacao")
         .ilike("requester_email", user.email)
     }
+
+    await notifyRatingReceived(ratedUserEmail, rating, comment, needId)
 
     return { success: true, message: "Avaliação criada com sucesso!" }
   } catch (error) {
