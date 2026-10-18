@@ -2,6 +2,7 @@
 
 import { useFormState, useFormStatus } from "react-dom"
 import { useState } from "react"
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -773,6 +774,18 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           <input type="hidden" name="isProfessional" value={isProfessional ? "true" : "false"} />
           <input type="hidden" name="cpf" value={cpf} />
           <input type="hidden" name="professionalPhone" value={professionalPhone} />
+
+          <p className="text-center text-xs leading-relaxed text-muted-foreground">
+            Ao criar sua conta, você concorda com os{" "}
+            <Link href="/termos" target="_blank" className="text-blue-600 underline underline-offset-2">
+              Termos de uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" target="_blank" className="text-blue-600 underline underline-offset-2">
+              Política de privacidade
+            </Link>
+            .
+          </p>
 
           <SubmitButton />
 

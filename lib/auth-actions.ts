@@ -3,7 +3,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.service").replace(/\/$/, "")
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.services").replace(/\/$/, "")
 
 export async function checkUserStatus(prevState: any, formData: FormData) {
   const email = formData.get("email")
