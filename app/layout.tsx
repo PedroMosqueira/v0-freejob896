@@ -14,11 +14,35 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const dynamic = "force-dynamic"
 
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.service").replace(/\/$/, "")
+const SITE_DESCRIPTION =
+  "Publique o serviço que você precisa e receba propostas de profissionais perto de você, ou encontre clientes para o seu trabalho."
+
 export const metadata: Metadata = {
-  title: "Freejob",
-  description: "Encontre ou ofereça serviços de forma fácil e rápida.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Freejob – Encontre ou ofereça serviços perto de você",
+    template: "%s | Freejob",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: "Freejob",
+  keywords: ["serviços", "profissionais", "freelancer", "orçamento", "prestadores de serviço", "Freejob"],
   icons: {
     icon: "/favicon.ico",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName: "Freejob",
+    title: "Freejob – Encontre ou ofereça serviços perto de você",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Freejob – Encontre ou ofereça serviços perto de você",
+    description: SITE_DESCRIPTION,
   },
   generator: "v0.app",
 }
@@ -31,7 +55,7 @@ export default async function RootLayout({
   console.log("[v0] 🔵 RootLayout carregado")
 
   return (
-    <html lang="en" translate="no" suppressHydrationWarning>
+    <html lang="pt-BR" translate="no" className="bg-background" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
