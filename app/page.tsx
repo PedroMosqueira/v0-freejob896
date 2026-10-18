@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth"
 import RequestForm from "@/components/request-form"
 import SearchRequests from "@/components/search-requests"
 import { AuthForm } from "@/components/auth-form"
+import { LoginBackground } from "@/components/login-background"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
 import { SiteFooter } from "@/components/site-footer"
@@ -146,7 +147,11 @@ export default function Home() {
       )}
 
       <section className="relative overflow-hidden flex-grow">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
+        {isLogged ? (
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
+        ) : (
+          <LoginBackground />
+        )}
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
             <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
@@ -155,15 +160,15 @@ export default function Home() {
                   <div className="flex justify-center mb-4">
                     <Image src="/logo.png" alt="Freejob Logo" width={80} height={80} className="rounded-full" />
                   </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight">
-                    <span className="text-[#4F7CFF]" translate="no">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight drop-shadow-md">
+                    <span className="text-[#6B93FF]" translate="no">
                       Freejob
                     </span>
-                    <span className="block text-[#4F7CFF] text-sm sm:text-base font-medium">
+                    <span className="block text-blue-100 text-sm sm:text-base font-medium">
                       prático e do seu jeito
                     </span>
                   </h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                  <p className="text-sm text-blue-100/80 mt-2 text-pretty drop-shadow">
                     Solicite ou procure serviço com facilidade
                   </p>
                 </div>
