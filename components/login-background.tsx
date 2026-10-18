@@ -1,66 +1,90 @@
+import type { LucideIcon } from "lucide-react"
+import { Camera, Car, ChefHat, Hammer, Laptop, PawPrint, Scissors, Truck } from "lucide-react"
+
 type Point = [number, number]
 type Avatar = { service: string; label: string; at: Point }
+type IconNode = { icon: LucideIcon; label: string; at: Point }
 
 type CircuitLayout = {
   avatars: Avatar[]
+  icons: IconNode[]
   trunk: Point[][]
   branches: Point[][]
-  terminals: Point[]
 }
 
-const mirror = (points: Point[]): Point[] => points.map(([x, y]) => [100 - x, y])
-const mirrorAll = (paths: Point[][]) => [...paths, ...paths.map(mirror)]
-
 const ROOTS: Point[][] = [
-  [[50, 90], [45, 96], [36, 100]],
+  [[50, 89], [44, 95], [33, 100]],
   [[50, 95], [47, 100]],
-]
-
-const MOBILE_LEFT: Point[][] = [
-  [[50, 86], [42, 80], [16, 80], [10, 74], [10, 72]],
-  [[50, 70], [42, 64], [16, 64], [8, 56], [8, 38], [10, 32]],
-  [[50, 56], [42, 50], [28, 50], [22, 44], [22, 24], [14, 16], [14, 10]],
-  [[22, 30], [30, 22]],
-  [[30, 64], [30, 58]],
-  [[28, 80], [28, 72]],
+  [[50, 92], [57, 97], [64, 100]],
+  [[50, 97], [53, 100]],
 ]
 
 const MOBILE: CircuitLayout = {
-  trunk: [[[50, 100], [50, 56]], ...mirrorAll(ROOTS)],
-  branches: mirrorAll(MOBILE_LEFT),
-  avatars: [
-    { service: "eletricista", label: "Eletricista", at: [14, 10] },
-    { service: "pintor", label: "Pintor", at: [10, 32] },
-    { service: "jardineiro", label: "Jardineiro", at: [10, 72] },
-    { service: "diarista", label: "Diarista", at: [86, 10] },
-    { service: "encanador", label: "Encanador", at: [90, 32] },
-    { service: "montador", label: "Montador", at: [90, 72] },
+  trunk: [[[50, 100], [50, 48]], ...ROOTS],
+  branches: [
+    [[50, 86], [40, 80], [22, 80], [14, 86], [14, 90]],
+    [[30, 80], [30, 94]],
+    [[50, 68], [40, 60], [16, 60], [7, 52], [7, 36], [10, 30]],
+    [[50, 54], [42, 48], [26, 48], [20, 42], [20, 18], [12, 10], [12, 8]],
+    [[20, 28], [30, 20]],
+    [[50, 92], [58, 88], [76, 88], [84, 84]],
+    [[66, 88], [66, 96]],
+    [[50, 64], [58, 56], [80, 56], [90, 46], [90, 28]],
+    [[50, 48], [60, 40], [72, 40], [76, 36], [76, 24], [84, 16], [86, 12]],
+    [[76, 30], [68, 24]],
   ],
-  terminals: [[30, 22], [70, 22], [30, 58], [70, 58], [28, 72], [72, 72]],
+  avatars: [
+    { service: "eletricista", label: "Eletricista", at: [12, 8] },
+    { service: "pintor", label: "Pintor", at: [10, 30] },
+    { service: "jardineiro", label: "Jardineiro", at: [14, 90] },
+    { service: "diarista", label: "Diarista", at: [86, 12] },
+    { service: "encanador", label: "Encanador", at: [90, 28] },
+    { service: "montador", label: "Montador", at: [84, 84] },
+  ],
+  icons: [
+    { icon: Hammer, label: "Marceneiro", at: [30, 20] },
+    { icon: Scissors, label: "Cabeleireiro", at: [68, 24] },
+    { icon: PawPrint, label: "Pet", at: [30, 94] },
+    { icon: Car, label: "Mecânico", at: [66, 96] },
+  ],
 }
 
-const DESKTOP_LEFT: Point[][] = [
-  [[50, 86], [42, 78], [14, 78], [8, 70]],
-  [[50, 68], [42, 60], [28, 60], [20, 54], [20, 50]],
-  [[50, 54], [44, 50], [34, 50], [22, 38], [14, 30], [14, 22]],
-  [[42, 78], [34, 70], [34, 64]],
-  [[28, 60], [12, 60], [6, 54], [6, 46]],
-  [[30, 46], [30, 32]],
-  [[14, 30], [6, 30], [6, 20]],
-]
-
 const DESKTOP: CircuitLayout = {
-  trunk: [[[50, 100], [50, 54]], ...mirrorAll(ROOTS)],
-  branches: mirrorAll(DESKTOP_LEFT),
-  avatars: [
-    { service: "eletricista", label: "Eletricista", at: [14, 22] },
-    { service: "diarista", label: "Diarista", at: [20, 50] },
-    { service: "pintor", label: "Pintor", at: [8, 70] },
-    { service: "encanador", label: "Encanador", at: [86, 22] },
-    { service: "jardineiro", label: "Jardineiro", at: [80, 50] },
-    { service: "montador", label: "Montador", at: [92, 70] },
+  trunk: [[[50, 100], [50, 60]], ...ROOTS],
+  branches: [
+    [[50, 90], [43, 83], [14, 83], [9, 77], [9, 72]],
+    [[26, 83], [26, 73]],
+    [[50, 72], [40, 64], [22, 64], [22, 48]],
+    [[22, 64], [12, 64], [5, 57], [5, 46]],
+    [[50, 60], [44, 56], [32, 56], [32, 40], [22, 30], [16, 24], [16, 18]],
+    [[32, 40], [38, 34], [38, 28]],
+    [[16, 24], [6, 24], [6, 14]],
+    [[50, 94], [56, 88], [80, 88], [88, 80], [88, 64]],
+    [[70, 88], [70, 80], [76, 74]],
+    [[50, 66], [58, 60], [72, 60], [76, 56], [76, 40]],
+    [[76, 48], [88, 48], [94, 42]],
+    [[50, 60], [54, 56], [70, 56], [70, 30], [76, 24], [84, 24], [84, 12]],
+    [[70, 36], [62, 30], [62, 26]],
+    [[84, 24], [94, 24], [94, 30]],
   ],
-  terminals: [[34, 64], [66, 64], [6, 46], [94, 46], [30, 32], [70, 32], [6, 20], [94, 20]],
+  avatars: [
+    { service: "eletricista", label: "Eletricista", at: [16, 18] },
+    { service: "diarista", label: "Diarista", at: [22, 48] },
+    { service: "pintor", label: "Pintor", at: [9, 72] },
+    { service: "encanador", label: "Encanador", at: [84, 12] },
+    { service: "jardineiro", label: "Jardineiro", at: [76, 40] },
+    { service: "montador", label: "Montador", at: [88, 64] },
+  ],
+  icons: [
+    { icon: Hammer, label: "Marceneiro", at: [26, 73] },
+    { icon: ChefHat, label: "Cozinheira", at: [5, 46] },
+    { icon: Camera, label: "Fotógrafo", at: [38, 28] },
+    { icon: Truck, label: "Mudanças", at: [6, 14] },
+    { icon: Car, label: "Mecânico", at: [76, 74] },
+    { icon: PawPrint, label: "Pet", at: [94, 42] },
+    { icon: Scissors, label: "Cabeleireiro", at: [94, 30] },
+    { icon: Laptop, label: "Informática", at: [62, 26] },
+  ],
 }
 
 const toPath = (points: Point[]) =>
@@ -96,12 +120,15 @@ function CircuitLayer({ layout, className }: { layout: CircuitLayout; className:
         ))}
       </svg>
 
-      {layout.terminals.map(([x, y]) => (
+      {layout.icons.map(({ icon: Icon, label, at: [x, y] }) => (
         <span
-          key={`${x}-${y}`}
-          className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#9DB8FF] bg-[#050d1f] shadow-[0_0_10px_2px_rgba(107,147,255,0.7)] md:size-4"
+          key={label}
+          title={label}
+          className="absolute flex size-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-[#9DB8FF] bg-[#0a1a3d] text-[#E6EDFF] shadow-[0_0_12px_2px_rgba(107,147,255,0.7)] md:size-9"
           style={{ left: `${x}%`, top: `${y}%` }}
-        />
+        >
+          <Icon className="size-3.5 md:size-4" strokeWidth={2.25} />
+        </span>
       ))}
 
       {layout.avatars.map((avatar, index) => (
