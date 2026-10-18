@@ -1,9 +1,14 @@
-import type { LucideIcon } from "lucide-react"
-import { Camera, Car, ChefHat, Hammer, Laptop, PawPrint, Scissors, Truck } from "lucide-react"
+import type { ComponentType } from "react"
+import { Hammer, Laptop, PaintRoller, Snowflake, Wrench, Zap } from "lucide-react"
+import { FaucetIcon, TrowelIcon } from "@/components/niche-icons"
 
 type Point = [number, number]
 type Avatar = { service: string; label: string; at: Point }
-type IconNode = { icon: LucideIcon; label: string; at: Point }
+type IconNode = {
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>
+  label: string
+  at: Point
+}
 
 type CircuitLayout = {
   avatars: Avatar[]
@@ -43,9 +48,9 @@ const MOBILE: CircuitLayout = {
   ],
   icons: [
     { icon: Hammer, label: "Marceneiro", at: [30, 20] },
-    { icon: Scissors, label: "Cabeleireiro", at: [68, 24] },
-    { icon: PawPrint, label: "Pet", at: [30, 94] },
-    { icon: Car, label: "Mecânico", at: [66, 96] },
+    { icon: Zap, label: "Elétrica", at: [68, 24] },
+    { icon: TrowelIcon, label: "Pedreiro", at: [30, 94] },
+    { icon: FaucetIcon, label: "Hidráulica", at: [66, 96] },
   ],
 }
 
@@ -77,12 +82,12 @@ const DESKTOP: CircuitLayout = {
   ],
   icons: [
     { icon: Hammer, label: "Marceneiro", at: [26, 73] },
-    { icon: ChefHat, label: "Cozinheira", at: [5, 46] },
-    { icon: Camera, label: "Fotógrafo", at: [38, 28] },
-    { icon: Truck, label: "Mudanças", at: [6, 14] },
-    { icon: Car, label: "Mecânico", at: [76, 74] },
-    { icon: PawPrint, label: "Pet", at: [94, 42] },
-    { icon: Scissors, label: "Cabeleireiro", at: [94, 30] },
+    { icon: TrowelIcon, label: "Pedreiro", at: [5, 46] },
+    { icon: Zap, label: "Elétrica", at: [38, 28] },
+    { icon: FaucetIcon, label: "Hidráulica", at: [6, 14] },
+    { icon: Wrench, label: "Manutenção", at: [76, 74] },
+    { icon: PaintRoller, label: "Pintura", at: [94, 42] },
+    { icon: Snowflake, label: "Ar-condicionado", at: [94, 30] },
     { icon: Laptop, label: "Informática", at: [62, 26] },
   ],
 }
