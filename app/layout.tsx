@@ -8,6 +8,7 @@ import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
+import { Analytics } from "@vercel/analytics/next"
 import { InstallAppDialog } from "@/components/install-app-dialog"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -125,6 +126,7 @@ export default async function RootLayout({
         </ThemeProvider>
 
         <Script src="/register-sw.js" strategy="beforeInteractive" />
+        <Analytics />
       </body>
     </html>
   )

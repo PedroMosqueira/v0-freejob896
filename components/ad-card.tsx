@@ -38,7 +38,7 @@ export function AdCard({ className = '' }: AdCardProps) {
       </ul>
 
       <Link
-        href="/upgrade"
+        href="/planos"
         className="block w-full py-2.5 bg-white text-blue-600 font-semibold text-center rounded-lg hover:bg-blue-50 transition-colors"
       >
         Assinar por R$ 29,90/mês

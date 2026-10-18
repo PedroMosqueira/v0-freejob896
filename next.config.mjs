@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    // /planos is the single plans page; old links and bookmarks land there.
+    return [{ source: "/upgrade", destination: "/planos", permanent: true }]
+  },
   async headers() {
     return [
       {

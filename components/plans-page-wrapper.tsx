@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
 import { CheckoutReturn } from "@/components/checkout-return"
+import { SubscriptionManagement } from "@/components/subscription-management"
 import { FREE_PLAN_RULES, SUBSCRIPTION_PRODUCTS, type SubscriptionProduct } from "@/lib/stripe-products"
 
 const priceFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
@@ -75,6 +76,8 @@ export function PlansPageWrapper() {
             Cobrança mensal no cartão. A diferença entre os planos é quantos serviços você atende ao mesmo tempo.
           </p>
         </header>
+
+        {hasPaidPlan && <SubscriptionManagement />}
 
         {error && (
           <div
