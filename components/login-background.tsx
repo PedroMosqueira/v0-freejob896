@@ -163,7 +163,7 @@ function CircuitLayer({ layout, className }: { layout: CircuitLayout; className:
 
 export function LoginBackground() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#050d1f]" aria-hidden="true">
+    <div className="absolute inset-0 overflow-clip bg-[#050d1f]" aria-hidden="true">
       <style>{`
         @keyframes login-circuit-flow { to { stroke-dashoffset: -96; } }
         @keyframes login-circuit-halo { 0%, 100% { opacity: 0.35; transform: scale(0.95); } 50% { opacity: 0.9; transform: scale(1.1); } }

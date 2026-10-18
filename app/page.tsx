@@ -146,7 +146,7 @@ export default function Home() {
         </div>
       )}
 
-      <section className="relative overflow-hidden flex-grow">
+      <section className="relative overflow-clip flex-grow">
         {isLogged ? (
           <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 via-blue-50/30 to-transparent dark:from-gray-900/50 dark:via-gray-950/30 dark:to-transparent" />
         ) : (
