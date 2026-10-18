@@ -24,7 +24,7 @@ const nextConfig = {
           // Logged-in pages with payments and chat: block embedding by other sites (clickjacking).
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           // Location is used to find nearby services; camera and microphone are not used.
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(self)" },
         ],
       },
     ]
