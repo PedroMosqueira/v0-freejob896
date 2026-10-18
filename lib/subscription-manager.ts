@@ -30,7 +30,6 @@ export const PLAN_FEATURES = {
       interests_per_month: 3, // 3 interesses grátis
       simultaneous_interests: FREE_PLAN_RULES.simultaneousServices,
       bids_per_month: -1, // ilimitado
-      has_ads: true,
       priority_support: false,
       profile_boost: false,
     },
@@ -43,7 +42,6 @@ export const PLAN_FEATURES = {
       interests_per_month: -1, // ilimitado
       simultaneous_interests: SIMPLES.simultaneousServices,
       bids_per_month: -1,
-      has_ads: true,
       priority_support: false,
       profile_boost: false,
     },
@@ -56,7 +54,6 @@ export const PLAN_FEATURES = {
       interests_per_month: -1, // ilimitado
       simultaneous_interests: AGENCIA.simultaneousServices,
       bids_per_month: -1,
-      has_ads: false,
       priority_support: true,
       profile_boost: true,
     },

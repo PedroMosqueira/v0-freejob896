@@ -76,10 +76,9 @@ describe("limites de uso", () => {
     }
   })
 
-  it("só a Agência remove anúncios e impulsiona o perfil", () => {
-    expect(PLAN_FEATURES.free.limits.has_ads).toBe(true)
-    expect(PLAN_FEATURES.simples.limits.has_ads).toBe(true)
-    expect(PLAN_FEATURES.agencia.limits.has_ads).toBe(false)
+  it("só a Agência impulsiona o perfil", () => {
+    expect(PLAN_FEATURES.free.limits.profile_boost).toBe(false)
+    expect(PLAN_FEATURES.simples.limits.profile_boost).toBe(false)
     expect(PLAN_FEATURES.agencia.limits.profile_boost).toBe(true)
   })
 })

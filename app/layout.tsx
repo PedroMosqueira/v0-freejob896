@@ -107,13 +107,6 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Freejob" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXX"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
       </head>
       <body className={`${inter.className} bg-background text-foreground`}>
         <ThemeProvider defaultTheme="system" storageKey="freejob-theme">
