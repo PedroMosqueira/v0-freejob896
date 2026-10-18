@@ -1,6 +1,10 @@
-const CACHE_NAME = "freejob-shell-v2"
+const CACHE_NAME = "freejob-shell-v3"
 const OFFLINE_URL = "/offline.html"
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/badge-96.png"]
+const NOTIFICATION_ICON = "/icons/icon-192.png"
+// Android draws the badge as a single-color mask from the alpha channel only, so it must be
+// the white glyph on a transparent background — an opaque logo renders as a blank circle.
+const NOTIFICATION_BADGE = "/icons/notification-badge-96.png"
+const PRECACHE = [OFFLINE_URL, NOTIFICATION_ICON, NOTIFICATION_BADGE]
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)))
@@ -34,8 +38,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Freejob"
   const options = {
     body: data.body || "Você tem uma nova notificação",
-    icon: data.icon || "/icons/icon-192.png",
-    badge: data.badge || "/icons/badge-96.png",
+    icon: data.icon || NOTIFICATION_ICON,
+    badge: data.badge || NOTIFICATION_BADGE,
     tag: data.tag,
     renotify: Boolean(data.tag),
     data: { url: (data.data && data.data.url) || "/" },
