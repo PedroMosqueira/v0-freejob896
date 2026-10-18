@@ -121,6 +121,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     creditsGranted,
     message: creditsGranted
       ? "Telefone validado! Você recebeu 3 propostas gratuitas."
-      : "Telefone validado! As propostas gratuitas deste número já foram concedidas antes.",
+      : "Telefone validado com sucesso!",
   })
 }
