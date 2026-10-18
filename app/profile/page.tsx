@@ -11,6 +11,7 @@ import { Loader2, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { RatingsList } from "@/components/ratings-list"
+import { DeleteAccountSection } from "@/components/delete-account-section"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -87,6 +88,8 @@ export default function ProfilePage() {
         </div>
 
         <ProfileForm profile={profile} userEmail={email || ""} />
+
+        <DeleteAccountSection />
       </div>
     </div>
   )
