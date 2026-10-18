@@ -2,9 +2,9 @@ export function LoginBackground() {
   return (
     <div className="absolute inset-0" aria-hidden="true">
       <picture>
-        <source media="(min-width: 768px)" srcSet="/images/login-bg-desktop.jpg" />
+        <source media="(min-width: 768px)" srcSet="/images/login-bg-desktop-v2.jpg" />
         <img
-          src="/images/login-bg-mobile.jpg"
+          src="/images/login-bg-mobile-v2.jpg"
           alt=""
           width={768}
           height={1376}
