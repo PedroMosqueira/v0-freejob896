@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createClient } from "@supabase/supabase-js"
 import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
+import { sendNotificationEmail } from "@/lib/email-notifications"
 import type {
   Need,
   NewNeedInput,
@@ -1581,11 +1582,11 @@ async function createNotification(
 ): Promise<boolean> {
   const created = await insertNotificationRow(userEmail, title, message, type, relatedNeedId, relatedProposalId)
   if (created) {
-    await safeSendPush(userEmail, {
-      title,
-      body: message,
-      data: { url: buildNotificationUrl(relatedNeedId) },
-    })
+    const url = buildNotificationUrl(relatedNeedId)
+    await Promise.all([
+      safeSendPush(userEmail, { title, body: message, data: { url } }),
+      sendNotificationEmail(userEmail, { title, message, url }),
+    ])
   }
   return created
 }

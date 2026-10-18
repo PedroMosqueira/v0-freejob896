@@ -37,7 +37,7 @@ export function AdBanner({ position = "inline", className = "" }: AdBannerProps)
           </p>
         </div>
         <Link
-          href="/upgrade"
+          href="/planos"
           className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
           Saiba Mais
