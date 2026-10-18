@@ -1483,9 +1483,9 @@ export async function professionalWithdrawInterest(params: { needId: string; rea
 }
 
 /**
- * Notifies the other party about a new chat message. Skips when they already
- * have an unread message notification for this request, so a conversation
- * produces one alert until it is read instead of one per message.
+ * Notifies the other party about a new chat message. The in-app bell keeps a single
+ * unread entry per conversation, but every message still sends a push — the push tag
+ * makes the phone replace the previous alert for that conversation instead of stacking.
  */
 async function notifyNewChatMessage(recipientEmail: string, needId: string, text: string): Promise<void> {
   try {
@@ -1497,26 +1497,31 @@ async function notifyNewChatMessage(recipientEmail: string, needId: string, text
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { count } = await admin
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", recipientEmail)
-      .eq("related_need_id", needId)
-      .eq("type", "message")
-      .eq("is_read", false)
+    const [{ count }, { data: need }] = await Promise.all([
+      admin
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", recipientEmail)
+        .eq("related_need_id", needId)
+        .eq("type", "message")
+        .eq("is_read", false),
+      admin.from("needs").select("title").eq("id", needId).single(),
+    ])
 
-    if (count && count > 0) return
-
-    const { data: need } = await admin.from("needs").select("title").eq("id", needId).single()
+    const title = need?.title ? `Nova mensagem em "${need.title}"` : "Nova mensagem"
     const preview = text.length > 80 ? `${text.slice(0, 80)}...` : text
 
-    await createNotification(
-      recipientEmail,
-      need?.title ? `Nova mensagem em "${need.title}"` : "Nova mensagem",
-      preview,
-      "message",
-      needId,
-    )
+    if (count && count > 0) {
+      await safeSendPush(recipientEmail, {
+        title,
+        body: preview,
+        tag: `chat-${needId}`,
+        data: { url: buildNotificationUrl(needId) },
+      })
+      return
+    }
+
+    await createNotification(recipientEmail, title, preview, "message", needId, undefined, `chat-${needId}`)
   } catch (error) {
     console.error("[needs-store] Failed to notify new chat message:", error)
   }
@@ -1529,6 +1534,7 @@ async function createNotification(
   type: string,
   relatedNeedId?: string,
   relatedProposalId?: string,
+  pushTag?: string,
 ): Promise<boolean> {
   try {
     console.log("[v0] 🔔 Creating notification:", { userEmail, title, message, type, relatedNeedId, relatedProposalId })
@@ -1576,7 +1582,7 @@ async function createNotification(
     await safeSendPush(userEmail, {
       title,
       body: message,
-      tag: relatedNeedId ? `need-${relatedNeedId}` : undefined,
+      tag: pushTag ?? (relatedNeedId ? `need-${relatedNeedId}` : undefined),
       data: { url: buildNotificationUrl(relatedNeedId) },
     })
     return true
