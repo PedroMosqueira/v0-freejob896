@@ -420,6 +420,7 @@ function SearchRequests({
           locationState={locationState}
           radiusKm={radiusKm}
           city={userCity}
+          location={userLocation}
           onRadiusChange={handleRadiusChange}
           onRequestLocation={requestLocation}
         />

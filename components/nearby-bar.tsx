@@ -2,6 +2,7 @@
 
 import { MapPin, MapPinOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { NearbyAlertToggle } from "./nearby-alert-toggle"
 
 export const RADIUS_OPTIONS_KM = [10, 25, 50, 100] as const
 export type RadiusKm = (typeof RADIUS_OPTIONS_KM)[number]
@@ -11,11 +12,19 @@ interface NearbyBarProps {
   locationState: LocationState
   radiusKm: RadiusKm
   city?: string
+  location?: { latitude: number; longitude: number } | null
   onRadiusChange: (radius: RadiusKm) => void
   onRequestLocation: () => void
 }
 
-export function NearbyBar({ locationState, radiusKm, city, onRadiusChange, onRequestLocation }: NearbyBarProps) {
+export function NearbyBar({
+  locationState,
+  radiusKm,
+  city,
+  location,
+  onRadiusChange,
+  onRequestLocation,
+}: NearbyBarProps) {
   if (locationState === "locating") {
     return (
       <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
@@ -56,6 +65,7 @@ export function NearbyBar({ locationState, radiusKm, city, onRadiusChange, onReq
         <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
         {`Serviços em até ${radiusKm} km de você${city ? ` (${city})` : ""}`}
       </p>
+      <div className="flex flex-wrap items-center gap-2">
       <div role="group" aria-label="Distância máxima" className="flex items-center gap-1">
         {RADIUS_OPTIONS_KM.map((option) => {
           const active = option === radiusKm
@@ -75,6 +85,8 @@ export function NearbyBar({ locationState, radiusKm, city, onRadiusChange, onReq
             </button>
           )
         })}
+      </div>
+      {location && <NearbyAlertToggle location={location} radiusKm={radiusKm} />}
       </div>
     </div>
   )
