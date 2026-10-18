@@ -11,6 +11,8 @@ import NeedDetailsDialog from "./need-details-dialog"
 import InterestDialog from "./interest-dialog"
 import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
+
+const NEARBY_RADIUS_KM = 50
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
 import { FilterForm } from "./filter-form"
 import { getNeedStatusLabel } from "@/data/needs"
@@ -112,6 +114,7 @@ function SearchRequests({
             status: status === "all" ? undefined : status,
             limit,
             offset: currentPage * limit,
+            near: userLocation ? { ...userLocation, radiusKm: NEARBY_RADIUS_KM } : undefined,
           })
         }
 
@@ -346,6 +349,8 @@ function SearchRequests({
     }
   }, [])
 
+  const isNearbyMode = !!userLocation && !showMyRequests && !showMyProfessionalServices
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-4 mb-6">
@@ -393,6 +398,12 @@ function SearchRequests({
         </div>
       </div>
 
+      {isNearbyMode && (
+        <p className="text-sm text-muted-foreground">
+          {`Mostrando serviços em até ${NEARBY_RADIUS_KM} km de você${userCity ? ` (${userCity})` : ""}.`}
+        </p>
+      )}
+
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
           {/* Mobile Filter Sheet */}
@@ -420,7 +431,11 @@ function SearchRequests({
           {isSearching && searchResults.length === 0 ? (
             <SearchRequestsSkeleton />
           ) : searchResults.length === 0 ? (
-            <p className="text-center text-muted-foreground">Nenhum serviço encontrado.</p>
+            <p className="text-center text-muted-foreground">
+              {isNearbyMode
+                ? `Nenhum serviço encontrado em até ${NEARBY_RADIUS_KM} km de você.`
+                : "Nenhum serviço encontrado."}
+            </p>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3">

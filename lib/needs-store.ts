@@ -138,6 +138,7 @@ export async function filterNeeds({
   professionalEmail,
   limit = 20,
   offset = 0,
+  near,
 }: {
   q?: string
   cidade?: string
@@ -147,6 +148,7 @@ export async function filterNeeds({
   professionalEmail?: string
   limit?: number
   offset?: number
+  near?: { latitude: number; longitude: number; radiusKm: number }
 }): Promise<Need[]> {
   const supabase = await createSupabaseServerClient()
 
@@ -207,6 +209,56 @@ export async function filterNeeds({
     }
 
     return (data || []) as Need[]
+  }
+
+  if (near && !requesterEmail) {
+    const { data: nearby, error: nearbyError } = await supabase.rpc("search_nearby_needs", {
+      p_lat: near.latitude,
+      p_lng: near.longitude,
+      p_radius_km: near.radiusKm,
+      p_q: q || null,
+      p_category: categoria || null,
+      p_status: status || null,
+      p_city: cidade || null,
+      p_limit: limit,
+      p_offset: offset,
+    })
+
+    if (nearbyError) {
+      console.error("Erro ao buscar pedidos próximos:", nearbyError)
+      throw new Error("Falha ao buscar pedidos próximos.")
+    }
+
+    const rows = (nearby || []) as { id: string; distance_km: number }[]
+    if (rows.length === 0) return []
+
+    const { data, error } = await supabase
+      .from("needs")
+      .select(
+        `
+     *,
+     need_proposals (
+       id, need_id, professional_email, type, message, when_iso, status, created_at, accepted_at, bid_amount
+     )
+   `,
+      )
+      .in(
+        "id",
+        rows.map((r) => r.id),
+      )
+
+    if (error) {
+      console.error("Erro ao carregar pedidos próximos:", error)
+      throw new Error("Falha ao buscar pedidos próximos.")
+    }
+
+    const byId = new Map(data.map((row) => [row.id, row]))
+    return rows.flatMap(({ id, distance_km }) => {
+      const row = byId.get(id)
+      if (!row) return []
+      const need = mapSupabaseNeedToNeedType(row, row.need_proposals.map(mapSupabaseProposalToNeedProposalType))
+      return [{ ...need, distance: distance_km }]
+    })
   }
 
   // Query normal para outros casos
