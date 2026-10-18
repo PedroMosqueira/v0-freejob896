@@ -142,6 +142,7 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
 
   const handlePhoneValidationSuccess = (validatedPhone: string) => {
     setPhone(validatedPhone)
+    setOriginalPhone(validatedPhone)
     setPhoneValidated(true)
     setShowPhoneModal(false)
     if (errors.phoneValidation) {
@@ -387,10 +388,11 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                         <Button
                           type="button"
                           variant="outline"
-                          disabled
+                          onClick={() => setShowPhoneModal(true)}
                           className="whitespace-nowrap"
+                          aria-label="Trocar número verificado"
                         >
-                          Verificado
+                          Trocar
                         </Button>
                       ) : phoneValid && phoneChanged ? (
                         <Button
@@ -413,6 +415,12 @@ export function ProfileForm({ profile, userEmail }: ProfileFormProps) {
                       )}
                     </div>
                   </div>
+                  {phoneValidated && !phoneChanged && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Número verificado. Perdeu o acesso a ele? Use &quot;Trocar&quot; e valide o novo número pelo
+                      WhatsApp. As propostas gratuitas não são concedidas de novo.
+                    </p>
+                  )}
                   {errors.phone && (
                     <p className="text-sm text-red-500">{errors.phone}</p>
                   )}
