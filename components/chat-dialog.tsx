@@ -25,7 +25,6 @@ import { createClient } from "@/lib/supabase/client"
 import { getUserNameByEmail } from "@/lib/format-user-name"
 import { toast } from "@/components/ui/use-toast"
 import { getUserProfile } from "@/lib/user-profile"
-import { createNotificationViaAPI } from "@/lib/notifications-client"
 import { formatCurrency } from "@/lib/pricing"
 import useSWR from "swr"
 import { WithdrawInterestControl, withdrawStatusKey } from "@/components/withdraw-interest-control"
@@ -326,22 +325,12 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
     setTimeout(scrollToBottom, 50)
 
     try {
+      // addChatMessage notifies the other party (bell + push) on the server.
       await addChatMessage({
         chatThreadId: chatThreadId,
         email: currentUserEmail,
         text: trimmedMessage,
       })
-
-      const otherEmail = need.requesterEmail === currentUserEmail ? need.professionalEmail : need.requesterEmail
-      if (otherEmail) {
-        await createNotificationViaAPI(
-          otherEmail,
-          "Nova mensagem",
-          `Você recebeu uma nova mensagem sobre "${need.title}"`,
-          "message",
-          need.id,
-        ).catch((err) => console.error("[v0] Failed to create message notification:", err))
-      }
     } catch (error) {
       console.error("Failed to send message:", error)
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMessage.id))
