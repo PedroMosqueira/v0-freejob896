@@ -1,8 +1,21 @@
 import { put } from "@vercel/blob"
 import { type NextRequest, NextResponse } from "next/server"
+import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { checkRateLimit, tooManyRequests } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createSupabaseServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: "Faça login para enviar fotos." }, { status: 401 })
+    }
+
+    const limit = await checkRateLimit([{ key: `upload:user:${user.id}`, limit: 60, windowSeconds: 60 * 60 }])
+    if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds)
+
     const formData = await request.formData()
     const files = formData.getAll("files") as File[]
     const needId = (formData.get("needId") as string) || "temp"

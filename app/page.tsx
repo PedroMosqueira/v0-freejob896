@@ -10,6 +10,7 @@ import SearchRequests from "@/components/search-requests"
 import { AuthForm } from "@/components/auth-form"
 import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
+import { SiteFooter } from "@/components/site-footer"
 import { useSearchParams } from "next/navigation"
 
 export default function Home() {
@@ -194,6 +195,7 @@ export default function Home() {
           )}
         </div>
       </section>
+      <SiteFooter />
       {isLogged && <BackToTopButton />}
     </main>
   )

@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const dynamic = "force-dynamic"
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.service").replace(/\/$/, "")
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.services").replace(/\/$/, "")
 const SITE_DESCRIPTION =
   "Publique o serviço que você precisa e receba propostas de profissionais perto de você, ou encontre clientes para o seu trabalho."
 

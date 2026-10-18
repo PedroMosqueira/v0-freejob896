@@ -113,10 +113,11 @@ export async function createSubscriptionCheckoutSession(
     customer_email: userEmail,
     success_url: successUrl,
     cancel_url: cancelUrl,
+    // Custom metadata goes first so it can never override the plan the customer is actually paying for.
     metadata: {
+      ...metadata,
       product_id: productId,
       plan_slug: product.slug,
-      ...metadata, // Adicionar metadata customizada
     },
   })
 

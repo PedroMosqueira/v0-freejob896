@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { GoogleSignInButton } from "@/components/google-sign-in-button"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -136,6 +137,18 @@ export function AuthForm() {
               {loading ? "Enviando..." : "Enviar Link de Login"}
             </Button>
           </form>
+
+          <p className="text-center text-xs leading-relaxed text-gray-500">
+            Ao continuar, você concorda com os{" "}
+            <Link href="/termos" className="text-blue-600 underline underline-offset-2">
+              Termos de uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" className="text-blue-600 underline underline-offset-2">
+              Política de privacidade
+            </Link>
+            .
+          </p>
 
           {/* Messages */}
           {error && (
