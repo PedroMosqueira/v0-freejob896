@@ -1,121 +1,5 @@
 import webpush from "web-push"
-
-/**
- * Get VAPID keys from environment variables
- * If not configured, returns null (push notifications will be disabled)
- */
-export function getVAPIDKeys() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  const privateKey = process.env.VAPID_PRIVATE_KEY
-
-  if (!publicKey || !privateKey) {
-    console.warn(
-      "[v0] Push notifications not configured. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY environment variables."
-    )
-    return null
-  }
-
-  return { publicKey, privateKey }
-}
-
-/**
- * Configure web-push with VAPID keys and subject
- */
-export function configureWebPush() {
-  const keys = getVAPIDKeys()
-  if (!keys) return false
-
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:admin@freejob.service",
-    keys.publicKey,
-    keys.privateKey
-  )
-
-  return true
-}
-
-/**
- * Send push notification to a subscription
- */
-export async function sendPushNotification(
-  subscription: PushSubscription,
-  payload: PushPayload
-) {
-  try {
-    configureWebPush()
-
-    await webpush.sendNotification(subscription, JSON.stringify(payload))
-    return { success: true }
-  } catch (error: any) {
-    console.error("[v0] Failed to send push notification:", error.message)
-
-    // If subscription is invalid or expired, it might be a 410 or 404
-    if (error.statusCode === 410 || error.statusCode === 404) {
-      return { success: false, shouldDelete: true }
-    }
-
-    return { success: false, shouldDelete: false }
-  }
-}
-
-/**
- * Send push notification to all subscriptions for a user
- */
-export async function sendPushToUser(email: string, payload: PushPayload) {
-  const { createClient } = await import("@supabase/supabase-js")
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-  )
-
-  // Get all subscriptions for user
-  const { data: subscriptions, error } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .eq("user_email", email)
-
-  if (error) {
-    console.error("[v0] Failed to fetch push subscriptions:", error.message)
-    return { success: false, sent: 0 }
-  }
-
-  if (!subscriptions || subscriptions.length === 0) {
-    return { success: true, sent: 0 }
-  }
-
-  // Send to all subscriptions
-  let sent = 0
-  const toDelete = []
-
-  for (const sub of subscriptions) {
-    const result = await sendPushNotification(
-      {
-        endpoint: sub.endpoint,
-        keys: {
-          auth: sub.auth,
-          p256dh: sub.p256dh,
-        },
-      } as PushSubscription,
-      payload
-    )
-
-    if (result.success) {
-      sent++
-    }
-
-    if (result.shouldDelete) {
-      toDelete.push(sub.id)
-    }
-  }
-
-  // Delete invalid subscriptions
-  if (toDelete.length > 0) {
-    await supabase.from("push_subscriptions").delete().in("id", toDelete)
-  }
-
-  return { success: true, sent }
-}
+import { createClient } from "@supabase/supabase-js"
 
 export interface PushPayload {
   title: string
@@ -123,13 +7,74 @@ export interface PushPayload {
   icon?: string
   badge?: string
   tag?: string
-  data?: Record<string, any>
+  data?: { url?: string } & Record<string, unknown>
 }
 
-export interface PushSubscription {
-  endpoint: string
-  keys: {
-    auth: string
-    p256dh: string
+let configured: boolean | null = null
+
+function configureWebPush(): boolean {
+  if (configured !== null) return configured
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const privateKey = process.env.VAPID_PRIVATE_KEY
+  if (!publicKey || !privateKey) {
+    configured = false
+    return false
+  }
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT || "mailto:contato@freejob.services", publicKey, privateKey)
+  configured = true
+  return true
+}
+
+export function buildNotificationUrl(needId?: string | null): string {
+  return needId ? `/?needId=${encodeURIComponent(needId)}` : "/"
+}
+
+export async function sendPushToUser(email: string, payload: PushPayload): Promise<{ sent: number }> {
+  if (!email || !configureWebPush()) return { sent: 0 }
+
+  const admin = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+    { auth: { persistSession: false } },
+  )
+
+  const { data: subscriptions, error } = await admin
+    .from("push_subscriptions")
+    .select("id, endpoint, auth, p256dh")
+    .eq("user_email", email.toLowerCase())
+
+  if (error || !subscriptions?.length) return { sent: 0 }
+
+  const body = JSON.stringify(payload)
+  const expired: string[] = []
+  let sent = 0
+
+  await Promise.all(
+    subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { auth: sub.auth, p256dh: sub.p256dh } },
+          body,
+          { TTL: 60 * 60 * 24, urgency: "high" },
+        )
+        sent++
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode
+        if (status === 404 || status === 410) expired.push(sub.id)
+        else console.error("[push] Send failed:", status, (err as Error).message)
+      }
+    }),
+  )
+
+  if (expired.length) await admin.from("push_subscriptions").delete().in("id", expired)
+  return { sent }
+}
+
+// Never let a push failure break the action that created the notification.
+export async function safeSendPush(email: string, payload: PushPayload) {
+  try {
+    await sendPushToUser(email, payload)
+  } catch (error) {
+    console.error("[push] Unexpected error:", error)
   }
 }

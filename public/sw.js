@@ -1,55 +1,61 @@
-/**
- * Service Worker for handling push notifications
- * Place this file at public/sw.js
- */
+const CACHE_NAME = "freejob-shell-v2"
+const OFFLINE_URL = "/offline.html"
+const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/badge-96.png"]
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)))
+  self.skipWaiting()
+})
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  )
+})
+
+// Pages always come from the network so users never see a stale app; the cache only
+// backs an offline fallback page.
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode !== "navigate") return
+  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)))
+})
 
 self.addEventListener("push", (event) => {
-  if (!event.data) {
-    console.log("[SW] Push notification received with no data")
-    return
-  }
-
+  let data = {}
   try {
-    const data = event.data.json()
-    const options = {
-      body: data.body,
-      icon: data.icon || "/favicon.ico",
-      badge: data.badge || "/favicon.ico",
-      tag: data.tag || "notification",
-      data: data.data || {},
-    }
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    )
-  } catch (error) {
-    console.error("[SW] Failed to parse push notification:", error)
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : "" }
   }
+
+  const title = data.title || "Freejob"
+  const options = {
+    body: data.body || "Você tem uma nova notificação",
+    icon: data.icon || "/icons/icon-192.png",
+    badge: data.badge || "/icons/badge-96.png",
+    tag: data.tag,
+    renotify: Boolean(data.tag),
+    data: { url: (data.data && data.data.url) || "/" },
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options))
 })
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close()
-
-  const urlToOpen = event.notification.data?.url || "/"
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href
 
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // Check if URL is already open in a window
-      for (let i = 0; i < clientList.length; i++) {
-        const client = clientList[i]
-        if (client.url === urlToOpen && "focus" in client) {
-          return client.focus()
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          return client.navigate(target).then((c) => (c || client).focus())
         }
       }
-
-      // If not open, open new window
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen)
-      }
-    })
+      return self.clients.openWindow(target)
+    }),
   )
-})
-
-self.addEventListener("notificationclose", (event) => {
-  console.log("[SW] Notification closed:", event.notification.tag)
 })

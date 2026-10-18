@@ -8,6 +8,7 @@ import { NotificationListener } from "@/components/notification-listener"
 import { AuthProvider } from "@/components/auth-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import Script from "next/script"
+import { InstallAppDialog } from "@/components/install-app-dialog"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -75,12 +76,12 @@ export default async function RootLayout({
         />
 
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#3b82f6" />
+        <meta name="theme-color" content="#2563eb" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Freejob" />
-        <link rel="apple-touch-icon" href="/images/logo.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
         <Script
           async
@@ -96,9 +97,10 @@ export default async function RootLayout({
             <NotificationListener />
           </AuthProvider>
           <Toaster />
+          <InstallAppDialog />
         </ThemeProvider>
 
-        <Script src="/register-sw.js" strategy="afterInteractive" />
+        <Script src="/register-sw.js" strategy="beforeInteractive" />
       </body>
     </html>
   )
