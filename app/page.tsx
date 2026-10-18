@@ -195,7 +195,7 @@ export default function Home() {
           )}
         </div>
       </section>
-      <SiteFooter />
+      <SiteFooter clearBottomNav={isLogged} />
       {isLogged && <BackToTopButton />}
     </main>
   )

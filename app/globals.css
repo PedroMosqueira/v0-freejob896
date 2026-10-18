@@ -90,3 +90,14 @@
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background-color: rgb(75 85 99);
 }
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Height of the mobile bottom nav (h-16) plus the device safe area. */
+  .pb-bottom-nav {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+}
