@@ -36,6 +36,18 @@ export async function subscribeToPush(publicKey: string): Promise<PushSubscripti
   })
 }
 
+/** Removes the chat's push from the phone once the user has read the conversation. */
+export async function dismissChatPush(needId: string): Promise<void> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return
+  try {
+    const registration = await navigator.serviceWorker.getRegistration()
+    const notifications = (await registration?.getNotifications({ tag: `chat-${needId}` })) ?? []
+    for (const notification of notifications) notification.close()
+  } catch {
+    // Dismissing is best-effort; the alert simply stays until swiped.
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/")

@@ -26,6 +26,7 @@ import { getUserNameByEmail } from "@/lib/format-user-name"
 import { toast } from "@/components/ui/use-toast"
 import { getUserProfile } from "@/lib/user-profile"
 import { formatCurrency } from "@/lib/pricing"
+import { dismissChatPush } from "@/lib/push-notifications-client"
 import useSWR from "swr"
 import { WithdrawInterestControl, withdrawStatusKey } from "@/components/withdraw-interest-control"
 
@@ -154,6 +155,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
         markAsReadTimeoutRef.current = setTimeout(async () => {
           await markChatAsRead(chatThreadId, currentUserEmail)
+          dismissChatPush(need.id)
         }, 1000)
 
         setTimeout(scrollToBottom, 50)
@@ -213,6 +215,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
             }
             markAsReadTimeoutRef.current = setTimeout(async () => {
               await markChatAsRead(chatThreadId, currentUserEmail)
+              dismissChatPush(need.id)
             }, 1000)
 
             setTimeout(scrollToBottom, 100)

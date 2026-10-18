@@ -8,7 +8,6 @@ import { useState, useEffect } from "react"
 import { formatCurrency, MINIMUM_BID } from "@/lib/pricing"
 import type { Need } from "@/lib/needs-store"
 import { sendBidToChat } from "@/lib/needs-store"
-import { createNotificationViaAPI } from "@/lib/notifications-client"
 
 interface SendBidDialogProps {
   need: Need
@@ -37,20 +36,13 @@ export default function SendBidDialog({ need, isOpen, onClose, currentUserEmail,
 
     setIsSending(true)
     try {
+      // sendBidToChat notifies the requester (bell + push) on the server.
       await sendBidToChat({
         needId: need.id,
         professionalEmail: currentUserEmail,
         requesterEmail: need.requesterEmail,
         bidAmount: amount,
       })
-
-      await createNotificationViaAPI(
-        need.requesterEmail,
-        "Nova proposta recebida",
-        `Você recebeu uma proposta de ${formatCurrency(amount)} para "${need.title}"`,
-        "new_proposal",
-        need.id,
-      ).catch((err) => console.error("[v0] Failed to create bid notification:", err))
 
       onSuccess?.()
       onClose()

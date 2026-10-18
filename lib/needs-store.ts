@@ -396,7 +396,9 @@ export async function addChatMessage(params: {
 
     const { data: currentThread, error: fetchError } = await supabase
       .from("chat_threads")
-      .select("messages_json, requester_email, professional_email, need_id")
+      .select(
+        "messages_json, requester_email, professional_email, need_id, last_read_by_requester, last_read_by_professional",
+      )
       .eq("id", params.chatThreadId)
       .single()
 
@@ -441,7 +443,13 @@ export async function addChatMessage(params: {
         ? currentThread.professional_email
         : currentThread.requester_email
     if (recipientEmail) {
-      await notifyNewChatMessage(String(recipientEmail), String(currentThread.need_id), msg.text)
+      const recipientIsRequester =
+        String(currentThread.requester_email).toLowerCase() === String(recipientEmail).toLowerCase()
+      const recipientLastRead = recipientIsRequester
+        ? currentThread.last_read_by_requester
+        : currentThread.last_read_by_professional
+      const unread = getUnreadMessagesFor(String(recipientEmail), updatedMessages, recipientLastRead ?? null)
+      await notifyNewChatMessage(String(recipientEmail), String(currentThread.need_id), msg.text, unread)
     }
 
     return msg
@@ -1482,12 +1490,40 @@ export async function professionalWithdrawInterest(params: { needId: string; rea
   )
 }
 
+const MAX_PUSH_PREVIEW_LINES = 5
+
+/** Messages from the other party that the recipient hasn't read yet, oldest first. */
+function getUnreadMessagesFor(recipientEmail: string, messages: ChatMessage[], lastReadAt: string | null): ChatMessage[] {
+  const recipient = recipientEmail.toLowerCase()
+  const lastRead = lastReadAt ? new Date(lastReadAt).getTime() : 0
+  return messages.filter(
+    (msg) =>
+      msg.type === "user" &&
+      msg.email &&
+      msg.email.toLowerCase() !== recipient &&
+      new Date(msg.createdAt).getTime() > lastRead,
+  )
+}
+
+function buildChatPushBody(unread: ChatMessage[], fallbackText: string): string {
+  const lines = (unread.length ? unread : [{ text: fallbackText } as ChatMessage])
+    .slice(-MAX_PUSH_PREVIEW_LINES)
+    .map((msg) => (msg.text.length > 80 ? `${msg.text.slice(0, 80)}...` : msg.text))
+  const hidden = unread.length - lines.length
+  return hidden > 0 ? `+${hidden} anteriores\n${lines.join("\n")}` : lines.join("\n")
+}
+
 /**
  * Notifies the other party about a new chat message. The in-app bell keeps a single
- * unread entry per conversation, but every message still sends a push — the push tag
- * makes the phone replace the previous alert for that conversation instead of stacking.
+ * unread entry per conversation. The push uses one tag per chat, so the phone shows a
+ * single alert per conversation listing only the messages still unread in it.
  */
-async function notifyNewChatMessage(recipientEmail: string, needId: string, text: string): Promise<void> {
+async function notifyNewChatMessage(
+  recipientEmail: string,
+  needId: string,
+  text: string,
+  unread: ChatMessage[] = [],
+): Promise<void> {
   try {
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -1508,25 +1544,33 @@ async function notifyNewChatMessage(recipientEmail: string, needId: string, text
       admin.from("needs").select("title").eq("id", needId).single(),
     ])
 
-    const title = need?.title ? `Nova mensagem em "${need.title}"` : "Nova mensagem"
     const preview = text.length > 80 ? `${text.slice(0, 80)}...` : text
+    const bellTitle = need?.title ? `Nova mensagem em "${need.title}"` : "Nova mensagem"
+    const unreadCount = Math.max(unread.length, 1)
+    const pushTitle =
+      unreadCount > 1
+        ? `${unreadCount} novas mensagens${need?.title ? ` em "${need.title}"` : ""}`
+        : bellTitle
 
-    if (count && count > 0) {
-      await safeSendPush(recipientEmail, {
-        title,
-        body: preview,
-        tag: `chat-${needId}`,
-        data: { url: buildNotificationUrl(needId) },
-      })
-      return
+    if (!count) {
+      await insertNotificationRow(recipientEmail, bellTitle, preview, "message", needId)
     }
 
-    await createNotification(recipientEmail, title, preview, "message", needId, undefined, `chat-${needId}`)
+    await safeSendPush(recipientEmail, {
+      title: pushTitle,
+      body: buildChatPushBody(unread, text),
+      tag: `chat-${needId}`,
+      data: { url: buildNotificationUrl(needId) },
+    })
   } catch (error) {
     console.error("[needs-store] Failed to notify new chat message:", error)
   }
 }
 
+/**
+ * Creates a bell notification and sends a matching push. Each event gets its own push
+ * (no shared tag), so a new bid or acceptance never replaces an alert already on screen.
+ */
 async function createNotification(
   userEmail: string,
   title: string,
@@ -1534,7 +1578,25 @@ async function createNotification(
   type: string,
   relatedNeedId?: string,
   relatedProposalId?: string,
-  pushTag?: string,
+): Promise<boolean> {
+  const created = await insertNotificationRow(userEmail, title, message, type, relatedNeedId, relatedProposalId)
+  if (created) {
+    await safeSendPush(userEmail, {
+      title,
+      body: message,
+      data: { url: buildNotificationUrl(relatedNeedId) },
+    })
+  }
+  return created
+}
+
+async function insertNotificationRow(
+  userEmail: string,
+  title: string,
+  message: string,
+  type: string,
+  relatedNeedId?: string,
+  relatedProposalId?: string,
 ): Promise<boolean> {
   try {
     console.log("[v0] 🔔 Creating notification:", { userEmail, title, message, type, relatedNeedId, relatedProposalId })
@@ -1578,13 +1640,6 @@ async function createNotification(
     }
 
     console.log("[v0] ✅ Notification created successfully:", data)
-
-    await safeSendPush(userEmail, {
-      title,
-      body: message,
-      tag: pushTag ?? (relatedNeedId ? `need-${relatedNeedId}` : undefined),
-      data: { url: buildNotificationUrl(relatedNeedId) },
-    })
     return true
   } catch (error) {
     console.error("[v0] ❌ EXCEPTION creating notification:", error)
