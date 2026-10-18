@@ -1,92 +1,81 @@
-type Point = { x: number; y: number }
-type Avatar = Point & { service: string; label: string }
+type Point = [number, number]
+type Avatar = { service: string; label: string; at: Point }
 
-type NetworkLayout = {
+type CircuitLayout = {
   avatars: Avatar[]
-  dots: Point[]
-  edges: [number, number][]
+  roots: number[]
+  traces: Point[][]
+  vias: Point[]
 }
 
-const MOBILE: NetworkLayout = {
+const MOBILE: CircuitLayout = {
+  roots: [13, 87],
   avatars: [
-    { service: "eletricista", label: "Eletricista", x: 13, y: 9 },
-    { service: "diarista", label: "Diarista", x: 86, y: 7 },
-    { service: "pintor", label: "Pintor", x: 11, y: 34 },
-    { service: "encanador", label: "Encanador", x: 88, y: 30 },
-    { service: "jardineiro", label: "Jardineiro", x: 12, y: 89 },
-    { service: "montador", label: "Montador", x: 88, y: 93 },
+    { service: "eletricista", label: "Eletricista", at: [13, 9] },
+    { service: "diarista", label: "Diarista", at: [87, 7] },
+    { service: "pintor", label: "Pintor", at: [12, 34] },
+    { service: "encanador", label: "Encanador", at: [88, 30] },
+    { service: "jardineiro", label: "Jardineiro", at: [24, 89] },
+    { service: "montador", label: "Montador", at: [76, 89] },
   ],
-  dots: [
-    { x: 50, y: 3 },
-    { x: 27, y: 21 },
-    { x: 73, y: 18 },
-    { x: 50, y: 97 },
-    { x: 33, y: 78 },
-    { x: 68, y: 83 },
+  traces: [
+    [[13, 100], [13, 95], [24, 95], [24, 89]],
+    [[13, 100], [13, 95], [4, 95], [4, 34], [12, 34]],
+    [[13, 100], [13, 95], [4, 95], [4, 20], [13, 20], [13, 9]],
+    [[87, 100], [87, 95], [76, 95], [76, 89]],
+    [[87, 100], [87, 95], [96, 95], [96, 30], [88, 30]],
+    [[87, 100], [87, 95], [96, 95], [96, 18], [87, 18], [87, 7]],
   ],
-  // avatar indices 0-5, dot indices 6+
-  edges: [
-    [0, 6], [6, 1], [0, 7], [7, 2], [1, 8], [8, 3], [7, 8],
-    [2, 10], [10, 4], [3, 11], [11, 5], [4, 9], [9, 5], [10, 11],
-  ],
+  vias: [[13, 95], [87, 95], [4, 95], [96, 95], [4, 34], [96, 30], [4, 20], [96, 18]],
 }
 
-const DESKTOP: NetworkLayout = {
+const DESKTOP: CircuitLayout = {
+  roots: [26, 74],
   avatars: [
-    { service: "eletricista", label: "Eletricista", x: 11, y: 18 },
-    { service: "diarista", label: "Diarista", x: 23, y: 46 },
-    { service: "pintor", label: "Pintor", x: 9, y: 76 },
-    { service: "encanador", label: "Encanador", x: 89, y: 20 },
-    { service: "jardineiro", label: "Jardineiro", x: 77, y: 52 },
-    { service: "montador", label: "Montador", x: 90, y: 80 },
+    { service: "eletricista", label: "Eletricista", at: [12, 18] },
+    { service: "diarista", label: "Diarista", at: [20, 46] },
+    { service: "pintor", label: "Pintor", at: [9, 72] },
+    { service: "encanador", label: "Encanador", at: [88, 18] },
+    { service: "jardineiro", label: "Jardineiro", at: [80, 46] },
+    { service: "montador", label: "Montador", at: [91, 72] },
   ],
-  dots: [
-    { x: 22, y: 9 },
-    { x: 4, y: 46 },
-    { x: 20, y: 90 },
-    { x: 78, y: 8 },
-    { x: 96, y: 50 },
-    { x: 79, y: 91 },
-    { x: 40, y: 5 },
-    { x: 60, y: 95 },
+  traces: [
+    [[26, 100], [26, 84], [9, 84], [9, 72]],
+    [[26, 100], [26, 60], [20, 60], [20, 46]],
+    [[26, 100], [26, 32], [12, 32], [12, 18]],
+    [[74, 100], [74, 84], [91, 84], [91, 72]],
+    [[74, 100], [74, 60], [80, 60], [80, 46]],
+    [[74, 100], [74, 32], [88, 32], [88, 18]],
+    [[26, 72], [17, 72], [17, 66]],
+    [[74, 72], [83, 72], [83, 66]],
+    [[26, 32], [26, 10], [33, 10]],
+    [[74, 32], [74, 10], [67, 10]],
   ],
-  edges: [
-    [0, 6], [0, 7], [0, 1], [7, 1], [7, 2], [1, 2], [2, 8], [1, 8],
-    [3, 9], [3, 10], [3, 4], [10, 4], [10, 5], [4, 5], [5, 11], [4, 11],
-    [6, 12], [12, 9], [8, 13], [13, 11],
+  vias: [
+    [26, 84], [74, 84], [26, 60], [74, 60],
+    [26, 32], [74, 32], [26, 72], [74, 72], [17, 66], [83, 66], [33, 10], [67, 10],
   ],
 }
 
-function NetworkLayer({ layout, className }: { layout: NetworkLayout; className: string }) {
-  const points: Point[] = [...layout.avatars, ...layout.dots]
+const toPath = (points: Point[]) =>
+  points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x} ${y}`).join(" ")
 
+function CircuitLayer({ layout, className }: { layout: CircuitLayout; className: string }) {
   return (
     <div className={`absolute inset-0 ${className}`}>
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="none"
-      >
-        {layout.edges.map(([from, to]) => {
-          const a = points[from]
-          const b = points[to]
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {layout.traces.map((trace) => {
+          const d = toPath(trace)
           return (
-            <g key={`${from}-${to}`}>
-              <line
-                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke="#6B93FF" strokeOpacity={0.18} strokeWidth={5}
-                vectorEffect="non-scaling-stroke"
-              />
-              <line
-                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke="#9DB8FF" strokeOpacity={0.7} strokeWidth={1.25}
-                vectorEffect="non-scaling-stroke"
-              />
-              <line
-                className="login-network-flow"
-                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                stroke="#DCE6FF" strokeWidth={1.5} strokeLinecap="round"
-                strokeDasharray="2 22"
+            <g key={d} fill="none" strokeLinejoin="round" strokeLinecap="round">
+              <path d={d} stroke="#6B93FF" strokeOpacity={0.16} strokeWidth={6} vectorEffect="non-scaling-stroke" />
+              <path d={d} stroke="#9DB8FF" strokeOpacity={0.75} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+              <path
+                className="login-circuit-flow"
+                d={d}
+                stroke="#E6EDFF"
+                strokeWidth={2}
+                strokeDasharray="6 42"
                 vectorEffect="non-scaling-stroke"
               />
             </g>
@@ -94,11 +83,19 @@ function NetworkLayer({ layout, className }: { layout: NetworkLayout; className:
         })}
       </svg>
 
-      {layout.dots.map((dot) => (
+      {layout.roots.map((x) => (
         <span
-          key={`${dot.x}-${dot.y}`}
-          className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#DCE6FF] shadow-[0_0_10px_3px_rgba(107,147,255,0.85)]"
-          style={{ left: `${dot.x}%`, top: `${dot.y}%` }}
+          key={x}
+          className="absolute bottom-0 h-1.5 w-16 -translate-x-1/2 rounded-t-sm bg-[#9DB8FF] shadow-[0_0_18px_6px_rgba(59,115,238,0.8)]"
+          style={{ left: `${x}%` }}
+        />
+      ))}
+
+      {layout.vias.map(([x, y]) => (
+        <span
+          key={`${x}-${y}`}
+          className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#9DB8FF] bg-[#050d1f] shadow-[0_0_8px_2px_rgba(107,147,255,0.7)]"
+          style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
 
@@ -106,10 +103,10 @@ function NetworkLayer({ layout, className }: { layout: NetworkLayout; className:
         <span
           key={avatar.service}
           className="absolute -translate-x-1/2 -translate-y-1/2"
-          style={{ left: `${avatar.x}%`, top: `${avatar.y}%` }}
+          style={{ left: `${avatar.at[0]}%`, top: `${avatar.at[1]}%` }}
         >
           <span
-            className="login-network-halo absolute -inset-2 rounded-full bg-[#3B73EE]/40 blur-md"
+            className="login-circuit-halo absolute -inset-2 rounded-full bg-[#3B73EE]/40 blur-md"
             style={{ animationDelay: `${index * 0.6}s` }}
           />
           <img
@@ -131,12 +128,12 @@ export function LoginBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#050d1f]" aria-hidden="true">
       <style>{`
-        @keyframes login-network-flow { to { stroke-dashoffset: -48; } }
-        @keyframes login-network-halo { 0%, 100% { opacity: 0.35; transform: scale(0.95); } 50% { opacity: 0.9; transform: scale(1.1); } }
-        .login-network-flow { animation: login-network-flow 2.4s linear infinite; }
-        .login-network-halo { animation: login-network-halo 3.6s ease-in-out infinite; }
+        @keyframes login-circuit-flow { to { stroke-dashoffset: -96; } }
+        @keyframes login-circuit-halo { 0%, 100% { opacity: 0.35; transform: scale(0.95); } 50% { opacity: 0.9; transform: scale(1.1); } }
+        .login-circuit-flow { animation: login-circuit-flow 2.8s linear infinite; }
+        .login-circuit-halo { animation: login-circuit-halo 3.6s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .login-network-flow, .login-network-halo { animation: none; }
+          .login-circuit-flow, .login-circuit-halo { animation: none; }
         }
       `}</style>
 
@@ -153,11 +150,11 @@ export function LoginBackground() {
             className="absolute inset-0 h-full w-full object-cover"
           />
         </picture>
-        <div className="absolute inset-0 bg-[#050d1f]/40" />
+        <div className="absolute inset-0 bg-[#050d1f]/45" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(5,13,31,0.55)_0%,rgba(5,13,31,0.1)_70%)]" />
 
-        <NetworkLayer layout={MOBILE} className="md:hidden" />
-        <NetworkLayer layout={DESKTOP} className="hidden md:block" />
+        <CircuitLayer layout={MOBILE} className="md:hidden" />
+        <CircuitLayer layout={DESKTOP} className="hidden md:block" />
       </div>
     </div>
   )
