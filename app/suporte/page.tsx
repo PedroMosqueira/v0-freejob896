@@ -26,15 +26,6 @@ const FAQ = [
       "Primeiro tente resolver pelo chat do pedido. Se não houver acordo, envie para o suporte o link do pedido e uma descrição do que aconteceu, que analisamos o caso.",
   },
   {
-    question: "Não recebi o código de verificação no WhatsApp.",
-    answer:
-      "Confira se o número está com DDD e se o WhatsApp está ativo nele. Aguarde alguns minutos antes de pedir um novo código, porque há um limite de tentativas por segurança.",
-  },
-  {
-    question: "Esqueci minha senha.",
-    answer: "Na tela de entrada, use “Esqueci minha senha” e siga o link enviado para o seu e-mail. Confira também a caixa de spam.",
-  },
-  {
     question: "Como excluo minha conta?",
     answer:
       "No seu perfil, no final da página, use “Excluir conta”. A exclusão não é possível enquanto houver serviço em andamento ou pagamento pendente.",
