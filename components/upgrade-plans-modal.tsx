@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check, AlertCircle } from "lucide-react"
 import { useState } from "react"
+import { SUBSCRIPTION_PRODUCTS } from "@/lib/stripe-products"
 
 interface Plan {
   id: string
@@ -30,35 +31,15 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const defaultPlans: Plan[] = [
-    {
-      id: "simples",
-      slug: "simples",
-      name: "Plano Simples",
-      description: "Para profissionais iniciantes",
-      price_monthly: 29.90,
-      features: [
-        "Sem limite de quantidade de propostas",
-        "Limite de 2 propostas simultâneas",
-        "Acesso a todas as demandas",
-        "Cancelamento a qualquer momento",
-      ],
-    },
-    {
-      id: "agencia",
-      slug: "agencia",
-      name: "Plano Agência",
-      description: "Para agências e profissionais experientes",
-      price_monthly: 49.90,
-      features: [
-        "Sem limite de quantidade de propostas",
-        "Limite de 8 propostas simultâneas",
-        "Acesso prioritário a demandas",
-        "Suporte dedicado",
-      ],
-      popular: true,
-    },
-  ]
+  const defaultPlans: Plan[] = SUBSCRIPTION_PRODUCTS.map((product) => ({
+    id: product.slug,
+    slug: product.slug,
+    name: product.name,
+    description: product.description,
+    price_monthly: product.priceInCents / 100,
+    features: product.features,
+    popular: product.slug === "agencia",
+  }))
 
   const displayPlans = plans.length > 0 ? plans : defaultPlans
 
@@ -148,7 +129,7 @@ export function UpgradePlansModal({ isOpen, onClose, userEmail, plans = [], need
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                   <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white">
-                    Mais Popular
+                    Mais serviços simultâneos
                   </Badge>
                 </div>
               )}

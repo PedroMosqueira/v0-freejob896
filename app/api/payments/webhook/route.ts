@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripe"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import type Stripe from "stripe"
 import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
+import { activateSubscriptionFromCheckout } from "@/lib/stripe-subscription-sync"
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ""
 
@@ -54,92 +55,12 @@ export async function POST(request: NextRequest) {
           subscriptionId: session.subscription,
         })
 
-        // Atualizar subscrição do usuário no banco de dados
-        const userEmail = session.metadata?.userEmail
-        const planSlug = session.metadata?.planId
-
-        console.log("[v0] Metadata extracted:", { userEmail, planSlug })
-        console.log("[v0] Full metadata available:", Object.keys(session.metadata || {}))
-
-        if (!userEmail || !planSlug) {
-          console.error("[v0] Missing required metadata:", { 
-            hasUserEmail: !!userEmail, 
-            hasPlanSlug: !!planSlug,
-            fullMetadata: session.metadata
-          })
-        }
-
-        if (userEmail && planSlug) {
-          try {
-            // 1. Buscar o usuário
-            const { data: user, error: userError } = await supabase
-              .from("users")
-              .select("id")
-              .eq("email", userEmail)
-              .single()
-
-            if (userError || !user) {
-              console.error("[v0] Usuário não encontrado:", userEmail)
-              break
-            }
-
-            console.log("[v0] User found:", { userId: user.id, email: userEmail })
-
-            // 2. Buscar o plano pela slug
-            const { data: plan, error: planError } = await supabase
-              .from("subscription_plans")
-              .select("id")
-              .eq("slug", planSlug)
-              .single()
-
-            if (planError || !plan) {
-              console.error("[v0] Plano não encontrado:", { planSlug, error: planError })
-              break
-            }
-
-            console.log("[v0] Plan found:", { planId: plan.id, slug: planSlug })
-
-            // 3. Criar ou atualizar registro em user_subscriptions
-            const subscriptionData = {
-              user_id: user.id,
-              plan_id: plan.id,
-              stripe_subscription_id: session.subscription as string,
-              stripe_customer_id: session.customer as string,
-              status: "active",
-              current_period_start: new Date().toISOString(),
-              current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // +30 dias
-              billing_cycle: "monthly",
-              cancel_at_period_end: false,
-            }
-
-            // Tentar fazer upsert
-            const { error: subscriptionError, data: subscriptionData_result } = await supabase
-              .from("user_subscriptions")
-              .upsert(
-                {
-                  ...subscriptionData,
-                  id: session.subscription,
-                },
-                { onConflict: "stripe_subscription_id" }
-              )
-              .select()
-
-            if (subscriptionError) {
-              console.error("[v0] Erro ao criar subscrição:", {
-                error: subscriptionError.message,
-                code: subscriptionError.code,
-              })
-            } else {
-              console.log("[v0] Subscrição criada/atualizada com sucesso:", {
-                email: userEmail,
-                planSlug,
-                subscriptionId: session.subscription,
-                rowsAffected: subscriptionData_result?.length,
-              })
-            }
-          } catch (err) {
-            console.error("[v0] Erro ao processar upgrade de subscrição:", err)
-          }
+        // Same idempotent activation used by /api/webhooks/stripe and the checkout return.
+        // The previous inline upsert wrote a Stripe id into the uuid primary key, ran
+        // under RLS without a session, and conflicted with UNIQUE(user_id), so it never
+        // activated anything (Simples or Agência).
+        if (session.mode === "subscription") {
+          await activateSubscriptionFromCheckout(session)
         }
 
         break

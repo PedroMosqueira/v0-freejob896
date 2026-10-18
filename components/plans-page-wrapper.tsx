@@ -1,83 +1,47 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Check } from "lucide-react"
 import { CheckoutReturn } from "@/components/checkout-return"
+import { FREE_PLAN_RULES, SUBSCRIPTION_PRODUCTS, type SubscriptionProduct } from "@/lib/stripe-products"
 
-interface Plan {
-  id: string
-  name: string
-  slug: string
-  description: string
-  price_monthly: number
-  price_annual: number
-  features: string[]
-  is_active: boolean
-}
+const priceFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
+
+const FREE_PLAN_FEATURES = [
+  `${FREE_PLAN_RULES.totalProposals} propostas gratuitas`,
+  `${FREE_PLAN_RULES.simultaneousServices} serviço simultâneo`,
+]
 
 export function PlansPageWrapper() {
-  const { email } = useAuth()
-  const router = useRouter()
+  const { email, subscriptionPlan } = useAuth()
   const searchParams = useSearchParams()
-  const [plans, setPlans] = useState<Plan[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSubscribing, setIsSubscribing] = useState(false)
+  const [subscribingSlug, setSubscribingSlug] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const checkoutSessionId = searchParams.get("session_id")
   const pendingNeedId = searchParams.get("need")
+  const hasPaidPlan = subscriptionPlan === "simples" || subscriptionPlan === "agencia"
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const response = await fetch("/api/plans")
-        const data = await response.json()
-        
-        if (response.ok) {
-          // Filter to show only paid plans (simples and agencia)
-          const paidPlans = (data.plans || []).filter((plan: Plan) => 
-            plan.slug === "simples" || plan.slug === "agencia"
-          )
-          setPlans(paidPlans)
-        } else {
-          setError("Erro ao carregar planos")
-        }
-      } catch (err) {
-        console.error("[v0] Error fetching plans:", err)
-        setError("Erro ao carregar planos")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPlans()
-  }, [])
-
-  const handleSubscribe = async (plan: Plan) => {
+  const handleSubscribe = async (plan: SubscriptionProduct) => {
     if (!email) {
       setError("Você precisa estar autenticado")
       return
     }
 
-    setIsSubscribing(true)
+    setSubscribingSlug(plan.slug)
     setError(null)
 
     try {
       const response = await fetch("/api/subscriptions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          planSlug: plan.slug,
-          billingCycle: "monthly",
-        }),
+        body: JSON.stringify({ email, planSlug: plan.slug, billingCycle: "monthly" }),
       })
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -87,14 +51,14 @@ export function PlansPageWrapper() {
 
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
-      } else {
-        setError("Erro ao iniciar checkout")
+        return
       }
+      setError("Erro ao iniciar checkout")
     } catch (err) {
-      console.error("[v0] Error starting checkout:", err)
+      console.error("[plans] Error starting checkout:", err)
       setError("Erro ao processar sua inscrição")
     } finally {
-      setIsSubscribing(false)
+      setSubscribingSlug(null)
     }
   }
 
@@ -102,92 +66,109 @@ export function PlansPageWrapper() {
     return <CheckoutReturn sessionId={checkoutSessionId} needId={pendingNeedId} />
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">Carregando planos...</div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4">Planos de Assinatura</h1>
-          <p className="text-lg text-muted-foreground">
-            Escolha o plano que melhor se adapta às suas necessidades
+    <main className="min-h-screen bg-background px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-5xl flex-col gap-10">
+        <header className="flex flex-col gap-3 text-center">
+          <h1 className="text-balance text-4xl font-bold sm:text-5xl">Planos de Assinatura</h1>
+          <p className="text-pretty text-lg leading-relaxed text-muted-foreground">
+            Cobrança mensal no cartão. A diferença entre os planos é quantos serviços você atende ao mesmo tempo.
           </p>
-        </div>
+        </header>
 
-        {/* Error message */}
         {error && (
-          <div className="mb-8 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-800 dark:text-red-200">
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive"
+          >
             {error}
           </div>
         )}
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={`relative flex flex-col p-8 transition-all ${
-                plan.slug === "agencia"
-                  ? "border-2 border-cyan-500 dark:border-cyan-400 shadow-xl lg:scale-105"
-                  : "border border-gray-200 dark:border-gray-800"
-              }`}
-            >
-              {/* Popular Badge */}
-              {plan.slug === "agencia" && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold">
-                    Mais Popular
-                  </Badge>
-                </div>
-              )}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <PlanCard
+            name="Gratuito"
+            description="Para conhecer a plataforma"
+            price={0}
+            features={FREE_PLAN_FEATURES}
+            isCurrent={!hasPaidPlan && Boolean(email)}
+          />
 
-              {/* Plan Info */}
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mb-6">{plan.description}</p>
-
-                {/* Price */}
-                <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold">R$ {plan.price_monthly.toFixed(2)}</span>
-                    <span className="text-muted-foreground">/mês</span>
-                  </div>
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-3">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Subscribe Button */}
-              <Button
-                onClick={() => handleSubscribe(plan)}
-                disabled={isSubscribing || !email}
-                className={`w-full font-semibold py-3 text-base ${
-                  plan.slug === "agencia"
-                    ? "bg-cyan-500 hover:bg-cyan-600 text-white"
-                    : "bg-gray-800 hover:bg-gray-900 text-white dark:bg-gray-200 dark:hover:bg-gray-300 dark:text-gray-900"
-                }`}
-              >
-                {isSubscribing ? "Redirecionando..." : "Assinar"}
-              </Button>
-            </Card>
-          ))}
+          {SUBSCRIPTION_PRODUCTS.map((plan) => {
+            const isCurrent = subscriptionPlan === plan.slug
+            return (
+              <PlanCard
+                key={plan.id}
+                name={plan.name}
+                description={plan.description}
+                price={plan.priceInCents / 100}
+                features={plan.features}
+                highlighted={plan.slug === "agencia"}
+                isCurrent={isCurrent}
+                action={
+                  <Button
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={!email || hasPaidPlan || subscribingSlug !== null}
+                    variant={plan.slug === "agencia" ? "default" : "outline"}
+                    className="w-full font-semibold"
+                  >
+                    {isCurrent
+                      ? "Seu plano atual"
+                      : subscribingSlug === plan.slug
+                        ? "Redirecionando..."
+                        : "Assinar"}
+                  </Button>
+                }
+              />
+            )
+          })}
         </div>
+
+        <p className="text-center text-sm leading-relaxed text-muted-foreground">
+          {"Serviço simultâneo é cada pedido em que você tem proposta aberta ou que está executando. Ao concluir o serviço, a vaga é liberada. Se você cancelar um serviço, a vaga fica ocupada por 2 horas."}
+        </p>
       </div>
-    </div>
+    </main>
+  )
+}
+
+interface PlanCardProps {
+  name: string
+  description: string
+  price: number
+  features: string[]
+  highlighted?: boolean
+  isCurrent?: boolean
+  action?: React.ReactNode
+}
+
+function PlanCard({ name, description, price, features, highlighted, isCurrent, action }: PlanCardProps) {
+  return (
+    <Card className={`relative flex flex-col gap-6 p-6 ${highlighted ? "border-2 border-primary" : ""}`}>
+      {isCurrent && (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">Plano atual</Badge>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <h2 className="text-xl font-bold">{name}</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+      </div>
+
+      <div className="flex items-baseline gap-1 border-b border-border pb-6">
+        <span className="text-3xl font-bold">{priceFormatter.format(price)}</span>
+        {price > 0 && <span className="text-muted-foreground">/mês</span>}
+      </div>
+
+      <ul className="flex flex-1 flex-col gap-3">
+        {features.map((feature) => (
+          <li key={feature} className="flex items-start gap-3">
+            <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+            <span className="text-sm leading-relaxed">{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      {action}
+    </Card>
   )
 }
