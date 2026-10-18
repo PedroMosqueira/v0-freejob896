@@ -16,6 +16,7 @@ import type {
 } from "@/data/needs"
 import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
 import { createAdminClient } from "@/lib/stripe-subscription-sync"
+import { notifyNearbyProfessionals } from "@/lib/nearby-alerts"
 
 // Helper para mapear uma linha do Supabase para o tipo Need
 // Não inclui mais o chat, pois ele está em uma tabela separada
@@ -327,6 +328,18 @@ export async function addNeed(input: NewNeedInput): Promise<Need> {
 
     if (error) {
       throw new Error(`Falha ao adicionar pedido: ${String(error.message || "Erro desconhecido")}`)
+    }
+
+    if (typeof data.latitude === "number" && typeof data.longitude === "number") {
+      // Awaited because serverless functions may freeze once the response is sent; this never throws.
+      await notifyNearbyProfessionals({
+        needId: data.id,
+        title: data.title,
+        city: data.city,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        requesterEmail: data.requester_email,
+      })
     }
 
     return mapSupabaseNeedToNeedType(data, [])
@@ -749,7 +762,7 @@ export async function updateNeedStatus(needId: string, newStatus: NeedStatus, re
           const notificationResult = await createNotification(
             proposal.professional_email,
             "Serviço concluído",
-            `O serviço "${needData.title}" foi marcado como concluído`,
+            `O serviço "${needData.title}" foi marcado como conclu��do`,
             "completion",
             needId,
           )

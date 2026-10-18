@@ -7,9 +7,9 @@ const LINKS = [
   { href: "/planos", label: "Planos" },
 ]
 
-export function SiteFooter() {
+export function SiteFooter({ clearBottomNav = false }: { clearBottomNav?: boolean }) {
   return (
-    <footer className="border-t border-border">
+    <footer className={`border-t border-border ${clearBottomNav ? "pb-bottom-nav md:pb-0" : ""}`}>
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:justify-between sm:px-6 lg:px-8">
         <p>
           {"© "}

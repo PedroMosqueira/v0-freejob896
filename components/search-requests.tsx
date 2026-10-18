@@ -11,8 +11,7 @@ import NeedDetailsDialog from "./need-details-dialog"
 import InterestDialog from "./interest-dialog"
 import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
-
-const NEARBY_RADIUS_KM = 50
+import { NearbyBar, type LocationState, type RadiusKm } from "./nearby-bar"
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
 import { FilterForm } from "./filter-form"
 import { getNeedStatusLabel } from "@/data/needs"
@@ -60,6 +59,8 @@ function SearchRequests({
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [userCity, setUserCity] = useState<string>("")
   const [locationAttempted, setLocationAttempted] = useState(false)
+  const [locationState, setLocationState] = useState<LocationState>("locating")
+  const [radiusKm, setRadiusKm] = useState<RadiusKm>(50)
 
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
 
@@ -114,7 +115,7 @@ function SearchRequests({
             status: status === "all" ? undefined : status,
             limit,
             offset: currentPage * limit,
-            near: userLocation ? { ...userLocation, radiusKm: NEARBY_RADIUS_KM } : undefined,
+            near: userLocation ? { ...userLocation, radiusKm } : undefined,
           })
         }
 
@@ -179,6 +180,7 @@ function SearchRequests({
       debouncedSearchQuery,
       page,
       userLocation,
+      radiusKm,
     ],
   )
 
@@ -268,48 +270,63 @@ function SearchRequests({
     }
   }, [page])
 
-  useEffect(() => {
-    if (!locationAttempted && navigator.geolocation) {
-      setIsGettingLocation(true)
-      setLocationAttempted(true)
+  const requestLocation = useCallback(() => {
+    setLocationAttempted(true)
 
-      const timeoutId = setTimeout(() => {
-        setIsGettingLocation(false)
-        setUserLocation(null)
-      }, 3000)
-
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          clearTimeout(timeoutId)
-          const { latitude, longitude } = position.coords
-          setUserLocation({ latitude, longitude })
-
-          try {
-            const response = await fetch(`/api/geocode?q=${latitude},${longitude}&reverse=true`)
-            const data = await response.json()
-            if (data.address) {
-              const city = data.address.city || data.address.town || data.address.village || ""
-              setUserCity(city)
-            }
-          } catch (error) {
-            console.error("Error getting user city:", error)
-          }
-
-          setIsGettingLocation(false)
-        },
-        (error) => {
-          clearTimeout(timeoutId)
-          console.error("Geolocation error:", error.message, error.code)
-          setIsGettingLocation(false)
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 3000,
-          maximumAge: 300000,
-        },
-      )
+    if (!navigator.geolocation) {
+      setLocationState("unavailable")
+      return
     }
-  }, [locationAttempted])
+
+    setIsGettingLocation(true)
+    setLocationState("locating")
+
+    // Don't hold the list hostage while the browser decides; a late fix still applies below.
+    const fallbackTimer = setTimeout(() => {
+      setIsGettingLocation(false)
+      setLocationState((current) => (current === "locating" ? "unavailable" : current))
+    }, 3000)
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        clearTimeout(fallbackTimer)
+        const { latitude, longitude } = position.coords
+        setUserLocation({ latitude, longitude })
+        setLocationState("granted")
+        setIsGettingLocation(false)
+
+        try {
+          const response = await fetch(`/api/geocode?q=${latitude},${longitude}&reverse=true`)
+          const data = await response.json()
+          if (data.address) {
+            setUserCity(data.address.city || data.address.town || data.address.village || "")
+          }
+        } catch (error) {
+          console.error("Error getting user city:", error)
+        }
+      },
+      (error) => {
+        clearTimeout(fallbackTimer)
+        setLocationState(error.code === error.PERMISSION_DENIED ? "denied" : "unavailable")
+        setIsGettingLocation(false)
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      },
+    )
+  }, [])
+
+  useEffect(() => {
+    if (!locationAttempted) requestLocation()
+  }, [locationAttempted, requestLocation])
+
+  const handleRadiusChange = useCallback((radius: RadiusKm) => {
+    setPage(0)
+    setHasMore(true)
+    setRadiusKm(radius)
+  }, [])
 
   useEffect(() => {
     if (!isGettingLocation && locationAttempted) {
@@ -398,10 +415,15 @@ function SearchRequests({
         </div>
       </div>
 
-      {isNearbyMode && (
-        <p className="text-sm text-muted-foreground">
-          {`Mostrando serviços em até ${NEARBY_RADIUS_KM} km de você${userCity ? ` (${userCity})` : ""}.`}
-        </p>
+      {!showMyRequests && !showMyProfessionalServices && (
+        <NearbyBar
+          locationState={locationState}
+          radiusKm={radiusKm}
+          city={userCity}
+          location={userLocation}
+          onRadiusChange={handleRadiusChange}
+          onRequestLocation={requestLocation}
+        />
       )}
 
       <div className="flex gap-6">
@@ -433,7 +455,7 @@ function SearchRequests({
           ) : searchResults.length === 0 ? (
             <p className="text-center text-muted-foreground">
               {isNearbyMode
-                ? `Nenhum serviço encontrado em até ${NEARBY_RADIUS_KM} km de você.`
+                ? `Nenhum serviço encontrado em até ${radiusKm} km de você.${radiusKm < 100 ? " Tente aumentar a distância." : ""}`
                 : "Nenhum serviço encontrado."}
             </p>
           ) : (
