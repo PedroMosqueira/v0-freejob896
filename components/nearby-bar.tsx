@@ -86,7 +86,7 @@ export function NearbyBar({
           )
         })}
       </div>
-      {location && <NearbyAlertToggle location={location} radiusKm={radiusKm} />}
+      {location && <NearbyAlertToggle location={location} />}
       </div>
     </div>
   )

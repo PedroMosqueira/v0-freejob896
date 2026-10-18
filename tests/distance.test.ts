@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
-import { formatAlertDistance, isAlertRadius } from "@/lib/nearby-alerts"
+import { ALERT_RADIUS_KM, formatAlertDistance, isValidCoordinate, roundCoordinate } from "@/lib/nearby-alerts"
 
 const SAO_PAULO = { lat: -23.5505, lng: -46.6333 }
 const RIO = { lat: -22.9068, lng: -43.1729 }
@@ -35,15 +35,30 @@ describe("formatação de distância", () => {
     expect(formatDistance(12.34)).toBe("12.3 km")
   })
 
-  it("arredonda a distância nos avisos", () => {
-    expect(formatAlertDistance(0.3)).toBe("a menos de 1 km")
-    expect(formatAlertDistance(7.6)).toBe("a 8 km")
+  it("mostra metros abaixo de 1 km e uma casa decimal acima nos avisos", () => {
+    expect(formatAlertDistance(0.34)).toBe("a 300 m")
+    expect(formatAlertDistance(0.02)).toBe("a 100 m")
+    expect(formatAlertDistance(2.46)).toBe("a 2,5 km")
+    expect(formatAlertDistance(3)).toBe("a 3 km")
   })
 })
 
-describe("raios permitidos nos avisos", () => {
-  it("aceita só 10, 25, 50 e 100 km", () => {
-    for (const ok of [10, 25, 50, 100]) expect(isAlertRadius(ok)).toBe(true)
-    for (const bad of [0, 5, 49.9, 1000, -10, "50", null, undefined, Number.NaN]) expect(isAlertRadius(bad)).toBe(false)
+describe("avisos de proximidade", () => {
+  it("usa raio fixo de 3 km", () => {
+    expect(ALERT_RADIUS_KM).toBe(3)
+    expect(calculateDistance(SAO_BORJA.lat, SAO_BORJA.lng, SAO_BORJA.lat + 0.025, SAO_BORJA.lng)).toBeLessThan(ALERT_RADIUS_KM)
+    expect(calculateDistance(SAO_BORJA.lat, SAO_BORJA.lng, SAO_BORJA.lat + 0.03, SAO_BORJA.lng)).toBeGreaterThan(ALERT_RADIUS_KM)
+  })
+
+  it("valida coordenadas", () => {
+    expect(isValidCoordinate(-28.66, -56.0)).toBe(true)
+    for (const [lat, lng] of [[91, 0], [0, 181], [Number.NaN, 0], ["-28", -56], [null, null]]) {
+      expect(isValidCoordinate(lat, lng)).toBe(false)
+    }
+  })
+
+  it("guarda a localização com precisão de ~110 m", () => {
+    expect(roundCoordinate(-28.661234)).toBe(-28.661)
+    expect(roundCoordinate(-56.004567)).toBe(-56.005)
   })
 })
