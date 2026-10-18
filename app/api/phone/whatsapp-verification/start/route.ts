@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 import {
   MAX_ATTEMPTS_PER_HOUR,
   VERIFICATION_TTL_MINUTES,
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ id: open.id, code: open.code, link, expiresAt: open.expires_at })
     }
   }
+
+  const ipLimit = await checkRateLimit([
+    { key: `whatsapp-start:ip:${getClientIp(request)}`, limit: 15, windowSeconds: 60 * 60 },
+  ])
+  if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfterSeconds)
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
 

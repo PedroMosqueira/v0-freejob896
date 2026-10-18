@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getUserByEmail } from "@/lib/auth-users"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,12 @@ export async function POST(request: NextRequest) {
       console.log("❌ [API] Email missing")
       return NextResponse.json({ success: false, message: "Email não encontrado." }, { status: 400 })
     }
+
+    const limit = await checkRateLimit([
+      { key: `update-password:ip:${getClientIp(request)}`, limit: 10, windowSeconds: 15 * 60 },
+      { key: `update-password:email:${email}`, limit: 5, windowSeconds: 15 * 60 },
+    ])
+    if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds)
 
     if (newPassword !== confirmNewPassword) {
       console.log("❌ [API] Password confirmation mismatch")

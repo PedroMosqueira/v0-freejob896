@@ -2,6 +2,7 @@ import { generateText, Output } from "ai"
 import { createGroq } from "@ai-sdk/groq"
 import { z } from "zod"
 import { type NextRequest, NextResponse } from "next/server"
+import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 30
@@ -94,6 +95,12 @@ export async function POST(request: NextRequest) {
     if (!inputMessage) {
       return NextResponse.json({ error: "Descreva o serviço que você precisa." }, { status: 400 })
     }
+
+    const limit = await checkRateLimit([
+      { key: `ai-extract:ip:${getClientIp(request)}`, limit: 30, windowSeconds: 10 * 60 },
+      { key: `ai-extract:ip-day:${getClientIp(request)}`, limit: 200, windowSeconds: 24 * 60 * 60 },
+    ])
+    if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds)
 
     const history: HistoryMessage[] = Array.isArray(body?.conversationHistory)
       ? body.conversationHistory
