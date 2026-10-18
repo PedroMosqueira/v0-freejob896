@@ -1,5 +1,9 @@
 import { createSupabaseServerClient } from "./supabase/server"
 import { PAID_SUBSCRIPTION_STATUSES, isPaidSubscriptionStatus } from "./subscription-status"
+import { FREE_PLAN_RULES, getProductBySlug } from "./stripe-products"
+
+const SIMPLES = getProductBySlug("simples")!
+const AGENCIA = getProductBySlug("agencia")!
 
 export type SubscriptionPlan = "free" | "simples" | "agencia"
 
@@ -24,7 +28,7 @@ export const PLAN_FEATURES = {
     ],
     limits: {
       interests_per_month: 3, // 3 interesses grátis
-      simultaneous_interests: 1, // apenas 1 simultâneo
+      simultaneous_interests: FREE_PLAN_RULES.simultaneousServices,
       bids_per_month: -1, // ilimitado
       has_ads: true,
       priority_support: false,
@@ -32,17 +36,12 @@ export const PLAN_FEATURES = {
     },
   },
   simples: {
-    name: "Plano Simples",
-    price: 29.90,
-    features: [
-      "Sem limite de quantidade de propostas",
-      "Limite de 2 propostas simultâneas",
-      "Acesso a todas as demandas",
-      "Cancelamento a qualquer momento",
-    ],
+    name: SIMPLES.name,
+    price: SIMPLES.priceInCents / 100,
+    features: SIMPLES.features,
     limits: {
       interests_per_month: -1, // ilimitado
-      simultaneous_interests: 2, // 2 simultâneas
+      simultaneous_interests: SIMPLES.simultaneousServices,
       bids_per_month: -1,
       has_ads: true,
       priority_support: false,
@@ -50,17 +49,12 @@ export const PLAN_FEATURES = {
     },
   },
   agencia: {
-    name: "Plano Agência",
-    price: 49.90,
-    features: [
-      "Sem limite de quantidade de propostas",
-      "Limite de 8 propostas simultâneas",
-      "Acesso prioritário a demandas",
-      "Suporte dedicado",
-    ],
+    name: AGENCIA.name,
+    price: AGENCIA.priceInCents / 100,
+    features: AGENCIA.features,
     limits: {
       interests_per_month: -1, // ilimitado
-      simultaneous_interests: 8, // 8 simultâneas
+      simultaneous_interests: AGENCIA.simultaneousServices,
       bids_per_month: -1,
       has_ads: false,
       priority_support: true,
