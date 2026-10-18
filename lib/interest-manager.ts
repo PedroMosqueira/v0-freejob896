@@ -116,7 +116,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     // 2) créditos gratuitos -> pode, consumindo 1 crédito
     // 3) nenhum dos dois    -> precisa assinar um plano
     const isProfessional = Boolean(user.is_professional)
-    const freeInterestsRemaining = Math.max(0, user.free_interests_remaining ?? MAX_FREE_INTERESTS)
+    const freeInterestsRemaining = Math.max(0, user.free_interests_remaining ?? 0)
 
     const subscriptionUserIds = [user.id, authenticatedUserId].filter(
       (id, index, ids): id is string => Boolean(id) && ids.indexOf(id) === index,
@@ -206,7 +206,7 @@ export async function canUserExpressInterest(userEmail: string): Promise<{
     console.log("[v0-server] No paid plan and no free credits - upgrade required for", userEmail)
     return {
       canExpressInterest: false,
-      reason: `Você usou suas ${MAX_FREE_INTERESTS} propostas gratuitas. Para continuar, é necessário um plano de assinatura.`,
+      reason: `As ${MAX_FREE_INTERESTS} propostas gratuitas deste telefone já foram usadas. Para continuar, é necessário um plano de assinatura.`,
       needsUpgrade: true,
       isProfessional,
       freeInterestsUsed: MAX_FREE_INTERESTS,
@@ -350,7 +350,7 @@ export async function incrementInterestCount(userEmail: string, consumeFreeCredi
 
     const user = users[0]
 
-    const currentFreeRemaining = Math.max(0, user.free_interests_remaining ?? MAX_FREE_INTERESTS)
+    const currentFreeRemaining = Math.max(0, user.free_interests_remaining ?? 0)
     const currentTotalSent = user.total_interests_sent ?? 0
 
     // Assinantes não gastam crédito gratuito; os demais gastam 1 por interesse.

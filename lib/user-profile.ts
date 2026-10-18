@@ -94,7 +94,7 @@ export async function getUserProfile(email: string): Promise<UserProfile | null>
     verifiedAt: data.verified_at,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    freeInterestsRemaining: data.free_interests_remaining ?? 3,
+    freeInterestsRemaining: data.free_interests_remaining ?? 0,
   }
 }
 
@@ -139,7 +139,7 @@ export async function getUserProfiles(emails: string[]): Promise<Record<string, 
       verifiedAt: user.verified_at,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
-      freeInterestsRemaining: user.free_interests_remaining ?? 3,
+      freeInterestsRemaining: user.free_interests_remaining ?? 0,
     }
   }
 
