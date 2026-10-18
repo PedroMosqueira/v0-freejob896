@@ -21,8 +21,6 @@ interface ManagedSubscription {
   status: string
   cancelAtPeriodEnd: boolean
   periodEnd: string | null
-  refundEligible: boolean
-  refundDeadline: string
 }
 
 const fetcher = async (url: string) => {
@@ -57,12 +55,7 @@ export function SubscriptionManagement() {
         return
       }
       setFeedback({ tone: "success", text: result.message })
-      if (result.subscription === null) {
-        // Plan ended immediately: reload so the auth context drops the paid plan everywhere.
-        setTimeout(() => window.location.reload(), 2500)
-      } else {
-        await mutate({ subscription: result.subscription }, { revalidate: false })
-      }
+      await mutate({ subscription: result.subscription }, { revalidate: false })
     } catch {
       setFeedback({ tone: "error", text: "Erro de conexão. Tente novamente." })
     } finally {
@@ -104,9 +97,7 @@ export function SubscriptionManagement() {
             <AlertDialogHeader>
               <AlertDialogTitle>Cancelar assinatura?</AlertDialogTitle>
               <AlertDialogDescription className="leading-relaxed">
-                {subscription.refundEligible
-                  ? `Você está dentro do prazo de 7 dias (até ${formatDate(subscription.refundDeadline)}). O plano é encerrado agora e o valor pago é estornado integralmente no cartão.`
-                  : `A renovação será cancelada e você não será mais cobrado. Seu plano continua ativo até ${formatDate(subscription.periodEnd)}. Não há estorno do período já pago.`}
+                {`Você não será mais cobrado. Seu plano e todos os recursos continuam funcionando normalmente até ${formatDate(subscription.periodEnd)}. Depois disso, sua conta volta para o plano gratuito. Você pode reativar a qualquer momento antes dessa data.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -115,7 +106,7 @@ export function SubscriptionManagement() {
                 onClick={() => runAction("cancel")}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {subscription.refundEligible ? "Cancelar e estornar" : "Cancelar renovação"}
+Cancelar assinatura
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

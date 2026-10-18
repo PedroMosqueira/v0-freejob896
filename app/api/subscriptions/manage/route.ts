@@ -7,9 +7,6 @@ import { isPaidSubscriptionStatus } from "@/lib/subscription-status"
 
 export const dynamic = "force-dynamic"
 
-// CDC art. 49: online purchases can be withdrawn within 7 days for a full refund.
-const WITHDRAWAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
-
 async function loadSubscription() {
   const supabase = await createSupabaseServerClient()
   const {
@@ -37,14 +34,11 @@ async function loadSubscription() {
 
 function describe(subscription: Stripe.Subscription, planName: string | null) {
   const period = getSubscriptionPeriod(subscription)
-  const startedAt = subscription.start_date * 1000
   return {
     planName,
     status: mapSubscriptionStatus(subscription.status),
     cancelAtPeriodEnd: subscription.cancel_at_period_end || Boolean(subscription.cancel_at),
     periodEnd: period.end,
-    refundEligible: Date.now() - startedAt <= WITHDRAWAL_WINDOW_MS,
-    refundDeadline: new Date(startedAt + WITHDRAWAL_WINDOW_MS).toISOString(),
   }
 }
 
@@ -62,27 +56,6 @@ export async function GET() {
     console.error("[subscriptions/manage] GET failed:", error)
     return NextResponse.json({ error: "Não foi possível carregar sua assinatura" }, { status: 500 })
   }
-}
-
-async function refundLatestInvoice(subscription: Stripe.Subscription) {
-  const invoiceId =
-    typeof subscription.latest_invoice === "string" ? subscription.latest_invoice : subscription.latest_invoice?.id
-  if (!invoiceId) return false
-
-  const payments = await stripe.invoicePayments.list({ invoice: invoiceId, status: "paid", limit: 1 })
-  const payment = payments.data[0]?.payment
-  if (!payment) return false
-
-  const paymentIntent =
-    typeof payment.payment_intent === "string" ? payment.payment_intent : payment.payment_intent?.id
-  const charge = typeof payment.charge === "string" ? payment.charge : payment.charge?.id
-  if (!paymentIntent && !charge) return false
-
-  await stripe.refunds.create(
-    paymentIntent ? { payment_intent: paymentIntent } : { charge: charge! },
-    { idempotencyKey: `withdrawal-refund-${invoiceId}` },
-  )
-  return true
 }
 
 export async function POST(req: NextRequest) {
@@ -111,21 +84,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    if (current.refundEligible) {
-      const refunded = await refundLatestInvoice(subscription)
-      await stripe.subscriptions.cancel(subscription.id)
-      await admin
-        .from("user_subscriptions")
-        .update({ status: "canceled", cancel_at_period_end: false, updated_at: new Date().toISOString() })
-        .eq("id", row.id)
-      return NextResponse.json({
-        message: refunded
-          ? "Assinatura cancelada e valor estornado integralmente. O estorno aparece na fatura do cartão em até 10 dias úteis."
-          : "Assinatura cancelada.",
-        subscription: null,
-      })
-    }
-
+    // Like Netflix/Vercel: cancellation only stops renewal; access lasts until the paid period ends.
     const updated = await stripe.subscriptions.update(subscription.id, { cancel_at_period_end: true })
     await admin
       .from("user_subscriptions")
