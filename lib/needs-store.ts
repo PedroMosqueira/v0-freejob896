@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createClient } from "@supabase/supabase-js"
+import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
 import type {
   Need,
   NewNeedInput,
@@ -1571,6 +1572,13 @@ async function createNotification(
     }
 
     console.log("[v0] ✅ Notification created successfully:", data)
+
+    await safeSendPush(userEmail, {
+      title,
+      body: message,
+      tag: relatedNeedId ? `need-${relatedNeedId}` : undefined,
+      data: { url: buildNotificationUrl(relatedNeedId) },
+    })
     return true
   } catch (error) {
     console.error("[v0] ❌ EXCEPTION creating notification:", error)

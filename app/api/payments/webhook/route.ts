@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { stripe } from "@/lib/stripe"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import type Stripe from "stripe"
+import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || ""
 
@@ -189,6 +190,20 @@ export async function POST(request: NextRequest) {
             type: "completion",
             related_need_id: payment.need_id,
           })
+
+          const url = buildNotificationUrl(payment.need_id)
+          await Promise.all([
+            safeSendPush(payment.professional_email, {
+              title: "Pagamento recebido!",
+              body: "O cliente confirmou o pagamento. Você pode iniciar o serviço.",
+              data: { url },
+            }),
+            safeSendPush(payment.client_email, {
+              title: "Pagamento confirmado!",
+              body: "Seu pagamento foi confirmado. O profissional pode iniciar o serviço.",
+              data: { url },
+            }),
+          ])
         }
 
         break

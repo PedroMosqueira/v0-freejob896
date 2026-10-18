@@ -11,7 +11,8 @@ import {
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon, Heart, FileText, Zap } from "lucide-react"
+import { MessageCircle, Menu, LogOut, Lock, Plus, Search, Home, Sun, Moon, Heart, FileText, Zap, Download } from "lucide-react"
+import { openInstallDialog } from "@/lib/pwa"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { useState, useEffect } from "react"
 import MyChatsDialog from "@/components/my-chats-dialog"
@@ -372,7 +373,10 @@ export function SiteHeader({
                       {effectiveTheme === "dark" ? <Sun className="h-4 w-4 mr-3" /> : <Moon className="h-4 w-4 mr-3" />}
                       <span>Tema: {effectiveTheme === "dark" ? "Claro" : "Escuro"}</span>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={openInstallDialog} className="cursor-pointer">
+                      <Download className="h-4 w-4 mr-3" />
+                      <span>Baixar app</span>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
                       <Link href="/planos" className="flex items-center gap-3 cursor-pointer">

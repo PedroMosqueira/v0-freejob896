@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Bell, CheckCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { PushNotificationsToggle } from "@/components/push-notifications-toggle"
 import {
   getNotifications,
   getUnreadCount,
@@ -190,6 +191,8 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
                 </Button>
               )}
             </div>
+
+            <PushNotificationsToggle enabled={isOpen} />
 
             <ScrollArea className="h-96">
               {loading ? (

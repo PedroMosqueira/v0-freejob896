@@ -1,52 +1,32 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
+import { isStandalone, openInstallDialog } from "@/lib/pwa"
 
 export function InstallAppButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [isInstallable, setIsInstallable] = useState(false)
+  const [installed, setInstalled] = useState(true)
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setIsInstallable(true)
-    }
-
-    window.addEventListener("beforeinstallprompt", handler)
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler)
-    }
+    setInstalled(isStandalone())
+    const onInstalled = () => setInstalled(true)
+    window.addEventListener("freejob:installed", onInstalled)
+    return () => window.removeEventListener("freejob:installed", onInstalled)
   }, [])
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return
-
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-
-    if (outcome === "accepted") {
-      console.log("[v0] App instalado com sucesso")
-      setIsInstallable(false)
-    }
-
-    setDeferredPrompt(null)
-  }
-
-  if (!isInstallable) return null
+  if (installed) return null
 
   return (
     <Button
       variant="outline"
       size="icon"
       className="relative bg-transparent"
-      onClick={handleInstallClick}
-      title="Instalar App"
+      onClick={openInstallDialog}
+      title="Baixar app"
     >
       <Download className="h-5 w-5" />
+      <span className="sr-only">Baixar app</span>
     </Button>
   )
 }

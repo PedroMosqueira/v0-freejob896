@@ -1,134 +1,93 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import {
-  registerServiceWorker,
-  subscribeToPushNotifications,
-  unsubscribeFromPushNotifications,
-  getPushSubscriptionStatus,
-} from "@/lib/push-notifications-client"
-import { useAuth } from "@/hooks/use-auth"
+import { useCallback, useEffect, useState } from "react"
+import { getCurrentSubscription, isPushSupported, subscribeToPush } from "@/lib/push-notifications-client"
+import { isIOS, isStandalone } from "@/lib/pwa"
 
-export function usePushNotifications() {
-  const { email } = useAuth()
-  const user = email ? { email } : null
-  const [isSubscribed, setIsSubscribed] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+export type PushStatus = "loading" | "unsupported" | "needs-install" | "denied" | "off" | "on"
+
+const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+export function usePushNotifications(enabled: boolean) {
+  const [status, setStatus] = useState<PushStatus>("loading")
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (!publicKey) {
-      setIsLoading(false)
-      return
-    }
+    if (!enabled) return
+    let cancelled = false
 
-    const initializePushNotifications = async () => {
-      try {
-        // Register service worker
-        await registerServiceWorker()
+    const check = async () => {
+      if (!publicKey) return setStatus("unsupported")
+      if (isIOS() && !isStandalone()) return setStatus("needs-install")
+      if (!isPushSupported()) return setStatus("unsupported")
+      if (Notification.permission === "denied") return setStatus("denied")
 
-        // Check subscription status
-        const isCurrentlySubscribed = await getPushSubscriptionStatus()
-        setIsSubscribed(isCurrentlySubscribed)
-      } catch (error) {
-        console.error("[v0] Failed to initialize push notifications:", error)
-      } finally {
-        setIsLoading(false)
+      const subscription = await getCurrentSubscription()
+      if (cancelled) return
+      if (subscription && Notification.permission === "granted") {
+        setStatus("on")
+        // Re-sync so the device stays linked to whoever is logged in now.
+        fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscription: subscription.toJSON() }),
+        }).catch(() => {})
+      } else {
+        setStatus("off")
       }
     }
 
-    initializePushNotifications()
-  }, [publicKey])
-
-  const subscribe = async () => {
-    if (!publicKey || !user?.email) {
-      console.error("[v0] Missing VAPID public key or user email")
-      return false
+    check().catch(() => !cancelled && setStatus("off"))
+    return () => {
+      cancelled = true
     }
+  }, [enabled])
 
+  const enable = useCallback(async () => {
+    if (!publicKey) return false
+    setBusy(true)
     try {
-      setIsLoading(true)
-
-      const subscription = await subscribeToPushNotifications(publicKey)
+      const subscription = await subscribeToPush(publicKey)
       if (!subscription) {
+        setStatus(Notification.permission === "denied" ? "denied" : "off")
         return false
       }
-
-      // Send subscription to server
       const response = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subscription,
-          email: user.email,
-        }),
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
       })
-
-      if (!response.ok) {
-        throw new Error("Failed to save subscription to server")
-      }
-
-      setIsSubscribed(true)
-      console.log("[v0] Successfully subscribed to push notifications")
+      if (!response.ok) throw new Error("subscribe failed")
+      setStatus("on")
       return true
-    } catch (error: any) {
-      console.error("[v0] Failed to subscribe to push notifications:", error.message)
+    } catch {
+      setStatus("off")
       return false
     } finally {
-      setIsLoading(false)
+      setBusy(false)
     }
-  }
+  }, [])
 
-  const unsubscribe = async () => {
-    if (!user?.email) {
-      console.error("[v0] Missing user email")
-      return false
-    }
-
+  const disable = useCallback(async () => {
+    setBusy(true)
     try {
-      setIsLoading(true)
-
-      const registration = await navigator.serviceWorker.ready
-      const subscription = await registration.pushManager.getSubscription()
-
-      if (!subscription) {
-        setIsSubscribed(false)
-        return true
+      const subscription = await getCurrentSubscription()
+      if (subscription) {
+        await fetch("/api/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        })
+        await subscription.unsubscribe()
       }
-
-      // Remove subscription from server
-      const response = await fetch("/api/push/unsubscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: subscription.endpoint,
-          email: user.email,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to remove subscription from server")
-      }
-
-      // Unsubscribe from browser
-      await unsubscribeFromPushNotifications()
-
-      setIsSubscribed(false)
-      console.log("[v0] Successfully unsubscribed from push notifications")
+      setStatus("off")
       return true
-    } catch (error: any) {
-      console.error("[v0] Failed to unsubscribe from push notifications:", error.message)
+    } catch {
       return false
     } finally {
-      setIsLoading(false)
+      setBusy(false)
     }
-  }
+  }, [])
 
-  return {
-    isSubscribed,
-    isLoading,
-    isSupported: !!publicKey,
-    subscribe,
-    unsubscribe,
-  }
+  return { status, busy, enable, disable }
 }
