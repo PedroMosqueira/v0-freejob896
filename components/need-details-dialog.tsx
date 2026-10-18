@@ -49,7 +49,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
 import SendBidDialog from "@/components/send-bid-dialog"
-import { createNotificationViaAPI } from "@/lib/notifications-client"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -305,18 +304,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
     setAcceptingProposalId(proposalId)
     try {
+      // acceptProposal notifies the professional (bell + push) on the server.
       await acceptProposal(proposalId, currentNeed.id, email)
-
-      const proposal = proposals.find((p) => p.id === proposalId)
-      if (proposal?.professional_email) {
-        await createNotificationViaAPI(
-          proposal.professional_email,
-          "Proposta aceita!",
-          `Sua proposta para "${currentNeed.title}" foi aceita`,
-          "proposal_accepted",
-          currentNeed.id,
-        ).catch((err) => console.error("[v0] Failed to create acceptance notification:", err))
-      }
 
       await fetchProposals()
       onStatusUpdate?.()
