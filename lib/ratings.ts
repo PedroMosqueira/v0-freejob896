@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
+import { sendNotificationEmail } from "@/lib/email-notifications"
 
 /**
  * Tells the rated user they received a review: a bell entry plus its own push.
@@ -47,11 +48,10 @@ async function notifyRatingReceived(
     })
     if (error) console.error("[ratings] Failed to create rating notification:", error.message)
 
-    await safeSendPush(ratedEmail, {
-      title,
-      body: message,
-      data: { url: buildNotificationUrl(needId) },
-    })
+    await Promise.all([
+      safeSendPush(ratedEmail, { title, body: message, data: { url: buildNotificationUrl(needId) } }),
+      sendNotificationEmail(ratedEmail, { title, message, url: "/profile", ctaLabel: "Ver minhas avaliações" }),
+    ])
   } catch (error) {
     console.error("[ratings] Failed to notify rating:", error)
   }

@@ -8,6 +8,7 @@ import {
   mapSubscriptionStatus,
 } from "@/lib/stripe-subscription-sync"
 import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
+import { sendNotificationEmail } from "@/lib/email-notifications"
 
 /**
  * Single Stripe webhook processor. Both /api/webhooks/stripe and the legacy
@@ -134,6 +135,8 @@ async function handleServicePaymentSucceeded(paymentIntent: Stripe.PaymentIntent
   await Promise.all([
     safeSendPush(payment.professional_email, { title: "Pagamento recebido!", body: professionalMessage, data: { url } }),
     safeSendPush(payment.client_email, { title: "Pagamento confirmado!", body: clientMessage, data: { url } }),
+    sendNotificationEmail(payment.professional_email, { title: "Pagamento recebido!", message: professionalMessage, url }),
+    sendNotificationEmail(payment.client_email, { title: "Pagamento confirmado!", message: clientMessage, url }),
   ])
 }
 
