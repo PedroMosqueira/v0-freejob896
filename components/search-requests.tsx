@@ -2,7 +2,7 @@
 
 import React from "react"
 import type { ReactElement } from "react"
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
@@ -11,12 +11,9 @@ import NeedDetailsDialog from "./need-details-dialog"
 import InterestDialog from "./interest-dialog"
 import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
-import { AffiliateSidebar, AffiliateSidebarVertical } from "@/components/affiliate-sidebar"
-import { AdWrapper } from "@/components/ad-wrapper"
+
+const NEARBY_RADIUS_KM = 50
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
-import { CourseBannerAd } from "./course-banner-ad"
-import { GoogleAdSense } from "./google-adsense"
-import { AFFILIATE_CONFIG } from "@/lib/affiliate-config"
 import { FilterForm } from "./filter-form"
 import { getNeedStatusLabel } from "@/data/needs"
 
@@ -35,7 +32,7 @@ function SearchRequests({
   searchQuery = "",
   initialQuery = "",
 }: SearchRequestsProps): ReactElement {
-  const { email, isFreeUser } = useAuth()
+  const { email } = useAuth()
 
   const [query, setQuery] = useState(initialQuery)
   const [category, setCategory] = useState("all")
@@ -117,6 +114,7 @@ function SearchRequests({
             status: status === "all" ? undefined : status,
             limit,
             offset: currentPage * limit,
+            near: userLocation ? { ...userLocation, radiusKm: NEARBY_RADIUS_KM } : undefined,
           })
         }
 
@@ -351,14 +349,10 @@ function SearchRequests({
     }
   }, [])
 
-  const filters = useMemo(() => ({ category, city, status }), [category, city, status])
+  const isNearbyMode = !!userLocation && !showMyRequests && !showMyProfessionalServices
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
-      <AdWrapper freeUserOnly={isFreeUser}>
-        <AffiliateSidebar />
-      </AdWrapper>
-
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">{getTitle()}</h1>
         <div className="hidden md:flex gap-2">
@@ -404,6 +398,12 @@ function SearchRequests({
         </div>
       </div>
 
+      {isNearbyMode && (
+        <p className="text-sm text-muted-foreground">
+          {`Mostrando serviços em até ${NEARBY_RADIUS_KM} km de você${userCity ? ` (${userCity})` : ""}.`}
+        </p>
+      )}
+
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
           {/* Mobile Filter Sheet */}
@@ -431,11 +431,15 @@ function SearchRequests({
           {isSearching && searchResults.length === 0 ? (
             <SearchRequestsSkeleton />
           ) : searchResults.length === 0 ? (
-            <p className="text-center text-muted-foreground">Nenhum serviço encontrado.</p>
+            <p className="text-center text-muted-foreground">
+              {isNearbyMode
+                ? `Nenhum serviço encontrado em até ${NEARBY_RADIUS_KM} km de você.`
+                : "Nenhum serviço encontrado."}
+            </p>
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-                {searchResults.map((need: any, index: number) => {
+                {searchResults.map((need: any) => {
                   const hasProposedInterest =
                     email && need.proposals
                       ? need.proposals.some(
@@ -456,9 +460,6 @@ function SearchRequests({
 
                   const displayImage =
                     need.images && need.images.length > 0 ? need.images[0] : getCategoryImage(need.category)
-
-                  const showCourseAd = (index + 1) % 6 === 0 && index > 0
-                  const showGoogleAd = (index + 1) % 12 === 0 && index > 0
 
                   return (
                     <React.Fragment key={need.id}>
@@ -511,8 +512,6 @@ function SearchRequests({
                           </div>
                         </div>
                       </Card>
-
-                      {showCourseAd && <CourseBannerAd category={filters.category} />}
                     </React.Fragment>
                   )
                 })}
@@ -563,12 +562,6 @@ function SearchRequests({
               onChatActionSuccess={handleActionSuccess}
             />
           )}
-        </div>
-
-        <div className="hidden xl:block w-64 flex-shrink-0">
-          <AdWrapper freeUserOnly={isFreeUser}>
-            <AffiliateSidebarVertical />
-          </AdWrapper>
         </div>
       </div>
 
