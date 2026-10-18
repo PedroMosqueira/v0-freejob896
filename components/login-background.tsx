@@ -3,98 +3,103 @@ type Avatar = { service: string; label: string; at: Point }
 
 type CircuitLayout = {
   avatars: Avatar[]
-  roots: number[]
-  traces: Point[][]
-  vias: Point[]
+  trunk: Point[][]
+  branches: Point[][]
+  terminals: Point[]
 }
+
+const mirror = (points: Point[]): Point[] => points.map(([x, y]) => [100 - x, y])
+const mirrorAll = (paths: Point[][]) => [...paths, ...paths.map(mirror)]
+
+const ROOTS: Point[][] = [
+  [[50, 90], [45, 96], [36, 100]],
+  [[50, 95], [47, 100]],
+]
+
+const MOBILE_LEFT: Point[][] = [
+  [[50, 86], [42, 80], [16, 80], [10, 74], [10, 72]],
+  [[50, 70], [42, 64], [16, 64], [8, 56], [8, 38], [10, 32]],
+  [[50, 56], [42, 50], [28, 50], [22, 44], [22, 24], [14, 16], [14, 10]],
+  [[22, 30], [30, 22]],
+  [[30, 64], [30, 58]],
+  [[28, 80], [28, 72]],
+]
 
 const MOBILE: CircuitLayout = {
-  roots: [13, 87],
+  trunk: [[[50, 100], [50, 56]], ...mirrorAll(ROOTS)],
+  branches: mirrorAll(MOBILE_LEFT),
   avatars: [
-    { service: "eletricista", label: "Eletricista", at: [13, 9] },
-    { service: "diarista", label: "Diarista", at: [87, 7] },
-    { service: "pintor", label: "Pintor", at: [12, 34] },
-    { service: "encanador", label: "Encanador", at: [88, 30] },
-    { service: "jardineiro", label: "Jardineiro", at: [24, 89] },
-    { service: "montador", label: "Montador", at: [76, 89] },
+    { service: "eletricista", label: "Eletricista", at: [14, 10] },
+    { service: "pintor", label: "Pintor", at: [10, 32] },
+    { service: "jardineiro", label: "Jardineiro", at: [10, 72] },
+    { service: "diarista", label: "Diarista", at: [86, 10] },
+    { service: "encanador", label: "Encanador", at: [90, 32] },
+    { service: "montador", label: "Montador", at: [90, 72] },
   ],
-  traces: [
-    [[13, 100], [13, 95], [24, 95], [24, 89]],
-    [[13, 100], [13, 95], [4, 95], [4, 34], [12, 34]],
-    [[13, 100], [13, 95], [4, 95], [4, 20], [13, 20], [13, 9]],
-    [[87, 100], [87, 95], [76, 95], [76, 89]],
-    [[87, 100], [87, 95], [96, 95], [96, 30], [88, 30]],
-    [[87, 100], [87, 95], [96, 95], [96, 18], [87, 18], [87, 7]],
-  ],
-  vias: [[13, 95], [87, 95], [4, 95], [96, 95], [4, 34], [96, 30], [4, 20], [96, 18]],
+  terminals: [[30, 22], [70, 22], [30, 58], [70, 58], [28, 72], [72, 72]],
 }
 
+const DESKTOP_LEFT: Point[][] = [
+  [[50, 86], [42, 78], [14, 78], [8, 70]],
+  [[50, 68], [42, 60], [28, 60], [20, 54], [20, 50]],
+  [[50, 54], [44, 50], [34, 50], [22, 38], [14, 30], [14, 22]],
+  [[42, 78], [34, 70], [34, 64]],
+  [[28, 60], [12, 60], [6, 54], [6, 46]],
+  [[30, 46], [30, 32]],
+  [[14, 30], [6, 30], [6, 20]],
+]
+
 const DESKTOP: CircuitLayout = {
-  roots: [26, 74],
+  trunk: [[[50, 100], [50, 54]], ...mirrorAll(ROOTS)],
+  branches: mirrorAll(DESKTOP_LEFT),
   avatars: [
-    { service: "eletricista", label: "Eletricista", at: [12, 18] },
-    { service: "diarista", label: "Diarista", at: [20, 46] },
-    { service: "pintor", label: "Pintor", at: [9, 72] },
-    { service: "encanador", label: "Encanador", at: [88, 18] },
-    { service: "jardineiro", label: "Jardineiro", at: [80, 46] },
-    { service: "montador", label: "Montador", at: [91, 72] },
+    { service: "eletricista", label: "Eletricista", at: [14, 22] },
+    { service: "diarista", label: "Diarista", at: [20, 50] },
+    { service: "pintor", label: "Pintor", at: [8, 70] },
+    { service: "encanador", label: "Encanador", at: [86, 22] },
+    { service: "jardineiro", label: "Jardineiro", at: [80, 50] },
+    { service: "montador", label: "Montador", at: [92, 70] },
   ],
-  traces: [
-    [[26, 100], [26, 84], [9, 84], [9, 72]],
-    [[26, 100], [26, 60], [20, 60], [20, 46]],
-    [[26, 100], [26, 32], [12, 32], [12, 18]],
-    [[74, 100], [74, 84], [91, 84], [91, 72]],
-    [[74, 100], [74, 60], [80, 60], [80, 46]],
-    [[74, 100], [74, 32], [88, 32], [88, 18]],
-    [[26, 72], [17, 72], [17, 66]],
-    [[74, 72], [83, 72], [83, 66]],
-    [[26, 32], [26, 10], [33, 10]],
-    [[74, 32], [74, 10], [67, 10]],
-  ],
-  vias: [
-    [26, 84], [74, 84], [26, 60], [74, 60],
-    [26, 32], [74, 32], [26, 72], [74, 72], [17, 66], [83, 66], [33, 10], [67, 10],
-  ],
+  terminals: [[34, 64], [66, 64], [6, 46], [94, 46], [30, 32], [70, 32], [6, 20], [94, 20]],
 }
 
 const toPath = (points: Point[]) =>
   points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x} ${y}`).join(" ")
 
+function Trace({ points, width }: { points: Point[]; width: number }) {
+  const d = toPath(points)
+  return (
+    <g fill="none" strokeLinejoin="round" strokeLinecap="round">
+      <path d={d} stroke="#6B93FF" strokeOpacity={0.16} strokeWidth={width * 4} vectorEffect="non-scaling-stroke" />
+      <path d={d} stroke="#9DB8FF" strokeOpacity={0.8} strokeWidth={width} vectorEffect="non-scaling-stroke" />
+      <path
+        className="login-circuit-flow"
+        d={d}
+        stroke="#E6EDFF"
+        strokeWidth={width + 0.5}
+        strokeDasharray="6 42"
+        vectorEffect="non-scaling-stroke"
+      />
+    </g>
+  )
+}
+
 function CircuitLayer({ layout, className }: { layout: CircuitLayout; className: string }) {
   return (
     <div className={`absolute inset-0 ${className}`}>
       <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {layout.traces.map((trace) => {
-          const d = toPath(trace)
-          return (
-            <g key={d} fill="none" strokeLinejoin="round" strokeLinecap="round">
-              <path d={d} stroke="#6B93FF" strokeOpacity={0.16} strokeWidth={6} vectorEffect="non-scaling-stroke" />
-              <path d={d} stroke="#9DB8FF" strokeOpacity={0.75} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-              <path
-                className="login-circuit-flow"
-                d={d}
-                stroke="#E6EDFF"
-                strokeWidth={2}
-                strokeDasharray="6 42"
-                vectorEffect="non-scaling-stroke"
-              />
-            </g>
-          )
-        })}
+        {layout.trunk.map((points) => (
+          <Trace key={toPath(points)} points={points} width={3} />
+        ))}
+        {layout.branches.map((points) => (
+          <Trace key={toPath(points)} points={points} width={1.75} />
+        ))}
       </svg>
 
-      {layout.roots.map((x) => (
-        <span
-          key={x}
-          className="absolute bottom-0 h-1.5 w-16 -translate-x-1/2 rounded-t-sm bg-[#9DB8FF] shadow-[0_0_18px_6px_rgba(59,115,238,0.8)]"
-          style={{ left: `${x}%` }}
-        />
-      ))}
-
-      {layout.vias.map(([x, y]) => (
+      {layout.terminals.map(([x, y]) => (
         <span
           key={`${x}-${y}`}
-          className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#9DB8FF] bg-[#050d1f] shadow-[0_0_8px_2px_rgba(107,147,255,0.7)]"
+          className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#9DB8FF] bg-[#050d1f] shadow-[0_0_10px_2px_rgba(107,147,255,0.7)] md:size-4"
           style={{ left: `${x}%`, top: `${y}%` }}
         />
       ))}
