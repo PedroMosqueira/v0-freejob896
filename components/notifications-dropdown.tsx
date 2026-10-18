@@ -132,6 +132,8 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
         return "🎉" // Serviço concluído (alternativo)
       case "interest":
         return "⭐" // Interesse demonstrado
+      case "rating":
+        return "🏆" // Avaliação recebida
       case "visit":
         return "📅" // Visita agendada
       case "cancellation":
