@@ -81,33 +81,3 @@ export async function markAllAsRead(userEmail: string): Promise<boolean> {
 
   return true
 }
-
-export async function createNotification(
-  userEmail: string,
-  title: string,
-  message: string,
-  type: string,
-  relatedNeedId?: string,
-  relatedProposalId?: string,
-): Promise<boolean> {
-  const supabase = createClient()
-
-  const { error } = await supabase.from("notifications").insert({
-    user_id: userEmail,
-    title,
-    message,
-    type,
-    is_read: false,
-    related_need_id: relatedNeedId,
-    related_proposal_id: relatedProposalId,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  })
-
-  if (error) {
-    console.error("Error creating notification:", error)
-    return false
-  }
-
-  return true
-}
