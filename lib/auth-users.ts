@@ -10,10 +10,10 @@ interface User {
 export async function getUserByEmail(email: string): Promise<User | undefined> {
   try {
     const supabase = await createSupabaseServerClient()
-    const { data, error } = await supabase.from("users").select("id, email, password_hash").eq("email", email).single()
+    const { data, error } = await supabase.from("users").select("id, email").eq("email", email).single()
     if (error && error.code !== "PGRST116") return undefined
     if (!data) return undefined
-    return { id: data.id, email: data.email, passwordHash: data.password_hash }
+    return { id: data.id, email: data.email, passwordHash: "" }
   } catch (error) {
     console.warn("[v0] getUserByEmail: Supabase not available during build", error instanceof Error ? error.message : error)
     return undefined

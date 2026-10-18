@@ -1,7 +1,11 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/whatsapp-verification"
 import { revalidatePath } from "next/cache"
+
+const PUBLIC_USER_COLUMNS =
+  "id, email, created_at, updated_at, full_name, first_name, last_name, bio, profile_image_url, city, user_type, skills, rating, total_services, verified_at, is_client, is_professional, phone_verified, professional_verified_at, free_interests_remaining, total_interests_sent"
 
 export interface UserProfile {
   id: string
@@ -33,7 +37,19 @@ export interface UserProfile {
 export async function getUserProfile(email: string): Promise<UserProfile | null> {
   const supabase = await createSupabaseServerClient()
 
-  const { data, error } = await supabase.from("users").select("*").eq("email", email).single()
+  const {
+    data: { user: sessionUser },
+  } = await supabase.auth.getUser()
+  const isOwner = !!sessionUser?.email && sessionUser.email.toLowerCase() === email.toLowerCase()
+
+  // Only the profile owner may read private columns (phone); everyone else gets the public column set.
+  const { data, error } = isOwner
+    ? await createServiceClient()
+        .from("users")
+        .select(`${PUBLIC_USER_COLUMNS}, phone`)
+        .eq("email", sessionUser.email)
+        .single()
+    : await supabase.from("users").select(PUBLIC_USER_COLUMNS).eq("email", email).single()
 
   if (error || !data) {
     console.error("Error fetching user profile:", error)
@@ -79,7 +95,7 @@ export async function getUserProfile(email: string): Promise<UserProfile | null>
     lastName,
     fullName,
     photoUrl: data.profile_image_url,
-    phone: data.phone,
+    phone: "phone" in data ? (data.phone as string | undefined) : undefined,
     phoneVerified: data.phone_verified || false,
     bio: data.bio,
     profileImageUrl: data.profile_image_url,
@@ -103,7 +119,7 @@ export async function getUserProfiles(emails: string[]): Promise<Record<string, 
 
   const supabase = await createSupabaseServerClient()
 
-  const { data, error } = await supabase.from("users").select("*").in("email", emails)
+  const { data, error } = await supabase.from("users").select(PUBLIC_USER_COLUMNS).in("email", emails)
 
   if (error || !data) {
     console.error("Error fetching user profiles:", error)
@@ -124,7 +140,7 @@ export async function getUserProfiles(emails: string[]): Promise<Record<string, 
       lastName,
       fullName,
       photoUrl: user.profile_image_url,
-      phone: user.phone,
+      phone: undefined,
       phoneVerified: user.phone_verified || false,
       bio: user.bio,
       profileImageUrl: user.profile_image_url,
@@ -200,7 +216,7 @@ export async function updateUserProfile(
       updated_at: new Date().toISOString(),
     }
 
-    const { data, error } = await supabase.from("users").update(updateData).eq("email", user.email).select()
+    const { data, error } = await supabase.from("users").update(updateData).eq("email", user.email).select("id")
 
     if (error) {
       console.error("[v0] Erro ao atualizar perfil - Erro do DB:", error)
