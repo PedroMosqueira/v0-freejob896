@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
+import { clearPendingRequest, loadPendingRequest } from "@/lib/pending-request"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -80,6 +81,22 @@ export default function RequestForm() {
 
   const [cep, setCep] = useState("")
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [restoredDraft, setRestoredDraft] = useState(false)
+
+  useEffect(() => {
+    const draft = loadPendingRequest()
+    if (!draft) return
+    if (draft.title) setTitle(draft.title)
+    if (draft.description) setDescription(draft.description)
+    if (draft.category) setCategory(draft.category)
+    if (draft.state) setState(draft.state)
+    if (draft.city) setCity(draft.city)
+    if (draft.neighborhood) setNeighborhood(draft.neighborhood)
+    if (typeof draft.latitude === "number") setLatitude(draft.latitude)
+    if (typeof draft.longitude === "number") setLongitude(draft.longitude)
+    if (draft.images.length > 0) setImagePreviews(draft.images)
+    setRestoredDraft(true)
+  }, [])
 
   // Validation errors state
   const [errors, setErrors] = useState<{
@@ -351,6 +368,8 @@ export default function RequestForm() {
       }
 
       await addNeed(newNeed)
+      clearPendingRequest()
+      setRestoredDraft(false)
 
       toast({
         title: "Sucesso!",
@@ -568,6 +587,40 @@ export default function RequestForm() {
           {/* Traditional Form Mode */}
           {!useAIChat && (
             <>
+              {restoredDraft && (
+                <div
+                  role="status"
+                  className="mb-6 flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-100 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-semibold">Recuperamos o pedido que você descreveu</p>
+                    <p className="text-sm leading-relaxed opacity-90">
+                      Confira os dados abaixo e clique em publicar para enviar aos profissionais.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-fit flex-shrink-0"
+                    onClick={() => {
+                      clearPendingRequest()
+                      setRestoredDraft(false)
+                      setTitle("")
+                      setDescription("")
+                      setCategory("")
+                      setCity("")
+                      setNeighborhood("")
+                      setState("")
+                      setImagePreviews([])
+                      setLatitude(undefined)
+                      setLongitude(undefined)
+                    }}
+                  >
+                    Descartar
+                  </Button>
+                </div>
+              )}
               {/* Banner de erros de validação */}
               {Object.keys(errors).length > 0 && (
                 <div

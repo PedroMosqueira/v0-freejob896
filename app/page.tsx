@@ -1,32 +1,33 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
 import RequestForm from "@/components/request-form"
 import SearchRequests from "@/components/search-requests"
-import { AuthForm } from "@/components/auth-form"
+import { GuestLanding } from "@/components/guest-landing"
 import { LoginBackground } from "@/components/login-background"
-import Image from "next/image"
 import { BackToTopButton } from "@/components/back-to-top-button"
+import {
+  claimPendingRequest,
+  clearPendingRef,
+  decodePendingRef,
+  getPendingRef,
+  hasPendingRequest,
+  restoreDraftLocally,
+  takePendingInterest,
+} from "@/lib/pending-request"
 import { SiteFooter } from "@/components/site-footer"
 import { useSearchParams } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
-
-  // Log para verificar se o código está atualizado
-  useEffect(() => {
-    console.log("[v0] ========== FREEJOB HOME PAGE CARREGADA ==========")
-    console.log("[v0] Timestamp:", new Date().toISOString())
-    console.log("[v0] Email autenticado:", authenticatedEmail || "nenhum")
-    console.log("[v0] Carregando:", isLoading)
-    console.log("[v0] Build com OAuth Supabase singleton implementado")
-    console.log("[v0] ========== FIM DO LOG ==========")
-  }, [])
+  const { toast } = useToast()
+  const claimingRef = useRef<string | null>(null)
 
   // Processar OAuth callback com token no hash
   useEffect(() => {
@@ -40,11 +41,54 @@ export default function Home() {
   useEffect(() => {
     if (!authenticatedEmail) return
 
-    const needId = searchParams?.get("needId")
+    const needId = searchParams?.get("needId") || takePendingInterest()
     if (needId) {
       window.dispatchEvent(new CustomEvent("openNeed", { detail: needId }))
     }
   }, [searchParams, authenticatedEmail])
+
+  useEffect(() => {
+    if (!authenticatedEmail) return
+
+    const ref = decodePendingRef(searchParams?.get("pending")) ?? getPendingRef()
+    if (searchParams?.get("pending")) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete("pending")
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash)
+    }
+
+    if (!ref) {
+      if (hasPendingRequest()) setActiveTab("solicitar")
+      return
+    }
+    if (claimingRef.current === ref.id) return
+    claimingRef.current = ref.id
+
+    claimPendingRequest(ref)
+      .then((result) => {
+        clearPendingRef()
+        if (result.status === "published") {
+          setActiveTab("minhas-solicitacoes")
+          toast({
+            title: "Pedido publicado!",
+            description: "Os profissionais da sua região já podem ver e enviar propostas.",
+            variant: "success",
+          })
+        } else if (result.status === "incomplete" || result.status === "failed") {
+          restoreDraftLocally(result.draft)
+          setActiveTab("solicitar")
+          toast({
+            title: result.status === "incomplete" ? "Falta pouco para publicar" : "Não conseguimos publicar",
+            description: "Confira os dados do pedido e clique em publicar.",
+          })
+        } else if (hasPendingRequest()) {
+          setActiveTab("solicitar")
+        }
+      })
+      .catch(() => {
+        claimingRef.current = null
+      })
+  }, [authenticatedEmail, searchParams, toast])
 
   useEffect(() => {
     if (!authenticatedEmail) return
@@ -154,36 +198,7 @@ export default function Home() {
         )}
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
           {!isLogged ? (
-            <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8">
-              <div className="w-full max-w-sm">
-                <div className="text-center mb-6">
-                  <div className="flex justify-center mb-4">
-                    <Image
-                      src="/logo.png"
-                      alt="Freejob Logo"
-                      width={80}
-                      height={80}
-                      className="rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.6),0_0_0_4px_rgba(5,13,31,0.55)]"
-                    />
-                  </div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold leading-tight [text-shadow:0_2px_4px_rgba(0,0,0,0.85),0_4px_16px_rgba(0,0,0,0.7)]">
-                    <span className="text-[#6B93FF]" translate="no">
-                      Freejob
-                    </span>
-                    <span className="block text-blue-100 text-sm sm:text-base font-medium">
-                      prático e do seu jeito
-                    </span>
-                  </h1>
-                  <p className="text-sm text-blue-100/80 mt-2 text-pretty [text-shadow:0_1px_3px_rgba(0,0,0,0.9),0_2px_12px_rgba(0,0,0,0.7)]">
-                    Solicite ou procure serviço com facilidade
-                  </p>
-                </div>
-
-                <div className="rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.65),0_2px_8px_rgba(0,0,0,0.45)]">
-                  <AuthForm />
-                </div>
-              </div>
-            </div>
+            <GuestLanding />
           ) : (
             <>
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
