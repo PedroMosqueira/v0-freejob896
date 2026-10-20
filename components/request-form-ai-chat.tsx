@@ -32,9 +32,19 @@ interface ExtractedInfo {
 interface ChatProps {
   onExtract: (info: ExtractedInfo) => void
   onComplete: (info: ExtractedInfo) => void
+  confirmMessage?: string
+  afterComplete?: React.ReactNode
+  hideEditInForm?: boolean
 }
 
-export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
+export function RequestFormAIChat({
+  onExtract,
+  onComplete,
+  confirmMessage = "Sua solicitação foi confirmada e enviada com sucesso!",
+  afterComplete,
+  hideEditInForm = false,
+}: ChatProps) {
+  const [completed, setCompleted] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -317,10 +327,11 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
       ...prev,
       {
         role: "assistant",
-        content: "Sua solicitação foi confirmada e enviada com sucesso!",
+        content: confirmMessage,
       },
     ])
     setShowingPreview(false)
+    setCompleted(true)
     
     // Incluir fotos no objeto final
     const finalInfo = { ...extractedInfo }
@@ -536,16 +547,20 @@ export function RequestFormAIChat({ onExtract, onComplete }: ChatProps) {
               >
                 ✅ Confirmar e Enviar
               </Button>
-              <Button
-                onClick={handleEditInForm}
-                variant="outline"
-                className="w-full text-sm"
-              >
-                ✏️ Editar no Formulário
-              </Button>
+              {!hideEditInForm && (
+                <Button
+                  onClick={handleEditInForm}
+                  variant="outline"
+                  className="w-full text-sm"
+                >
+                  ✏️ Editar no Formulário
+                </Button>
+              )}
             </div>
           </div>
         )}
+
+        {completed && afterComplete}
 
         <div ref={messagesEndRef} />
       </div>

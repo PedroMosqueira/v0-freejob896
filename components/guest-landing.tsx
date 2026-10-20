@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { AuthForm } from "@/components/auth-form"
 import { RequestFormAIChat } from "@/components/request-form-ai-chat"
 import { GuestNeedsPreview } from "@/components/guest-needs-preview"
+import { ChatLoginPrompt } from "@/components/chat-login-prompt"
 import { savePendingInterest, savePendingRequest } from "@/lib/pending-request"
 
 type View = "inicio" | "solicitar" | "entrar"
@@ -24,6 +25,7 @@ export function GuestLanding() {
   const [view, setView] = useState<View>("inicio")
   const [browseOpen, setBrowseOpen] = useState(false)
   const [loginContext, setLoginContext] = useState<LoginContext | null>(null)
+  const [imagesDropped, setImagesDropped] = useState(false)
 
   const goToLogin = (context: LoginContext | null) => {
     setLoginContext(context)
@@ -33,12 +35,7 @@ export function GuestLanding() {
 
   const handleRequestComplete = async (info: Parameters<typeof savePendingRequest>[0]) => {
     const { imagesDropped } = await savePendingRequest(info)
-    goToLogin({
-      title: "Seu pedido está salvo",
-      message: imagesDropped
-        ? "Entre para publicar. As fotos eram grandes demais para guardar; você poderá adicioná-las de novo depois do login."
-        : "Entre ou crie sua conta para publicar. Você vai revisar o pedido antes de enviar.",
-    })
+    setImagesDropped(imagesDropped)
   }
 
   const handleInterest = (needId: string) => {
@@ -77,14 +74,14 @@ export function GuestLanding() {
 
             <ChoiceCard
               icon={<MessageSquareText className="h-6 w-6" aria-hidden="true" />}
-              title="Preciso de um serviço"
+              title="Solicitar um serviço"
               description="Conte o que precisa em uma conversa rápida e receba propostas de profissionais da sua região."
               onClick={() => setView("solicitar")}
             />
             <ChoiceCard
               icon={<Search className="h-6 w-6" aria-hidden="true" />}
-              title="Quero encontrar trabalho"
-              description="Veja pedidos abertos perto de você e mostre interesse nos que combinam com o seu ofício."
+              title="Quero fazer serviços"
+              description="Veja pedidos abertos perto de você e mostre interesse nos que combinam com o que você faz."
               onClick={() => setBrowseOpen(true)}
             />
 
@@ -103,10 +100,16 @@ export function GuestLanding() {
           <div className="flex flex-col gap-3">
             <BackButton onClick={() => setView("inicio")} />
             <div className={`flex h-[min(640px,calc(100vh-14rem))] flex-col rounded-xl ${PANEL_SHADOW}`}>
-              <RequestFormAIChat onExtract={() => {}} onComplete={handleRequestComplete} />
+              <RequestFormAIChat
+                onExtract={() => {}}
+                onComplete={handleRequestComplete}
+                confirmMessage="Perfeito, pedido confirmado!"
+                hideEditInForm
+                afterComplete={<ChatLoginPrompt imagesDropped={imagesDropped} />}
+              />
             </div>
             <p className={`text-center text-xs text-blue-100/80 ${TEXT_SHADOW}`}>
-              Ao confirmar, pedimos o login para publicar. Nada é publicado antes disso.
+              Ao confirmar, você entra com Google ou e-mail aqui mesmo no chat. Nada é publicado antes disso.
             </p>
           </div>
         )}
