@@ -48,9 +48,9 @@ function MapPin({ pin, index }: { pin: Pin; index: number }) {
       title={pin.label}
     >
       <span className="map-pin-float flex flex-col items-center" style={{ animationDelay: delay }}>
-        <span className="flex origin-bottom flex-col items-center transition-transform duration-300 ease-out group-hover:scale-[1.6]">
+        <span className="flex origin-bottom flex-col items-center opacity-70 saturate-[0.7] transition-[transform,opacity,filter] duration-300 ease-out group-hover:scale-[1.6] group-hover:opacity-100 group-hover:saturate-100">
         <span
-          className={`flex items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#3B73EE] text-white shadow-[0_6px_16px_rgba(6,20,51,0.55)] transition-shadow duration-300 group-hover:shadow-[0_10px_28px_rgba(6,20,51,0.6)] ${
+          className={`relative flex items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#3B73EE] text-white shadow-[0_6px_16px_rgba(6,20,51,0.55)] transition-shadow duration-300 group-hover:shadow-[0_10px_28px_rgba(6,20,51,0.6)] ${
             isAvatar ? "size-12 md:size-16" : "size-9 md:size-11"
           }`}
         >
@@ -66,12 +66,16 @@ function MapPin({ pin, index }: { pin: Pin; index: number }) {
           ) : (
             <pin.icon className="size-4 md:size-5" strokeWidth={2.5} />
           )}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[#2563EB]/45 mix-blend-color transition-opacity duration-300 group-hover:opacity-0"
+          />
         </span>
         <span className="-mt-0.5 h-0 w-0 border-x-[7px] border-t-[11px] border-x-transparent border-t-white md:border-x-[8px] md:border-t-[13px]" />
         </span>
       </span>
 
-      <span className="relative mt-0.5 flex h-2 w-5 items-center justify-center">
+      <span className="relative mt-0.5 flex h-2 w-5 items-center justify-center opacity-60 transition-opacity duration-300 group-hover:opacity-100">
         <span
           className="map-pin-ping absolute size-5 rounded-full border-2 border-white/80"
           style={{ animationDelay: delay }}
