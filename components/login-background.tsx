@@ -1,6 +1,6 @@
 import type { ComponentType } from "react"
-import { Hammer, Laptop, PaintRoller, Snowflake, Wrench, Zap } from "lucide-react"
-import { FaucetIcon, TrowelIcon } from "@/components/niche-icons"
+import { Hammer, Laptop, Snowflake } from "lucide-react"
+import { FaucetIcon } from "@/components/niche-icons"
 
 type Point = [number, number]
 type IconComponent = ComponentType<{ className?: string; strokeWidth?: number | string }>
@@ -10,31 +10,24 @@ type Pin =
 
 const MOBILE_PINS: Pin[] = [
   { kind: "avatar", service: "eletricista", label: "Eletricista", at: [13, 27] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [29, 22] },
+  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [29, 22] },
   { kind: "avatar", service: "diarista", label: "Diarista", at: [86, 31] },
   { kind: "icon", icon: Hammer, label: "Marceneiro", at: [7, 47] },
   { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [94, 42] },
   { kind: "avatar", service: "pintor", label: "Pintor", at: [11, 69] },
-  { kind: "avatar", service: "encanador", label: "Encanador", at: [89, 79] },
-  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [29, 97] },
+  { kind: "icon", icon: Laptop, label: "Informática", at: [90, 80] },
   { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [66, 95] },
 ]
 
 const DESKTOP_PINS: Pin[] = [
-  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [11, 41] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [25, 27] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [22, 63] },
-  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [4, 56] },
-  { kind: "avatar", service: "pintor", label: "Pintor", at: [9, 89] },
-  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [27, 91] },
-  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [6, 25] },
-  { kind: "icon", icon: Laptop, label: "Informática", at: [68, 30] },
-  { kind: "avatar", service: "encanador", label: "Encanador", at: [88, 42] },
-  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [81, 24] },
-  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [77, 63] },
-  { kind: "icon", icon: PaintRoller, label: "Pintura", at: [95, 53] },
-  { kind: "avatar", service: "montador", label: "Montador", at: [91, 91] },
-  { kind: "icon", icon: Wrench, label: "Manutenção", at: [72, 87] },
+  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [6, 26] },
+  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [14, 44] },
+  { kind: "avatar", service: "diarista", label: "Diarista", at: [23, 66] },
+  { kind: "avatar", service: "pintor", label: "Pintor", at: [9, 88] },
+  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [80, 25] },
+  { kind: "icon", icon: Laptop, label: "Informática", at: [94, 45] },
+  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [76, 62] },
+  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [90, 90] },
 ]
 
 function MapPin({ pin, index }: { pin: Pin; index: number }) {
