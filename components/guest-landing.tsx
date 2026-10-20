@@ -90,7 +90,7 @@ export function GuestLanding() {
         </header>
 
         {view === "inicio" && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-3xl border border-white/30 bg-white/15 p-4 shadow-[0_12px_40px_rgba(6,20,51,0.35)] backdrop-blur-md sm:p-5">
             <p className={`text-center text-base text-blue-100 text-pretty ${TEXT_SHADOW}`}>
               O que você quer fazer hoje?
             </p>
