@@ -58,7 +58,7 @@ export function GuestLanding() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] w-full flex-col">
-      <nav aria-label="Acesso" className="flex items-center justify-end">
+      <nav aria-label="Acesso" className="pointer-events-auto flex items-center justify-end self-end">
         {view !== "entrar" && (
           <button
             type="button"
@@ -72,7 +72,7 @@ export function GuestLanding() {
       </nav>
 
       <div className="flex w-full flex-1 items-center justify-center py-8">
-      <div className={view === "solicitar" ? "w-full max-w-2xl" : "w-full max-w-md"}>
+      <div className={`pointer-events-auto ${view === "solicitar" ? "w-full max-w-2xl" : "w-full max-w-md"}`}>
         <header className="mb-6 flex flex-col items-center gap-3 text-center">
           <Image
             src="/logo.png"
