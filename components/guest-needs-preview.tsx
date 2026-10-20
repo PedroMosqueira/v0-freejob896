@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import useSWR from "swr"
 import { MapPin, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -28,20 +29,93 @@ function formatLocation(need: PublicNeedPreview) {
   return need.state ? `${place}${place ? " - " : ""}${need.state}` : place
 }
 
+type PreviewResponse = { needs: PublicNeedPreview[]; categories: string[] }
+
 const fetcher = async (url: string) => {
   const response = await fetch(url)
   if (!response.ok) throw new Error("Falha ao carregar serviços")
-  return (await response.json()) as { needs: PublicNeedPreview[] }
+  return (await response.json()) as PreviewResponse
 }
+
+const ALL_NEEDS_KEY = "/api/public/needs"
 
 interface GuestNeedsPreviewProps {
   onInterest: (needId: string) => void
 }
 
 export function GuestNeedsPreview({ onInterest }: GuestNeedsPreviewProps) {
-  const { data, error, isLoading } = useSWR("/api/public/needs", fetcher, { revalidateOnFocus: false })
+  const [category, setCategory] = useState<string | null>(null)
+  const swrOptions = { revalidateOnFocus: false, keepPreviousData: true }
+  const { data: allData } = useSWR(ALL_NEEDS_KEY, fetcher, swrOptions)
+  const { data, error, isLoading } = useSWR(
+    category ? `${ALL_NEEDS_KEY}?category=${encodeURIComponent(category)}` : ALL_NEEDS_KEY,
+    fetcher,
+    swrOptions,
+  )
+  const categories = allData?.categories ?? []
   const needs = data?.needs ?? []
 
+  return (
+    <div className="flex flex-col gap-4">
+      {categories.length > 1 && (
+        <CategoryFilter categories={categories} selected={category} onSelect={setCategory} />
+      )}
+      <NeedsList needs={needs} error={!!error} isLoading={isLoading && !data} category={category} onInterest={onInterest} />
+    </div>
+  )
+}
+
+function CategoryFilter({
+  categories,
+  selected,
+  onSelect,
+}: {
+  categories: string[]
+  selected: string | null
+  onSelect: (category: string | null) => void
+}) {
+  const options: { label: string; value: string | null }[] = [
+    { label: "Todas", value: null },
+    ...categories.map((name) => ({ label: name, value: name })),
+  ]
+
+  return (
+    <div role="group" aria-label="Filtrar por categoria" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {options.map((option) => {
+        const active = option.value === selected
+        return (
+          <button
+            key={option.label}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onSelect(option.value)}
+            className={`flex-shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              active
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-card-foreground hover:bg-muted"
+            }`}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function NeedsList({
+  needs,
+  error,
+  isLoading,
+  category,
+  onInterest,
+}: {
+  needs: PublicNeedPreview[]
+  error: boolean
+  isLoading: boolean
+  category: string | null
+  onInterest: (needId: string) => void
+}) {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3" aria-busy="true" aria-label="Carregando serviços">
@@ -59,14 +133,16 @@ export function GuestNeedsPreview({ onInterest }: GuestNeedsPreviewProps) {
         <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
           {error
             ? "Não foi possível carregar os serviços agora."
-            : "Nenhum serviço aberto no momento. Entre para receber avisos de novos pedidos."}
+            : category
+              ? `Nenhum pedido de ${category} aberto agora. Entre para ser avisado quando surgir um.`
+              : "Nenhum serviço aberto no momento. Entre para receber avisos de novos pedidos."}
         </p>
       </div>
     )
   }
 
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="flex flex-col gap-3" aria-live="polite">
       {needs.map((need) => (
         <li key={need.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
           <img

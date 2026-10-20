@@ -4,6 +4,8 @@ import { checkRateLimit, getClientIp, tooManyRequests } from "@/lib/rate-limit"
 
 export const dynamic = "force-dynamic"
 
+const PREVIEW_LIMIT = 4
+
 export interface PublicNeedPreview {
   id: string
   title: string
@@ -21,18 +23,41 @@ export async function GET(request: NextRequest) {
   ])
   if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds)
 
+  const rawCategory = request.nextUrl.searchParams.get("category")?.trim() ?? ""
+  const category = rawCategory.length > 0 && rawCategory.length <= 60 ? rawCategory : null
+
   const supabase = createServiceClient()
-  const { data, error } = await supabase
+  let needsQuery = supabase
     .from("needs")
     .select("id, title, category, city, state, neighborhood, images, created_at")
     .eq("status", "aberto")
     .order("created_at", { ascending: false })
-    .limit(8)
+    .limit(PREVIEW_LIMIT)
+  if (category) needsQuery = needsQuery.eq("category", category)
+
+  const [{ data, error }, { data: categoryRows }] = await Promise.all([
+    needsQuery,
+    supabase
+      .from("needs")
+      .select("category")
+      .eq("status", "aberto")
+      .order("created_at", { ascending: false })
+      .limit(500),
+  ])
 
   if (error) {
     console.error("Erro ao carregar prévia pública de serviços:", error.message)
-    return NextResponse.json({ needs: [] }, { status: 500 })
+    return NextResponse.json({ needs: [], categories: [] }, { status: 500 })
   }
+
+  const categoryCounts = new Map<string, number>()
+  for (const row of categoryRows ?? []) {
+    if (row.category) categoryCounts.set(row.category, (categoryCounts.get(row.category) ?? 0) + 1)
+  }
+  const categories = [...categoryCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"))
+    .slice(0, 12)
+    .map(([name]) => name)
 
   const needs: PublicNeedPreview[] = (data ?? []).map((need) => ({
     id: need.id,
@@ -46,7 +71,7 @@ export async function GET(request: NextRequest) {
   }))
 
   return NextResponse.json(
-    { needs },
+    { needs, categories },
     { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } },
   )
 }
