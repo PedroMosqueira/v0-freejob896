@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
 
-export async function sendMagicLink(email: string): Promise<string | null> {
+export async function sendMagicLink(email: string, pendingRef?: string): Promise<string | null> {
   const trimmed = email.trim()
   if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
     return "E-mail inválido"
@@ -16,10 +16,12 @@ export async function sendMagicLink(email: string): Promise<string | null> {
 
   try {
     const supabase = createSupabaseBrowserClient()
+    const redirectUrl = new URL("/auth/callback", window.location.origin)
+    if (pendingRef) redirectUrl.searchParams.set("pending", pendingRef)
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectUrl.toString(),
       },
     })
     return error ? error.message : null

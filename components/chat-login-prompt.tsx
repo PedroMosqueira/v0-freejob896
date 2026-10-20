@@ -6,6 +6,7 @@ import { Loader2, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { GoogleLoginButton, sendMagicLink } from "@/components/auth-form"
+import { encodePendingRef, type PendingRequestRef } from "@/lib/pending-request"
 
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   return (
@@ -27,30 +28,39 @@ function UserBubble({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function ChatLoginPrompt({ imagesDropped }: { imagesDropped: boolean }) {
+interface ChatLoginPromptProps {
+  imagesDropped: boolean
+  saving: boolean
+  pendingRef: PendingRequestRef | null
+}
+
+export function ChatLoginPrompt({ imagesDropped, saving, pendingRef }: ChatLoginPromptProps) {
   const [email, setEmail] = useState("")
   const [sentTo, setSentTo] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
+  const loading = sending || saving
 
   const handleSend = async () => {
     if (loading || !email.trim()) return
-    setLoading(true)
+    setSending(true)
     setError("")
-    const sendError = await sendMagicLink(email)
+    const sendError = await sendMagicLink(email, pendingRef ? encodePendingRef(pendingRef) : undefined)
     if (sendError) {
       setError(sendError)
     } else {
       setSentTo(email.trim())
       setEmail("")
     }
-    setLoading(false)
+    setSending(false)
   }
 
   return (
     <div className="flex flex-col gap-4">
       <AssistantBubble>
-        Seu pedido está guardado. Para publicar, é só entrar na sua conta. Se ainda não tem, ela é criada na hora.
+        {saving
+          ? "Guardando seu pedido..."
+          : "Seu pedido está guardado. É só entrar na sua conta que ele é publicado na hora. Se ainda não tem conta, ela é criada automaticamente."}
       </AssistantBubble>
 
       {imagesDropped && (
@@ -60,7 +70,7 @@ export function ChatLoginPrompt({ imagesDropped }: { imagesDropped: boolean }) {
       )}
 
       <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3">
-        <GoogleLoginButton disabled={loading} onError={setError} onLoadingChange={setLoading} />
+        <GoogleLoginButton disabled={loading} onError={setError} onLoadingChange={setSending} />
         <div className="flex items-center gap-3 text-xs text-gray-500">
           <span className="h-px flex-1 bg-gray-200" aria-hidden="true" />
           ou receba um link no e-mail
@@ -71,8 +81,9 @@ export function ChatLoginPrompt({ imagesDropped }: { imagesDropped: boolean }) {
           <div className="flex flex-col gap-3">
             <UserBubble>{sentTo}</UserBubble>
             <AssistantBubble>
-              Enviei um link de acesso para {sentTo}. Abra o e-mail neste mesmo aparelho e navegador para publicar o
-              pedido.
+              {pendingRef
+                ? `Enviei um link de acesso para ${sentTo}. Pode abrir em qualquer aparelho: ao entrar, seu pedido é publicado automaticamente.`
+                : `Enviei um link de acesso para ${sentTo}. Abra o e-mail neste mesmo aparelho e navegador para publicar o pedido.`}
             </AssistantBubble>
             <button
               type="button"

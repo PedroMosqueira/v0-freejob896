@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { SiteHeader } from "@/components/site-header"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -10,13 +10,24 @@ import SearchRequests from "@/components/search-requests"
 import { GuestLanding } from "@/components/guest-landing"
 import { LoginBackground } from "@/components/login-background"
 import { BackToTopButton } from "@/components/back-to-top-button"
-import { hasPendingRequest, takePendingInterest } from "@/lib/pending-request"
+import {
+  claimPendingRequest,
+  clearPendingRef,
+  decodePendingRef,
+  getPendingRef,
+  hasPendingRequest,
+  restoreDraftLocally,
+  takePendingInterest,
+} from "@/lib/pending-request"
 import { SiteFooter } from "@/components/site-footer"
 import { useSearchParams } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
+  const claimingRef = useRef<string | null>(null)
 
   // Processar OAuth callback com token no hash
   useEffect(() => {
@@ -37,10 +48,47 @@ export default function Home() {
   }, [searchParams, authenticatedEmail])
 
   useEffect(() => {
-    if (authenticatedEmail && hasPendingRequest()) {
-      setActiveTab("solicitar")
+    if (!authenticatedEmail) return
+
+    const ref = decodePendingRef(searchParams?.get("pending")) ?? getPendingRef()
+    if (searchParams?.get("pending")) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete("pending")
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash)
     }
-  }, [authenticatedEmail])
+
+    if (!ref) {
+      if (hasPendingRequest()) setActiveTab("solicitar")
+      return
+    }
+    if (claimingRef.current === ref.id) return
+    claimingRef.current = ref.id
+
+    claimPendingRequest(ref)
+      .then((result) => {
+        clearPendingRef()
+        if (result.status === "published") {
+          setActiveTab("minhas-solicitacoes")
+          toast({
+            title: "Pedido publicado!",
+            description: "Os profissionais da sua região já podem ver e enviar propostas.",
+            variant: "success",
+          })
+        } else if (result.status === "incomplete" || result.status === "failed") {
+          restoreDraftLocally(result.draft)
+          setActiveTab("solicitar")
+          toast({
+            title: result.status === "incomplete" ? "Falta pouco para publicar" : "Não conseguimos publicar",
+            description: "Confira os dados do pedido e clique em publicar.",
+          })
+        } else if (hasPendingRequest()) {
+          setActiveTab("solicitar")
+        }
+      })
+      .catch(() => {
+        claimingRef.current = null
+      })
+  }, [authenticatedEmail, searchParams, toast])
 
   useEffect(() => {
     if (!authenticatedEmail) return

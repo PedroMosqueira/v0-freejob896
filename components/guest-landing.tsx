@@ -9,7 +9,7 @@ import { AuthForm } from "@/components/auth-form"
 import { RequestFormAIChat } from "@/components/request-form-ai-chat"
 import { GuestNeedsPreview } from "@/components/guest-needs-preview"
 import { ChatLoginPrompt } from "@/components/chat-login-prompt"
-import { savePendingInterest, savePendingRequest } from "@/lib/pending-request"
+import { savePendingInterest, savePendingRequest, type PendingRequestRef } from "@/lib/pending-request"
 
 type View = "inicio" | "solicitar" | "entrar"
 
@@ -26,6 +26,8 @@ export function GuestLanding() {
   const [browseOpen, setBrowseOpen] = useState(false)
   const [loginContext, setLoginContext] = useState<LoginContext | null>(null)
   const [imagesDropped, setImagesDropped] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [pendingRef, setPendingRef] = useState<PendingRequestRef | null>(null)
 
   const goToLogin = (context: LoginContext | null) => {
     setLoginContext(context)
@@ -34,8 +36,14 @@ export function GuestLanding() {
   }
 
   const handleRequestComplete = async (info: Parameters<typeof savePendingRequest>[0]) => {
-    const { imagesDropped } = await savePendingRequest(info)
-    setImagesDropped(imagesDropped)
+    setSavingDraft(true)
+    try {
+      const { imagesDropped, ref } = await savePendingRequest(info)
+      setImagesDropped(imagesDropped)
+      setPendingRef(ref)
+    } finally {
+      setSavingDraft(false)
+    }
   }
 
   const handleInterest = (needId: string) => {
@@ -105,7 +113,9 @@ export function GuestLanding() {
                 onComplete={handleRequestComplete}
                 confirmMessage="Perfeito, pedido confirmado!"
                 hideEditInForm
-                afterComplete={<ChatLoginPrompt imagesDropped={imagesDropped} />}
+                afterComplete={
+                  <ChatLoginPrompt imagesDropped={imagesDropped} saving={savingDraft} pendingRef={pendingRef} />
+                }
               />
             </div>
             <p className={`text-center text-xs text-blue-100/80 ${TEXT_SHADOW}`}>
