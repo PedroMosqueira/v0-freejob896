@@ -85,14 +85,16 @@ export function GuestLanding() {
             <span className="text-[#6B93FF]" translate="no">
               Freejob
             </span>
-            <span className="block text-sm font-medium text-blue-100 sm:text-base">prático e do seu jeito</span>
+            <span className="mt-1 block text-lg font-semibold text-white [text-shadow:0_2px_10px_rgba(6,20,51,0.85)] sm:text-xl">
+                Rápido e fácil
+              </span>
           </h1>
         </header>
 
         {view === "inicio" && (
           <div className="flex flex-col gap-4 rounded-3xl border border-white/30 bg-white/15 p-4 shadow-[0_12px_40px_rgba(6,20,51,0.35)] backdrop-blur-md sm:p-5">
             <p className={`text-center text-base text-blue-100 text-pretty ${TEXT_SHADOW}`}>
-              O que você quer fazer hoje?
+              O que você precisa hoje?
             </p>
 
             <ChoiceCard
