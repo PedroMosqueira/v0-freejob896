@@ -9,32 +9,32 @@ type Pin =
   | { kind: "icon"; icon: IconComponent; label: string; at: Point }
 
 const MOBILE_PINS: Pin[] = [
-  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [16, 14] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [50, 9] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [84, 27] },
-  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [8, 38] },
-  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [93, 39] },
-  { kind: "avatar", service: "pintor", label: "Pintor", at: [12, 72] },
-  { kind: "avatar", service: "encanador", label: "Encanador", at: [88, 76] },
-  { kind: "icon", icon: TrowelIcon, label: "Pedreiro", at: [34, 96] },
-  { kind: "avatar", service: "jardineiro", label: "Jardineiro", at: [62, 97] },
+  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [13, 17] },
+  { kind: "icon", icon: Zap, label: "Elétrica", at: [56, 7] },
+  { kind: "avatar", service: "diarista", label: "Diarista", at: [86, 23] },
+  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [7, 41] },
+  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [94, 36] },
+  { kind: "avatar", service: "pintor", label: "Pintor", at: [11, 69] },
+  { kind: "avatar", service: "encanador", label: "Encanador", at: [89, 79] },
+  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [29, 97] },
+  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [66, 95] },
 ]
 
 const DESKTOP_PINS: Pin[] = [
-  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [12, 30] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [24, 18] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [20, 58] },
-  { kind: "icon", icon: TrowelIcon, label: "Pedreiro", at: [6, 52] },
-  { kind: "avatar", service: "pintor", label: "Pintor", at: [10, 86] },
-  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [24, 92] },
-  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [40, 14] },
-  { kind: "icon", icon: Laptop, label: "Informática", at: [62, 12] },
-  { kind: "avatar", service: "encanador", label: "Encanador", at: [86, 26] },
-  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [76, 18] },
-  { kind: "avatar", service: "jardineiro", label: "Jardineiro", at: [80, 56] },
-  { kind: "icon", icon: PaintRoller, label: "Pintura", at: [94, 46] },
-  { kind: "avatar", service: "montador", label: "Montador", at: [90, 86] },
-  { kind: "icon", icon: Wrench, label: "Manutenção", at: [76, 92] },
+  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [11, 33] },
+  { kind: "icon", icon: Zap, label: "Elétrica", at: [27, 13] },
+  { kind: "avatar", service: "diarista", label: "Diarista", at: [22, 61] },
+  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [5, 50] },
+  { kind: "avatar", service: "pintor", label: "Pintor", at: [9, 89] },
+  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [27, 91] },
+  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [37, 7] },
+  { kind: "icon", icon: Laptop, label: "Informática", at: [67, 22] },
+  { kind: "avatar", service: "encanador", label: "Encanador", at: [88, 35] },
+  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [79, 9] },
+  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [77, 63] },
+  { kind: "icon", icon: PaintRoller, label: "Pintura", at: [95, 53] },
+  { kind: "avatar", service: "montador", label: "Montador", at: [91, 91] },
+  { kind: "icon", icon: Wrench, label: "Manutenção", at: [72, 87] },
 ]
 
 function MapPin({ pin, index }: { pin: Pin; index: number }) {
@@ -43,13 +43,14 @@ function MapPin({ pin, index }: { pin: Pin; index: number }) {
 
   return (
     <span
-      className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center"
+      className="group pointer-events-auto absolute flex -translate-x-1/2 -translate-y-full flex-col items-center hover:z-10"
       style={{ left: `${pin.at[0]}%`, top: `${pin.at[1]}%` }}
       title={pin.label}
     >
       <span className="map-pin-float flex flex-col items-center" style={{ animationDelay: delay }}>
+        <span className="flex origin-bottom flex-col items-center transition-transform duration-300 ease-out group-hover:scale-[1.6]">
         <span
-          className={`flex items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#3B73EE] text-white shadow-[0_6px_16px_rgba(6,20,51,0.55)] ${
+          className={`flex items-center justify-center overflow-hidden rounded-full border-[3px] border-white bg-[#3B73EE] text-white shadow-[0_6px_16px_rgba(6,20,51,0.55)] transition-shadow duration-300 group-hover:shadow-[0_10px_28px_rgba(6,20,51,0.6)] ${
             isAvatar ? "size-12 md:size-16" : "size-9 md:size-11"
           }`}
         >
@@ -67,6 +68,7 @@ function MapPin({ pin, index }: { pin: Pin; index: number }) {
           )}
         </span>
         <span className="-mt-0.5 h-0 w-0 border-x-[7px] border-t-[11px] border-x-transparent border-t-white md:border-x-[8px] md:border-t-[13px]" />
+        </span>
       </span>
 
       <span className="relative mt-0.5 flex h-2 w-5 items-center justify-center">
@@ -82,7 +84,7 @@ function MapPin({ pin, index }: { pin: Pin; index: number }) {
 
 function PinLayer({ pins, className }: { pins: Pin[]; className: string }) {
   return (
-    <div className={`absolute inset-0 ${className}`}>
+    <div className={`pointer-events-none absolute inset-0 ${className}`}>
       {pins.map((pin, index) => (
         <MapPin key={pin.label} pin={pin} index={index} />
       ))}
@@ -117,9 +119,9 @@ export function LoginBackground() {
             className="absolute inset-0 h-full w-full object-cover"
           />
         </picture>
-        <div className="absolute inset-0 bg-[#2563EB] mix-blend-color" />
-        <div className="absolute inset-0 bg-[#0B2A6B]/35" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,20,51,0.6)_0%,rgba(6,20,51,0.15)_65%,rgba(6,20,51,0)_100%)]" />
+        <div className="absolute inset-0 bg-[#2563EB]/45 mix-blend-color" />
+        <div className="absolute inset-0 bg-[#0B2A6B]/15" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,20,51,0.55)_0%,rgba(6,20,51,0.12)_60%,rgba(6,20,51,0)_100%)]" />
 
         <PinLayer pins={MOBILE_PINS} className="md:hidden" />
         <PinLayer pins={DESKTOP_PINS} className="hidden md:block" />

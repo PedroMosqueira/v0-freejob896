@@ -196,7 +196,11 @@ export default function Home() {
         ) : (
           <LoginBackground />
         )}
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
+        <div
+          className={`relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14 ${
+            isLogged ? "" : "pointer-events-none"
+          }`}
+        >
           {!isLogged ? (
             <GuestLanding />
           ) : (
