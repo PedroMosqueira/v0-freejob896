@@ -3,17 +3,17 @@ import { Hammer, Laptop, PaintRoller, Snowflake, Wrench, Zap } from "lucide-reac
 import { FaucetIcon, TrowelIcon } from "@/components/niche-icons"
 
 type Point = [number, number]
-type IconComponent = ComponentType<{ className?: string; strokeWidth?: number }>
+type IconComponent = ComponentType<{ className?: string; strokeWidth?: number | string }>
 type Pin =
   | { kind: "avatar"; service: string; label: string; at: Point }
   | { kind: "icon"; icon: IconComponent; label: string; at: Point }
 
 const MOBILE_PINS: Pin[] = [
-  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [13, 17] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [56, 7] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [86, 23] },
-  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [7, 41] },
-  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [94, 36] },
+  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [13, 27] },
+  { kind: "icon", icon: Zap, label: "Elétrica", at: [29, 22] },
+  { kind: "avatar", service: "diarista", label: "Diarista", at: [86, 31] },
+  { kind: "icon", icon: Hammer, label: "Marceneiro", at: [7, 47] },
+  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [94, 42] },
   { kind: "avatar", service: "pintor", label: "Pintor", at: [11, 69] },
   { kind: "avatar", service: "encanador", label: "Encanador", at: [89, 79] },
   { kind: "icon", icon: TrowelIcon, label: "Construção", at: [29, 97] },
@@ -21,16 +21,16 @@ const MOBILE_PINS: Pin[] = [
 ]
 
 const DESKTOP_PINS: Pin[] = [
-  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [11, 33] },
-  { kind: "icon", icon: Zap, label: "Elétrica", at: [27, 13] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [22, 61] },
-  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [5, 50] },
+  { kind: "avatar", service: "eletricista", label: "Eletricista", at: [11, 41] },
+  { kind: "icon", icon: Zap, label: "Elétrica", at: [25, 27] },
+  { kind: "avatar", service: "diarista", label: "Diarista", at: [22, 63] },
+  { kind: "icon", icon: TrowelIcon, label: "Construção", at: [4, 56] },
   { kind: "avatar", service: "pintor", label: "Pintor", at: [9, 89] },
   { kind: "icon", icon: Hammer, label: "Marceneiro", at: [27, 91] },
-  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [37, 7] },
-  { kind: "icon", icon: Laptop, label: "Informática", at: [67, 22] },
-  { kind: "avatar", service: "encanador", label: "Encanador", at: [88, 35] },
-  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [79, 9] },
+  { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [6, 25] },
+  { kind: "icon", icon: Laptop, label: "Informática", at: [68, 30] },
+  { kind: "avatar", service: "encanador", label: "Encanador", at: [88, 42] },
+  { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [81, 24] },
   { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [77, 63] },
   { kind: "icon", icon: PaintRoller, label: "Pintura", at: [95, 53] },
   { kind: "avatar", service: "montador", label: "Montador", at: [91, 91] },
