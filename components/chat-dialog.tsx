@@ -380,7 +380,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
   // One live bid at a time: a new bid is only allowed after the last one was declined or cancelled.
   const myBidStatuses = messages
-    .filter((msg) => msg.type === "bid" && msg.email === currentUserEmail)
+    .filter((msg) => msg.type === "bid" && msg.email?.toLowerCase() === currentUserEmail?.toLowerCase())
     .map((msg) => msg.metadata?.status)
   const myBidState: "none" | "pending" | "accepted" = myBidStatuses.includes("accepted")
     ? "accepted"
