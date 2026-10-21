@@ -1742,6 +1742,11 @@ export async function sendBidToChat({
   const supabase = await createSupabaseServerClient()
   const now = new Date().toISOString()
 
+  const { data: needRow } = await supabase.from("needs").select("status").eq("id", needId).maybeSingle()
+  if (!needRow || needRow.status !== "aberto") {
+    throw new Error("Este pedido não está mais aberto para lances.")
+  }
+
   const { data: existingProposals } = await supabase
     .from("need_proposals")
     .select("*")
