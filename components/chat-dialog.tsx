@@ -17,7 +17,7 @@ import {
   markChatAsRead,
   acceptProposal,
   declineProposal,
-  getProfessionalWithdrawStatus,
+  getProfessionalChatAccess,
   type Need,
 } from "@/lib/needs-store"
 import type { ChatMessage } from "@/data/needs"
@@ -28,7 +28,7 @@ import { getUserProfile } from "@/lib/user-profile"
 import { formatCurrency } from "@/lib/pricing"
 import { dismissChatPush } from "@/lib/push-notifications-client"
 import useSWR from "swr"
-import { WithdrawInterestControl, withdrawStatusKey } from "@/components/withdraw-interest-control"
+import { WithdrawInterestControl, chatAccessKey } from "@/components/withdraw-interest-control"
 
 const MESSAGES_PER_PAGE = 50
 
@@ -358,18 +358,25 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
 
   const isProfessional = chatThreadProfessionalEmail === currentUserEmail
 
-  // Shares the SWR cache with WithdrawInterestControl. null = no open interest (withdrawn).
-  const watchesInterest = isProfessional && need.status === "aberto"
-  const { data: withdrawPolicy } = useSWR(watchesInterest ? withdrawStatusKey(need.id) : null, () =>
-    getProfessionalWithdrawStatus(need.id),
+  // The `need` prop can be stale (e.g. the requester just accepted), so the live status decides.
+  const { data: chatAccess, mutate: refreshChatAccess } = useSWR(
+    isProfessional ? chatAccessKey(need.id) : null,
+    () => getProfessionalChatAccess(need.id),
+    { refreshInterval: 20000, revalidateOnFocus: true },
   )
-  const isChatClosed = watchesInterest && withdrawPolicy === null
+  const liveNeedStatus = chatAccess?.needStatus ?? need.status
+  const watchesInterest = isProfessional && liveNeedStatus === "aberto"
+  const isChatClosed = watchesInterest && chatAccess?.hasOpenInterest === false
 
-  // Changes when a bid is sent, declined or cancelled, refreshing the withdraw lock.
+  // Changes when a bid is sent, accepted, declined or cancelled.
   const bidStateSignature = messages.reduce(
     (acc, msg) => (msg.type === "bid" ? acc + 1 + (msg.metadata?.status === "pending" ? 0 : 1000) : acc),
     messages.length,
   )
+
+  useEffect(() => {
+    if (isProfessional) void refreshChatAccess()
+  }, [bidStateSignature, isProfessional, refreshChatAccess])
 
   return (
     <>

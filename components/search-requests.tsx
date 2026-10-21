@@ -73,8 +73,10 @@ function SearchRequests({
   }
 
   const performSearch = useCallback(
-    async (isLoadMore = false) => {
-      if (!isLoadMore) {
+    async (isLoadMore = false, silent = false) => {
+      if (silent) {
+        // Background refresh: no spinners, keep pagination and already loaded pages.
+      } else if (!isLoadMore) {
         setIsSearching(true)
       } else {
         setIsLoadingMore(true)
@@ -82,7 +84,7 @@ function SearchRequests({
 
       const searchTerm = debouncedSearchQuery || query
       const currentPage = isLoadMore ? page : 0
-      const limit = 20
+      const limit = silent ? (page + 1) * 20 : 20
 
       try {
         let fetchedNeeds: Need[]
@@ -134,6 +136,19 @@ function SearchRequests({
           })
         }
 
+        if (silent) {
+          const sorted = fetchedNeeds.sort(
+            (a, b) => (a.distance ?? Number.POSITIVE_INFINITY) - (b.distance ?? Number.POSITIVE_INFINITY),
+          )
+          setSearchResults(sorted)
+          const byId = new Map(sorted.map((need) => [need.id, need]))
+          const sync = (current: Need | null) => (current && byId.get(current.id)) || current
+          setSelectedNeedForDetails(sync)
+          setSelectedNeedForInterest(sync)
+          setSelectedNeedForChatManagement(sync)
+          return
+        }
+
         if (isLoadMore) {
           setSearchResults((prev) => {
             const combined = [...prev, ...fetchedNeeds]
@@ -158,11 +173,13 @@ function SearchRequests({
         setHasMore(fetchedNeeds.length === limit)
       } catch (error) {
         console.error("Erro ao buscar pedidos:", error)
-        if (!isLoadMore) {
+        if (!isLoadMore && !silent) {
           setSearchResults([])
         }
       } finally {
-        if (!isLoadMore) {
+        if (silent) {
+          // Nothing to reset.
+        } else if (!isLoadMore) {
           setIsSearching(false)
         } else {
           setIsLoadingMore(false)
@@ -269,6 +286,25 @@ function SearchRequests({
       performSearch(true)
     }
   }, [page])
+
+  // Keep cards in sync with changes made by the other side (acceptance, status, new requests).
+  const performSearchRef = useRef(performSearch)
+  performSearchRef.current = performSearch
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") void performSearchRef.current(false, true)
+    }
+    const interval = setInterval(refresh, 20000)
+    document.addEventListener("visibilitychange", refresh)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("new-notification", refresh)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", refresh)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("new-notification", refresh)
+    }
+  }, [])
 
   const requestLocation = useCallback(() => {
     setLocationAttempted(true)

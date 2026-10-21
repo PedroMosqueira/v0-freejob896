@@ -102,6 +102,11 @@ export default function NotificationsDropdown({ userEmail }: NotificationsDropdo
     await handleMarkAsRead(notification.id)
     setIsOpen(false)
 
+    if (notification.type === "rating") {
+      router.push("/profile#avaliacoes")
+      return
+    }
+
     if (notification.related_need_id) {
       const event = new CustomEvent("openNeed", { detail: notification.related_need_id })
       window.dispatchEvent(event)
