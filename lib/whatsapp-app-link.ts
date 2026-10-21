@@ -9,6 +9,10 @@ export function isAndroid(): boolean {
   return typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)
 }
 
+export function isMobileDevice(): boolean {
+  return typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+}
+
 // wa.me opens whichever app the phone has set as default (often WhatsApp Business).
 // On Android an intent URL can target a specific app, falling back to wa.me if it isn't installed.
 // iOS has no equivalent: the system decides which app handles wa.me.

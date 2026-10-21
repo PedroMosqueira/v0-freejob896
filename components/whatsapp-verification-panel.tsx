@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, CheckCircle2, Loader2, MessageCircle, RefreshCw } from "lucide-react"
-import { buildAndroidAppLink, isAndroid } from "@/lib/whatsapp-app-link"
+import { QRCodeSVG } from "qrcode.react"
+import { AlertCircle, CheckCircle2, Loader2, MessageCircle, QrCode, RefreshCw } from "lucide-react"
+import { buildAndroidAppLink, isAndroid, isMobileDevice } from "@/lib/whatsapp-app-link"
 
 type Status = "pending" | "received" | "confirmed" | "rejected" | "expired"
 
@@ -24,6 +25,33 @@ interface WhatsAppVerificationPanelProps {
   onVerified: (phone: string, message: string) => void
 }
 
+function VerificationQrCode({ link, code }: { link: string; code?: string }) {
+  return (
+    <figure className="flex flex-col items-center gap-2 rounded-lg border bg-muted/40 p-4">
+      {/* QR codes need dark modules on a light background to scan reliably, even in dark mode. */}
+      <div className="rounded-md bg-white p-2.5">
+        <QRCodeSVG
+          value={link}
+          size={168}
+          level="M"
+          bgColor="#ffffff"
+          fgColor="#0b141a"
+          role="img"
+          aria-label="QR code que abre o WhatsApp com a mensagem de verificação"
+        />
+      </div>
+      <figcaption className="flex flex-col items-center gap-0.5 text-center">
+        <span className="text-xs text-muted-foreground">Não precisa estar logado no celular</span>
+        {code && (
+          <span className="text-xs text-muted-foreground">
+            Código: <span className="font-mono font-semibold tracking-widest text-foreground">{code}</span>
+          </span>
+        )}
+      </figcaption>
+    </figure>
+  )
+}
+
 const fetchStatus = async (url: string): Promise<StatusResponse> => {
   const res = await fetch(url, { cache: "no-store" })
   if (!res.ok) throw new Error("status")
@@ -36,6 +64,8 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
   const [isConfirming, setIsConfirming] = useState(false)
   const [error, setError] = useState("")
   const [onAndroid, setOnAndroid] = useState(false)
+  const [onMobile, setOnMobile] = useState(true)
+  const [showQrOnMobile, setShowQrOnMobile] = useState(false)
   const startedRef = useRef(false)
 
   const { data, mutate } = useSWR<StatusResponse>(
@@ -72,6 +102,7 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
     if (startedRef.current) return
     startedRef.current = true
     setOnAndroid(isAndroid())
+    setOnMobile(isMobileDevice())
     start()
   }, [])
 
@@ -160,17 +191,32 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
       ) : (
         <div className="flex flex-col gap-4">
           <ol className="flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
-            <li>1. Toque no botão abaixo para abrir o WhatsApp com a mensagem pronta.</li>
+            <li>
+              {onMobile
+                ? "1. Toque no botão abaixo para abrir o WhatsApp com a mensagem pronta."
+                : "1. Aponte a câmera do seu celular para o QR code. O WhatsApp abre com a mensagem pronta."}
+            </li>
             <li>2. Envie a mensagem sem alterar o código.</li>
             <li>3. Volte aqui para confirmar seu número.</li>
           </ol>
 
-          <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/40 p-3">
-            <span className="text-xs text-muted-foreground">Seu código</span>
-            <span className="font-mono text-2xl font-semibold tracking-widest">{attempt.code}</span>
-          </div>
+          {onMobile ? (
+            <div className="flex flex-col items-center gap-1 rounded-lg border bg-muted/40 p-3">
+              <span className="text-xs text-muted-foreground">Seu código</span>
+              <span className="font-mono text-2xl font-semibold tracking-widest">{attempt.code}</span>
+            </div>
+          ) : (
+            <VerificationQrCode link={attempt.link} code={attempt.code} />
+          )}
 
-          {onAndroid ? (
+          {!onMobile ? (
+            <Button asChild variant="outline" className="gap-2">
+              <a href={attempt.link} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-4 w-4" />
+                Prefiro usar o WhatsApp deste computador
+              </a>
+            </Button>
+          ) : onAndroid ? (
             <div className="flex flex-col gap-2">
               <Button asChild className="gap-2 bg-[#25D366] text-[#0b141a] hover:bg-[#1ebe5b]">
                 <a href={buildAndroidAppLink(attempt.link, "personal")}>
@@ -192,6 +238,21 @@ export function WhatsAppVerificationPanel({ isProfessional, onVerified }: WhatsA
                 Enviar pelo WhatsApp
               </a>
             </Button>
+          )}
+
+          {onMobile && (
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                aria-expanded={showQrOnMobile}
+                onClick={() => setShowQrOnMobile((open) => !open)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                <QrCode className="h-4 w-4" />
+                {showQrOnMobile ? "Ocultar QR code" : "WhatsApp em outro celular? Mostrar QR code"}
+              </button>
+              {showQrOnMobile && <VerificationQrCode link={attempt.link} />}
+            </div>
           )}
 
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground" aria-live="polite">
