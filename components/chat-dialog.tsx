@@ -378,6 +378,16 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
     if (isProfessional) void refreshChatAccess()
   }, [bidStateSignature, isProfessional, refreshChatAccess])
 
+  // One live bid at a time: a new bid is only allowed after the last one was declined or cancelled.
+  const myBidStatuses = messages
+    .filter((msg) => msg.type === "bid" && msg.email === currentUserEmail)
+    .map((msg) => msg.metadata?.status)
+  const myBidState: "none" | "pending" | "accepted" = myBidStatuses.includes("accepted")
+    ? "accepted"
+    : myBidStatuses.includes("pending")
+      ? "pending"
+      : "none"
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -595,8 +605,13 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                 onClick={() => setShowSendBidDialog(true)}
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
                 size="sm"
+                disabled={myBidState !== "none"}
               >
-                💰 Enviar Lance
+                {myBidState === "pending"
+                  ? "Lance enviado, aguardando resposta"
+                  : myBidState === "accepted"
+                    ? "Lance aceito"
+                    : "💰 Enviar Lance"}
               </Button>
               <WithdrawInterestControl
                 needId={need.id}
@@ -628,6 +643,7 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
           currentUserEmail={currentUserEmail}
           onSuccess={() => {
             setShowSendBidDialog(false)
+            void refreshChatAccess()
           }}
         />
       )}

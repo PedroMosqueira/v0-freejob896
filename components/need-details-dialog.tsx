@@ -32,6 +32,7 @@ import {
   type NeedProposal,
   addNeedProposal,
   startChat,
+  getNeed,
   type ProposalType,
 } from "@/lib/needs-store"
 import { createSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -48,7 +49,6 @@ import { getNeedStatusLabel } from "@/data/needs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
-import SendBidDialog from "@/components/send-bid-dialog"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -113,7 +113,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [selectedNeedForChatManagement, setSelectedNeedForChatManagement] = useState<Need | null>(null)
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
   const [showInterestDialog, setShowInterestDialog] = useState(false)
-  const [showSendBidDialog, setShowSendBidDialog] = useState(false)
   const [isSendingInterest, setIsSendingInterest] = useState(false)
   const [selectedProfessionalChat, setSelectedProfessionalChat] = useState<{
     email: string
@@ -211,12 +210,38 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
   }, [isOpen, currentNeed?.id, onStatusUpdate])
 
-  const fetchProposals = async () => {
+  // Realtime may not deliver every change, so poll while the modal is open and on focus.
+  useEffect(() => {
+    if (!isOpen || !currentNeed?.id) return
+    const needId = currentNeed.id
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return
+      const fresh = await getNeed(needId).catch(() => undefined)
+      if (fresh) {
+        setCurrentNeed((prev) =>
+          prev.id === fresh.id ? { ...prev, ...fresh, distance: prev.distance } : prev,
+        )
+      }
+      void fetchProposals(true)
+    }
+    const interval = setInterval(refresh, 15000)
+    document.addEventListener("visibilitychange", refresh)
+    window.addEventListener("focus", refresh)
+    window.addEventListener("new-notification", refresh)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", refresh)
+      window.removeEventListener("focus", refresh)
+      window.removeEventListener("new-notification", refresh)
+    }
+  }, [isOpen, currentNeed?.id])
+
+  const fetchProposals = async (silent = false) => {
     if (!currentNeed) {
       console.warn("[v0] fetchProposals called but currentNeed is null")
       return
     }
-    setIsLoadingProposals(true)
+    if (!silent) setIsLoadingProposals(true)
     try {
       const supabase = createSupabaseBrowserClient()
       const { data, error } = await supabase
@@ -574,6 +599,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const canCancelService = email === currentNeed.requesterEmail && !isClosedStatus
   const isRequester = email === currentNeed.requesterEmail
+  // Bids live only in the chat, so the chat is the main action unless "Tenho Interesse" comes first.
+  const isChatPrimaryAction = isRequester || currentNeed.status !== "aberto" || hasShownInterest
+  const chatButtonLabel =
+    !isRequester && currentNeed.status === "aberto" ? "Abrir chat e enviar lance" : "Abrir chat"
   const isAwaitingReview =
     isRequester && currentNeed.status === "aguardando_avaliacao" && !!acceptedProposal && canRateProfessional
   const canRate = isRequester && currentNeed.status === "concluido" && canRateProfessional
@@ -741,25 +770,29 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   </Button>
                 )}
 
+                {email &&
+                  (isChatPrimaryAction ? (
+                    <Button
+                      className="h-12 w-full gap-2 bg-blue-600 text-base font-semibold text-white shadow-md shadow-blue-600/25 hover:bg-blue-700"
+                      onClick={() => setSelectedNeedForChatManagement(currentNeed)}
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                      {chatButtonLabel}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 border-blue-200 dark:border-blue-800 h-9"
+                      size="sm"
+                      onClick={() => setSelectedNeedForChatManagement(currentNeed)}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" /> Abrir Chat
+                    </Button>
+                  ))}
                 {email && !isRequester && hasShownInterest && currentNeed.status === "aberto" && (
-                  <Button
-                    onClick={() => setShowSendBidDialog(true)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white"
-                    size="sm"
-                  >
-                    💰 Enviar Lance
-                  </Button>
-                )}
-
-                {email && (
-                  <Button
-                    variant="outline"
-                    className="w-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 border-blue-200 dark:border-blue-800 h-9"
-                    size="sm"
-                    onClick={() => setSelectedNeedForChatManagement(currentNeed)}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" /> Abrir Chat
-                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Envie seu lance e converse com o solicitante pelo chat.
+                  </p>
                 )}
               </div>
 
@@ -1379,20 +1412,6 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           currentUserEmail={email}
           onActionSuccess={() => {
             setShowInterestDialog(false)
-            fetchProposals()
-            onStatusUpdate?.()
-          }}
-        />
-      )}
-
-      {showSendBidDialog && email && (
-        <SendBidDialog
-          need={currentNeed}
-          isOpen={showSendBidDialog}
-          onClose={() => setShowSendBidDialog(false)}
-          currentUserEmail={email}
-          onSuccess={() => {
-            setShowSendBidDialog(false)
             fetchProposals()
             onStatusUpdate?.()
           }}
