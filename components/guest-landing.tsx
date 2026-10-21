@@ -72,7 +72,7 @@ export function GuestLanding() {
       </nav>
 
       <div className="flex w-full flex-1 items-center justify-center py-8">
-      <div className={`pointer-events-auto ${view === "solicitar" ? "w-full max-w-2xl" : "w-full max-w-md"}`}>
+      <div className={view === "solicitar" ? "w-full max-w-2xl" : "w-full max-w-md"}>
         <header className="mb-6 flex flex-col items-center gap-3 text-center">
           <Image
             src="/logo.png"
@@ -92,7 +92,7 @@ export function GuestLanding() {
         </header>
 
         {view === "inicio" && (
-          <div className="flex flex-col gap-4 rounded-3xl border border-white/30 bg-white/15 p-4 shadow-[0_12px_40px_rgba(6,20,51,0.35)] backdrop-blur-md sm:p-5">
+          <div className="pointer-events-auto flex flex-col gap-4 rounded-3xl border border-white/30 bg-white/15 p-4 shadow-[0_12px_40px_rgba(6,20,51,0.35)] backdrop-blur-md sm:p-5">
             <p className={`text-center text-base text-blue-100 text-pretty ${TEXT_SHADOW}`}>
               O que você precisa hoje?
             </p>
@@ -134,7 +134,7 @@ export function GuestLanding() {
         )}
 
         {view === "solicitar" && (
-          <div className="flex flex-col gap-3">
+          <div className="pointer-events-auto flex flex-col gap-3">
             <BackButton onClick={() => setView("inicio")} />
             <div className={`flex h-[min(640px,calc(100vh-14rem))] flex-col rounded-xl ${PANEL_SHADOW}`}>
               <RequestFormAIChat
@@ -154,7 +154,7 @@ export function GuestLanding() {
         )}
 
         {view === "entrar" && (
-          <div className="flex flex-col gap-3">
+          <div className="pointer-events-auto flex flex-col gap-3">
             <BackButton
               onClick={() => {
                 setLoginContext(null)
