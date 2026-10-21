@@ -20,6 +20,10 @@ export function withdrawStatusKey(needId: string) {
   return ["withdraw-status", needId] as const
 }
 
+export function chatAccessKey(needId: string) {
+  return ["chat-access", needId] as const
+}
+
 export function WithdrawInterestControl({ needId, revalidationKey, onWithdrawn }: WithdrawInterestControlProps) {
   const [confirming, setConfirming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -65,6 +69,7 @@ export function WithdrawInterestControl({ needId, revalidationKey, onWithdrawn }
       setConfirming(false)
       void mutate()
       void mutateGlobal(ACTIVE_INTERESTS_KEY)
+      void mutateGlobal(chatAccessKey(needId))
       onWithdrawn?.()
     } catch (error) {
       toast({

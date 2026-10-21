@@ -50,6 +50,12 @@ export default function ProfilePage() {
     loadProfile()
   }, [email, isAuthLoading, router, refreshKey])
 
+  // The page renders after an async load, so the browser's own hash scroll misses the target.
+  useEffect(() => {
+    if (!profile || window.location.hash !== "#avaliacoes") return
+    document.getElementById("avaliacoes")?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }, [profile])
+
   if (isAuthLoading || isLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[400px]">
@@ -82,7 +88,7 @@ export default function ProfilePage() {
         <ProfileHeader profile={profile} />
         <ProfileStats profile={profile} />
 
-        <div>
+        <div id="avaliacoes" className="scroll-mt-24">
           <h2 className="text-2xl font-bold mb-4">Avaliações Recebidas</h2>
           <RatingsList userEmail={profile.email} />
         </div>

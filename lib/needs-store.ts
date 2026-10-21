@@ -1492,6 +1492,29 @@ async function loadWithdrawContext(needId: string): Promise<WithdrawContext | nu
 }
 
 /** Whether the signed-in professional can withdraw from this request right now. */
+/**
+ * Live chat state for the professional. Distinguishes "withdrew" (open request, no open
+ * interest) from "proposal accepted" (request no longer open), which a stale client copy
+ * of the need cannot tell apart.
+ */
+export async function getProfessionalChatAccess(
+  needId: string,
+): Promise<{ needStatus: string; hasOpenInterest: boolean } | null> {
+  const supabase = await createSupabaseServerClient()
+  const { data: authData } = await supabase.auth.getUser()
+  const professionalEmail = authData.user?.email
+  if (!professionalEmail) return null
+
+  const { data: need } = await supabase.from("needs").select("status").eq("id", needId).maybeSingle()
+  if (!need) return null
+
+  const hasOpenInterest = await professionalHasOpenInterest(supabase, {
+    need_id: needId,
+    professional_email: professionalEmail,
+  })
+  return { needStatus: String(need.status), hasOpenInterest }
+}
+
 export async function getProfessionalWithdrawStatus(needId: string): Promise<WithdrawPolicy | null> {
   const context = await loadWithdrawContext(needId)
   return context?.policy ?? null
