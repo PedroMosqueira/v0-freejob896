@@ -88,26 +88,10 @@ export function GoogleSignInButton({ onError, onLoadingChange }: GoogleSignInBut
               nonce: raw,
             })
             if (error) throw error
+            if (!data.user) throw new Error("Sessão sem usuário")
 
-            const user = data.user
-            if (user) {
-              const { data: existing } = await supabase.from("users").select("id").eq("id", user.id).maybeSingle()
-              if (!existing) {
-                const fullName: string = user.user_metadata?.full_name || user.user_metadata?.name || ""
-                const now = new Date().toISOString()
-                await supabase.from("users").insert({
-                  id: user.id,
-                  email: user.email || "",
-                  full_name: fullName,
-                  first_name: fullName.split(" ")[0] || "",
-                  last_name: fullName.split(" ").slice(1).join(" ") || "",
-                  profile_image_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || "",
-                  verified_at: now,
-                  created_at: now,
-                  updated_at: now,
-                })
-              }
-            }
+            const profileResponse = await fetch("/api/auth/ensure-profile", { method: "POST" })
+            if (!profileResponse.ok) throw new Error(`Falha ao criar perfil (${profileResponse.status})`)
 
             window.location.assign("/")
           } catch (err) {
