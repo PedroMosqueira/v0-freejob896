@@ -479,8 +479,30 @@ export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, ch
                             {msg.metadata?.status !== "cancelled" && msg.metadata?.bidAmount && (
                               <>
                                 <div className="space-y-2 mb-3">
+                                  {msg.metadata.expenses && (
+                                    <div className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-400">
+                                      <div className="flex justify-between">
+                                        <span>Mão de obra:</span>
+                                        <span>{formatCurrency(msg.metadata.serviceAmount ?? 0)}</span>
+                                      </div>
+                                      {msg.metadata.expenses.materials > 0 && (
+                                        <div className="flex justify-between">
+                                          <span>Materiais:</span>
+                                          <span>{formatCurrency(msg.metadata.expenses.materials)}</span>
+                                        </div>
+                                      )}
+                                      {msg.metadata.expenses.travel > 0 && (
+                                        <div className="flex justify-between">
+                                          <span>Deslocamento:</span>
+                                          <span>{formatCurrency(msg.metadata.expenses.travel)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                   <div className="flex items-center justify-between text-base font-bold">
-                                    <span className="text-gray-700 dark:text-gray-300">Valor do servico:</span>
+                                    <span className="text-gray-700 dark:text-gray-300">
+                                      {msg.metadata.expenses ? "Valor total:" : "Valor do servico:"}
+                                    </span>
                                     <span className="text-green-600 dark:text-green-400">
                                       {formatCurrency(msg.metadata.bidAmount)}
                                     </span>

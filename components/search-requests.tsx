@@ -11,6 +11,7 @@ import NeedDetailsDialog from "./need-details-dialog"
 import InterestDialog from "./interest-dialog"
 import { ChatManagementDialog } from "./chat-management-dialog"
 import { calculateDistance, formatDistance } from "@/lib/calculate-distance"
+import { TravelEstimateBadge } from "@/components/travel-estimate-badge"
 import { NearbyBar, type LocationState, type RadiusKm } from "./nearby-bar"
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
 import { FilterForm } from "./filter-form"
@@ -536,10 +537,11 @@ function SearchRequests({
                             need.distance !== null &&
                             need.distance !== Number.POSITIVE_INFINITY &&
                             !isNaN(need.distance) && (
-                              <div className="absolute top-2 right-2 z-10">
+                              <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
                                 <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
                                   ⚡ {formatDistance(need.distance)}
                                 </span>
+                                <TravelEstimateBadge distanceKm={need.distance} />
                               </div>
                             )}
 
