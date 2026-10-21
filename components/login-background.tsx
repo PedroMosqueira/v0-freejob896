@@ -11,12 +11,9 @@ type Pin =
 const MOBILE_PINS: Pin[] = [
   { kind: "avatar", service: "eletricista", label: "Eletricista", at: [13, 27] },
   { kind: "icon", icon: Snowflake, label: "Ar-condicionado", at: [29, 22] },
-  { kind: "avatar", service: "diarista", label: "Diarista", at: [86, 31] },
+  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [86, 31] },
   { kind: "icon", icon: Hammer, label: "Marceneiro", at: [7, 47] },
   { kind: "icon", icon: FaucetIcon, label: "Hidráulica", at: [94, 42] },
-  { kind: "avatar", service: "pintor", label: "Pintor", at: [11, 69] },
-  { kind: "icon", icon: Laptop, label: "Informática", at: [90, 80] },
-  { kind: "avatar", service: "pedreiro", label: "Pedreiro", at: [66, 95] },
 ]
 
 const DESKTOP_PINS: Pin[] = [
