@@ -1,94 +1,114 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr"
+import { createServerClient } from "@supabase/ssr"
+import type { EmailOtpType } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { ensureUserProfile } from "@/lib/ensure-user-profile"
 
 export const dynamic = "force-dynamic"
 
+const EMAIL_OTP_TYPES: EmailOtpType[] = ["email", "magiclink", "signup", "invite", "email_change"]
+const PENDING_REF_PATTERN = /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{20,100}$/
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const tokenHash = requestUrl.searchParams.get("token_hash")
+  const otpType = requestUrl.searchParams.get("type") as EmailOtpType | null
   const error = requestUrl.searchParams.get("error")
+  const errorCode = requestUrl.searchParams.get("error_code")
+  const pending = requestUrl.searchParams.get("pending")
+  const validPending = pending && PENDING_REF_PATTERN.test(pending) ? pending : null
   const cookieStore = await cookies()
 
-  console.log("[v0] ========== AUTH CALLBACK ==========")
-  console.log("[v0] Full URL:", request.url)
-  console.log("[v0] Code present:", !!code)
-  console.log("[v0] Code length:", code?.length || 0)
-  console.log("[v0] Error param:", error)
-  console.log("[v0] NEXT_PUBLIC_SUPABASE_URL:", !!process.env.NEXT_PUBLIC_SUPABASE_URL)
-  console.log("[v0] NEXT_PUBLIC_SUPABASE_ANON_KEY:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  // Errors keep the pending request reference so a retry still publishes it.
+  const redirectHome = (authError?: string) => {
+    const url = new URL("/", requestUrl.origin)
+    if (authError) url.searchParams.set("auth_error", authError)
+    if (validPending) url.searchParams.set("pending", validPending)
+    return NextResponse.redirect(url)
+  }
 
-  // Se houver erro (ex: usuário cancelou OAuth)
   if (error) {
-    console.error("[v0] ❌ Auth error:", error)
-    return NextResponse.redirect(new URL("/", requestUrl.origin))
+    console.error("[v0] Auth error param:", error, errorCode)
+    return redirectHome(errorCode === "otp_expired" ? "link_expired" : "auth_failed")
+  }
+
+  // token_hash links (custom email template) verify without a PKCE verifier,
+  // so they work even when opened in a different browser or device.
+  if (tokenHash && otpType && EMAIL_OTP_TYPES.includes(otpType)) {
+    const supabase = createCallbackClient(cookieStore)
+    if (!supabase) return redirectHome("auth_failed")
+
+    const { data, error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType })
+    if (verifyError || !data.user) {
+      console.error("[v0] verifyOtp error:", verifyError?.code, verifyError?.message)
+      return redirectHome("link_expired")
+    }
+
+    const profile = await ensureUserProfile(data.user)
+    if (!profile.ok) {
+      console.error("[v0] Erro ao criar perfil:", profile.error)
+      return redirectHome("profile_failed")
+    }
+    return redirectHome()
   }
 
   // Processar code de Magic Link ou OAuth
   if (code) {
-    console.log("[v0] 🔄 Tentando fazer exchange do code...")
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error("[v0] ❌ Supabase credentials missing!")
-      return NextResponse.redirect(new URL("/?error=config_missing", requestUrl.origin))
-    }
-
-    // Usar createServerClient para servidor
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // SSR context limitation
-          }
-        },
-      },
-    })
+    const supabase = createCallbackClient(cookieStore)
+    if (!supabase) return redirectHome("auth_failed")
 
     try {
-      console.log("[v0] 📡 Chamando exchangeCodeForSession...")
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
       if (exchangeError) {
-        console.error("[v0] ❌ Exchange error completo:", JSON.stringify(exchangeError, null, 2))
-        console.error("[v0] ❌ Exchange error message:", exchangeError.message)
-        console.error("[v0] ❌ Exchange error code:", exchangeError.code)
-        return NextResponse.redirect(new URL("/?error=exchange_failed", requestUrl.origin))
+        console.error("[v0] Exchange error:", exchangeError.code, exchangeError.message)
+        // A missing verifier means the link was opened in another browser than the one that requested it.
+        const missingVerifier =
+          /code verifier|flow state|both auth code and code verifier/i.test(exchangeError.message) ||
+          exchangeError.code === "flow_state_not_found" ||
+          exchangeError.code === "bad_code_verifier"
+        return redirectHome(missingVerifier ? "other_browser" : "auth_failed")
       }
-
-      console.log("[v0] ✅ Sessão criada para user:", data.user?.email)
 
       if (data.user) {
         const profile = await ensureUserProfile(data.user)
         if (!profile.ok) {
-          console.error("[v0] ❌ Erro ao criar perfil:", profile.error)
-          return NextResponse.redirect(new URL("/?error=profile_failed", requestUrl.origin))
+          console.error("[v0] Erro ao criar perfil:", profile.error)
+          return redirectHome("profile_failed")
         }
       }
 
-      const homeUrl = new URL("/", requestUrl.origin)
-      const pending = requestUrl.searchParams.get("pending")
-      if (pending && /^[0-9a-f-]{36}\.[A-Za-z0-9_-]{20,100}$/.test(pending)) {
-        homeUrl.searchParams.set("pending", pending)
-      }
-      return NextResponse.redirect(homeUrl)
+      return redirectHome()
     } catch (err) {
-      console.error("[v0] ❌ Callback error:", err instanceof Error ? err.message : err)
-      return NextResponse.redirect(new URL("/?error=auth_failed", requestUrl.origin))
+      console.error("[v0] Callback error:", err instanceof Error ? err.message : err)
+      return redirectHome("auth_failed")
     }
   }
 
-  // Para OAuth (Google, GitHub, etc), Supabase retorna tudo no hash
-  // O cliente (navegador) precisa processar isso via JavaScript
-  // Esta rota é mais para Magic Link que usa query string com 'code'
-  
-  console.log("[v0] ❌ Nenhum code ou error - retornando para home")
-  return NextResponse.redirect(new URL("/", requestUrl.origin))
+  return redirectHome()
+}
+
+function createCallbackClient(cookieStore: Awaited<ReturnType<typeof cookies>>) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("[v0] Supabase credentials missing")
+    return null
+  }
+
+  return createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+        } catch {
+          // Cookies are read-only during render; route handlers can set them.
+        }
+      },
+    },
+  })
 }

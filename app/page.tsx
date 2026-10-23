@@ -23,6 +23,26 @@ import { SiteFooter } from "@/components/site-footer"
 import { useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
+const AUTH_ERROR_MESSAGES: Record<string, { title: string; description: string }> = {
+  other_browser: {
+    title: "Abra o link no mesmo navegador",
+    description:
+      "O link foi aberto em um navegador diferente do que pediu o acesso. Peça um novo link e abra-o no mesmo app ou navegador.",
+  },
+  link_expired: {
+    title: "Link expirado ou já usado",
+    description: "Peça um novo link de acesso. Cada link funciona uma única vez.",
+  },
+  profile_failed: {
+    title: "Não conseguimos concluir seu cadastro",
+    description: "Tente entrar novamente. Se continuar, fale com o suporte.",
+  },
+  auth_failed: {
+    title: "Não foi possível entrar",
+    description: "Tente novamente ou entre com o Google.",
+  },
+}
+
 export default function Home() {
   const { email: authenticatedEmail, isLoading } = useAuth()
   const searchParams = useSearchParams()
@@ -37,6 +57,18 @@ export default function Home() {
       // Apenas aguardamos o hook use-auth detectar a sessão
     }
   }, [])
+
+  useEffect(() => {
+    const authError = searchParams?.get("auth_error")
+    if (!authError) return
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete("auth_error")
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash)
+
+    const message = AUTH_ERROR_MESSAGES[authError] ?? AUTH_ERROR_MESSAGES.auth_failed
+    toast({ title: message.title, description: message.description, variant: "destructive" })
+  }, [searchParams, toast])
 
   useEffect(() => {
     if (!authenticatedEmail) return
