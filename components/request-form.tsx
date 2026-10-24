@@ -55,7 +55,7 @@ export default function RequestForm() {
   const errorBannerRef = useRef<HTMLDivElement>(null)
 
   // AI Chat mode toggle
-  const [useAIChat, setUseAIChat] = useState(false)
+  const [useAIChat, setUseAIChat] = useState(true)
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
@@ -97,6 +97,8 @@ export default function RequestForm() {
     if (typeof draft.latitude === "number") setLatitude(draft.latitude)
     if (typeof draft.longitude === "number") setLongitude(draft.longitude)
     if (draft.images.length > 0) setImagePreviews(draft.images)
+    // A draft finished in the guest chat is ready to review, so show it in the form instead of restarting the chat.
+    setUseAIChat(false)
     setRestoredDraft(true)
   }, [])
 
@@ -536,17 +538,26 @@ export default function RequestForm() {
         <CardHeader>
           <div className="flex justify-between items-center gap-4">
             <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
-            <Button
-              onClick={() => setUseAIChat(!useAIChat)}
-              className={`${
-                useAIChat
-                  ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                  : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              } text-white font-semibold shadow-lg`}
-              size="sm"
-            >
-              {useAIChat ? "← Voltar ao Formulário" : "💬 Solicitar com Chat IA"}
-            </Button>
+            {useAIChat ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setUseAIChat(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Prefiro usar o formulário
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setUseAIChat(true)}
+                className="bg-blue-600 font-semibold text-white hover:bg-blue-700"
+              >
+                Voltar ao chat
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-6">
