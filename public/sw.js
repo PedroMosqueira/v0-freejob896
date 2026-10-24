@@ -1,4 +1,4 @@
-const CACHE_NAME = "freejob-shell-v3"
+const CACHE_NAME = "freejob-shell-v4"
 const OFFLINE_URL = "/offline.html"
 const NOTIFICATION_ICON = "/icons/icon-192.png"
 // Android draws the badge as a single-color mask from the alpha channel only, so it must be
@@ -20,11 +20,31 @@ self.addEventListener("activate", (event) => {
   )
 })
 
-// Pages always come from the network so users never see a stale app; the cache only
-// backs an offline fallback page.
+const RETRY_DELAYS_MS = [700, 2000]
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Pages always come from the network so users never see a stale app. A single failed fetch is
+// often transient (Wi-Fi/4G switch, cold start), so retry before falling back to the error page.
+async function handleNavigation(request) {
+  try {
+    return await fetch(request)
+  } catch {
+    for (const delay of RETRY_DELAYS_MS) {
+      await wait(delay)
+      try {
+        return await fetch(request.url, { credentials: "include", cache: "no-store", redirect: "follow" })
+      } catch {
+        // Try the next delay.
+      }
+    }
+    return (await caches.match(OFFLINE_URL)) || Response.error()
+  }
+}
+
 self.addEventListener("fetch", (event) => {
-  if (event.request.mode !== "navigate") return
-  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)))
+  if (event.request.mode !== "navigate" || event.request.method !== "GET") return
+  event.respondWith(handleNavigation(event.request))
 })
 
 self.addEventListener("push", (event) => {

@@ -3,21 +3,62 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Freejob - sem conexão</title>
+    <title>Freejob - não foi possível carregar</title>
     <style>
       body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui, sans-serif; background: #f9fafb; color: #111827; text-align: center; padding: 24px; box-sizing: border-box; }
       img { width: 72px; height: 72px; }
       h1 { font-size: 20px; margin: 16px 0 8px; }
       p { color: #4b5563; line-height: 1.5; margin: 0 0 20px; }
       button { background: #2563eb; color: #fff; border: 0; border-radius: 8px; padding: 12px 20px; font-size: 15px; }
+      small { display: block; margin-top: 12px; color: #6b7280; font-size: 14px; }
     </style>
   </head>
   <body>
     <main>
       <img src="/icons/icon-192.png" alt="Freejob" />
-      <h1>Você está sem conexão</h1>
-      <p>Verifique sua internet e tente de novo.</p>
-      <button onclick="location.reload()">Tentar novamente</button>
+      <h1 id="title">Não foi possível carregar</h1>
+      <p id="message">Tivemos um problema para abrir o Freejob. Vamos tentar de novo automaticamente.</p>
+      <button type="button" onclick="location.reload()">Tentar novamente</button>
+      <small id="status" aria-live="polite"></small>
     </main>
+    <script>
+      ;(function () {
+        var title = document.getElementById("title")
+        var message = document.getElementById("message")
+        var status = document.getElementById("status")
+        var seconds = 5
+        var timer = null
+
+        function render() {
+          if (navigator.onLine === false) {
+            title.textContent = "Você está sem conexão"
+            message.textContent = "Verifique sua internet. A página recarrega sozinha quando a conexão voltar."
+            status.textContent = ""
+            clearInterval(timer)
+            timer = null
+            return
+          }
+          title.textContent = "Não foi possível carregar"
+          message.textContent = "Tivemos um problema para abrir o Freejob. Vamos tentar de novo automaticamente."
+          if (!timer) {
+            seconds = 5
+            timer = setInterval(function () {
+              seconds -= 1
+              if (seconds <= 0) {
+                clearInterval(timer)
+                location.reload()
+                return
+              }
+              status.textContent = "Tentando de novo em " + seconds + "s..."
+            }, 1000)
+            status.textContent = "Tentando de novo em " + seconds + "s..."
+          }
+        }
+
+        window.addEventListener("online", function () { location.reload() })
+        window.addEventListener("offline", render)
+        render()
+      })()
+    </script>
   </body>
 </html>
