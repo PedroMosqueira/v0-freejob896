@@ -141,10 +141,12 @@ export async function POST(request: NextRequest) {
       temperature: 0.2,
     })
 
-    const intro = isFollowUp ? "Pronto, atualizei o pedido." : "Entendi! Montei o pedido abaixo."
+    const intro = isFollowUp ? "Pronto, atualizei a prévia." : "Montei a prévia do seu pedido."
     const reply = output.clarifyingQuestion
-      ? `${intro} ${output.clarifyingQuestion}\n\nPode responder aqui no chat ou confirmar assim mesmo.`
-      : `${intro} Confira o título, a descrição e a categoria.`
+      ? `${intro} ${output.clarifyingQuestion}`
+      : isFollowUp
+        ? intro
+        : `${intro} Complete o local e uma foto para enviar.`
 
     return NextResponse.json({
       message: reply,
