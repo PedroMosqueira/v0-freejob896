@@ -242,15 +242,16 @@ export default function Home() {
                   <RequestForm />
                 </TabsContent>
                 <TabsContent value="procurar" className="space-y-4 mt-0">
-                  <SearchRequests showFilters={showFilters} searchQuery={searchQuery} />
+                  <SearchRequests showFilters={showFilters} onShowFiltersChange={setShowFilters} searchQuery={searchQuery} />
                 </TabsContent>
                 <TabsContent value="minhas-solicitacoes" className="space-y-4 mt-0">
-                  <SearchRequests initialShowMyRequests={true} showFilters={showFilters} searchQuery={searchQuery} />
+                  <SearchRequests initialShowMyRequests={true} showFilters={showFilters} onShowFiltersChange={setShowFilters} searchQuery={searchQuery} />
                 </TabsContent>
                 <TabsContent value="meus-servicos" className="space-y-4 mt-0">
                   <SearchRequests
                     initialShowMyProfessionalServices={true}
                     showFilters={showFilters}
+                    onShowFiltersChange={setShowFilters}
                     searchQuery={searchQuery}
                   />
                 </TabsContent>

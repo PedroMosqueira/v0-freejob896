@@ -60,6 +60,7 @@ export default function RequestForm() {
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("")
+  const [isRemote, setIsRemote] = useState(false)
   const [city, setCity] = useState("")
   const [neighborhood, setNeighborhood] = useState("")
   const [state, setState] = useState("")
@@ -89,6 +90,7 @@ export default function RequestForm() {
     if (draft.title) setTitle(draft.title)
     if (draft.description) setDescription(draft.description)
     if (draft.category) setCategory(draft.category)
+    if (draft.isRemote) setIsRemote(true)
     if (draft.state) setState(draft.state)
     if (draft.city) setCity(draft.city)
     if (draft.neighborhood) setNeighborhood(draft.neighborhood)
@@ -365,9 +367,11 @@ export default function RequestForm() {
         longitude: finalLongitude,
         requesterEmail: email,
         images: imageUrls,
+        isRemote,
       }
 
       await addNeed(newNeed)
+      setIsRemote(false)
       clearPendingRequest()
       setRestoredDraft(false)
 
@@ -553,6 +557,7 @@ export default function RequestForm() {
                 if (info.title) setTitle(info.title)
                 if (info.description) setDescription(info.description)
                 if (info.category) setCategory(info.category)
+                if (typeof info.isRemote === "boolean") setIsRemote(info.isRemote)
                 if (info.city) setCity(info.city)
                 if (info.state) setState(info.state)
                 if (info.neighborhood) setNeighborhood(info.neighborhood)
@@ -562,6 +567,7 @@ export default function RequestForm() {
                 if (info.title) setTitle(info.title)
                 if (info.description) setDescription(info.description)
                 if (info.category) setCategory(info.category)
+                if (typeof info.isRemote === "boolean") setIsRemote(info.isRemote)
                 if (info.city) setCity(info.city)
                 if (info.state) setState(info.state)
                 if (info.neighborhood) setNeighborhood(info.neighborhood)
@@ -722,6 +728,19 @@ export default function RequestForm() {
                     <p className="text-xs text-red-500">{errors.category}</p>
                   )}
                 </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-md border p-3 sm:self-end">
+                <input
+                  id="is-remote"
+                  type="checkbox"
+                  checked={isRemote}
+                  onChange={(e) => setIsRemote(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-blue-600"
+                />
+                <Label htmlFor="is-remote" className="flex cursor-pointer flex-col gap-0.5 font-normal">
+                  <span className="text-sm font-medium">Pode ser feito remotamente</span>
+                  <span className="text-xs text-muted-foreground">Ex.: aulas online, design, suporte por videochamada</span>
+                </Label>
               </div>
             </div>
 

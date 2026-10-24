@@ -22,10 +22,13 @@ const serviceSchema = z.object({
     .describe("Descrição clara em primeira pessoa, 2 a 4 frases, só com fatos informados pelo cliente"),
   category: z.enum(officialCategories),
   categoryConfidence: z.enum(["alta", "media", "baixa"]),
+  remote: z
+    .enum(["sim", "nao", "talvez"])
+    .describe("Se o serviço pode ser feito à distância (online): sim, nao, ou talvez quando realmente depende"),
   clarifyingQuestion: z
     .string()
     .nullable()
-    .describe("Uma pergunta curta se faltar algo essencial para o profissional orçar; senão null"),
+    .describe("Uma pergunta curta se faltar algo essencial para o profissional orçar ou se remote for talvez; senão null"),
 })
 
 const SYSTEM_PROMPT = `Você ajuda clientes de uma plataforma brasileira de serviços a montar um pedido para profissionais autônomos.
@@ -61,8 +64,19 @@ CATEGORIA (escolha a que o profissional realmente faria o serviço)
 - Técnico de Informática: computador, notebook, impressora, rede, Wi-Fi, celular.
 - Use "Outros" só se nenhuma categoria servir. Na dúvida entre duas, escolha a do problema principal e marque confiança "media".
 
+REMOTO (campo remote)
+- "nao": tudo que exige presença física — obras, pintura, elétrica, encanamento, limpeza, jardinagem, montagem, mudanças, chaveiro, beleza, conserto de aparelho no local etc. NUNCA pergunte se esses podem ser remotos.
+- "sim": claramente feito à distância — design, criação de site, programação, tradução, revisão de texto, edição de vídeo, marketing digital, consultoria online, ou quando o cliente diz "online", "remoto", "por videochamada".
+- "talvez": só quando realmente pode ser dos dois jeitos e o cliente não disse — ex.: aula particular, suporte de informática/configuração de software, consultoria, personal trainer. Nesse caso a pergunta deve ser se pode ser feito online/remotamente.
+- Se o cliente já respondeu sobre isso na conversa, use a resposta dele (sim ou nao) e não pergunte de novo.
+
 PERGUNTA
-- Se faltar algo essencial para o profissional dar um preço (ex.: quantos aparelhos, tamanho do cômodo), faça UMA pergunta curta. Senão, null.`
+- Se faltar algo essencial para o profissional dar um preço (ex.: quantos aparelhos, tamanho do cômodo), faça UMA pergunta curta.
+- Se remote for "talvez", pergunte se pode ser feito online (pode juntar com a outra pergunta numa frase curta).
+- Não repita perguntas que o cliente já respondeu. Se nada faltar, null.
+
+CONVERSA EM ANDAMENTO
+- Se houver um PEDIDO ATUAL, o cliente está complementando ou corrigindo. Atualize título, descrição e categoria incorporando a nova informação, sem perder o que já foi dito antes (a menos que o cliente corrija).`
 
 const groq = createGroq({ apiKey: process.env.GROQ_API_KEY })
 const MODEL = groq("openai/gpt-oss-120b")
@@ -112,17 +126,25 @@ export async function POST(request: NextRequest) {
           .map((m: HistoryMessage) => ({ role: m.role, content: m.content.slice(0, 2000) }))
       : []
 
+    const draft = body?.currentDraft
+    const draftText =
+      draft && typeof draft === "object" && typeof draft.title === "string"
+        ? `\n\nPEDIDO ATUAL (atualize com o que o cliente disser agora):\nTítulo: ${String(draft.title).slice(0, 120)}\nDescrição: ${String(draft.description ?? "").slice(0, 1000)}\nCategoria: ${String(draft.category ?? "").slice(0, 60)}\nRemoto: ${draft.isRemote === true ? "sim" : draft.isRemote === false ? "nao" : "não definido"}`
+        : ""
+    const isFollowUp = draftText !== ""
+
     const { output } = await generateText({
       model: MODEL,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + draftText,
       messages: [...history, { role: "user", content: inputMessage }],
       output: Output.object({ schema: serviceSchema }),
       temperature: 0.2,
     })
 
+    const intro = isFollowUp ? "Pronto, atualizei o pedido." : "Entendi! Montei o pedido abaixo."
     const reply = output.clarifyingQuestion
-      ? `Entendi! Montei o pedido abaixo. Para o profissional orçar melhor: ${output.clarifyingQuestion}\n\nVocê pode responder clicando em "Corrigir" ou confirmar assim mesmo.`
-      : "Entendi! Montei o pedido abaixo. Confira o título, a descrição e a categoria."
+      ? `${intro} ${output.clarifyingQuestion}\n\nPode responder aqui no chat ou confirmar assim mesmo.`
+      : `${intro} Confira o título, a descrição e a categoria.`
 
     return NextResponse.json({
       message: reply,
@@ -130,7 +152,9 @@ export async function POST(request: NextRequest) {
         title: output.title.trim(),
         description: output.description.trim(),
         category: output.category,
+        ...(output.remote === "sim" ? { isRemote: true } : output.remote === "nao" ? { isRemote: false } : {}),
       },
+      remoteUncertain: output.remote === "talvez",
       categoryConfidence: output.categoryConfidence,
       needsLocation: true,
       missingFields: [],

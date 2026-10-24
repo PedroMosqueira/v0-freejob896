@@ -23,6 +23,7 @@ interface DraftPayload {
   neighborhood?: string
   latitude?: number
   longitude?: number
+  isRemote?: boolean
 }
 
 function isPublishable(payload: DraftPayload) {
@@ -102,6 +103,7 @@ export async function POST(request: NextRequest) {
       neighborhood: payload.neighborhood,
       latitude: payload.latitude,
       longitude: payload.longitude,
+      isRemote: payload.isRemote === true,
       requesterEmail: user.email,
       images: imageUrls,
     })
