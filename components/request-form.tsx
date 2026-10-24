@@ -532,7 +532,7 @@ export default function RequestForm() {
 
   return (
     <div className="space-y-4">
-      <Card className="w-full max-w-2xl mx-auto">
+      <Card className={`w-full mx-auto ${useAIChat ? "max-w-2xl md:max-w-4xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <CardHeader>
           <div className="flex justify-between items-center gap-4">
             <CardTitle className="text-lg sm:text-xl">O que você precisa?</CardTitle>
@@ -552,6 +552,7 @@ export default function RequestForm() {
         <CardContent className="pt-6">
           {/* AI Chat Mode */}
           {useAIChat && (
+            <div className="h-[min(640px,calc(100vh-14rem))] min-h-[440px]">
             <RequestFormAIChat
               onExtract={(info) => {
                 if (info.title) setTitle(info.title)
@@ -588,6 +589,7 @@ export default function RequestForm() {
                 }, 300)
               }}
             />
+            </div>
           )}
 
           {/* Traditional Form Mode */}

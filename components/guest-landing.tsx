@@ -72,7 +72,7 @@ export function GuestLanding() {
       </nav>
 
       <div className="flex w-full flex-1 items-center justify-center py-8">
-      <div className={view === "solicitar" ? "w-full max-w-2xl" : "w-full max-w-md"}>
+      <div className={view === "solicitar" ? "w-full max-w-2xl md:max-w-4xl lg:max-w-5xl" : "w-full max-w-md"}>
         <header className="mb-6 flex flex-col items-center gap-3 text-center">
           <Image
             src="/logo.png"

@@ -33,6 +33,22 @@ interface RequestDraftPreviewProps {
   onRemovePhoto: (index: number) => void
   onConfirm: () => void
   onEditInForm?: () => void
+  onClose?: () => void
+  className?: string
+}
+
+export function getMissingFields(info: DraftInfo, photoCount: number): string[] {
+  return [
+    !info.title?.trim() && "título",
+    !info.description?.trim() && "descrição",
+    !info.city && "localização",
+    photoCount === 0 && "uma foto",
+  ].filter(Boolean) as string[]
+}
+
+export function formatLocationLabel(info: DraftInfo): string | null {
+  if (!info.city) return null
+  return `${info.neighborhood ? `${info.neighborhood}, ` : ""}${info.city}${info.state ? ` - ${info.state}` : ""}`
 }
 
 export function RequestDraftPreview({
@@ -50,39 +66,54 @@ export function RequestDraftPreview({
   onRemovePhoto,
   onConfirm,
   onEditInForm,
+  onClose,
+  className = "",
 }: RequestDraftPreviewProps) {
   const [editing, setEditing] = useState<EditableField | null>(null)
   const [showCard, setShowCard] = useState(false)
   const photoUrls = usePhotoUrls(photos)
 
-  const hasLocation = Boolean(info.city)
-  const missing = [
-    !info.title?.trim() && "título",
-    !info.description?.trim() && "descrição",
-    !hasLocation && "localização",
-    photos.length === 0 && "uma foto",
-  ].filter(Boolean) as string[]
-
-  const locationLabel = hasLocation
-    ? `${info.neighborhood ? `${info.neighborhood}, ` : ""}${info.city}${info.state ? ` - ${info.state}` : ""}`
-    : null
+  const missing = getMissingFields(info, photos.length)
+  const locationLabel = formatLocationLabel(info)
+  const isEmpty = !info.title && !info.description
 
   return (
-    <section aria-label="Prévia do pedido" className="overflow-hidden rounded-lg border border-blue-200 bg-white text-sm">
+    <section aria-label="Prévia do pedido" className={`flex min-h-0 flex-col overflow-hidden bg-white text-sm ${className}`}>
       <header className="flex items-center justify-between gap-2 border-b border-blue-100 bg-blue-50 px-3 py-2">
         <h3 className="font-semibold text-blue-900">Prévia do pedido</h3>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowCard((v) => !v)}
-          aria-pressed={showCard}
-          className="h-7 gap-1.5 px-2 text-xs text-blue-700 hover:bg-blue-100 hover:text-blue-800"
-        >
-          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-          {showCard ? "Ocultar card" : "Ver card"}
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowCard((v) => !v)}
+            aria-pressed={showCard}
+            disabled={isEmpty}
+            className="h-7 gap-1.5 px-2 text-xs text-blue-700 hover:bg-blue-100 hover:text-blue-800"
+          >
+            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            {showCard ? "Ocultar card" : "Ver card"}
+          </Button>
+          {onClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-7 px-2 text-xs text-blue-700 hover:bg-blue-100 md:hidden"
+            >
+              Voltar ao chat
+            </Button>
+          )}
+        </div>
       </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto">
+      {isEmpty && (
+        <p className="border-b border-gray-100 px-3 py-3 text-xs leading-relaxed text-gray-500">
+          Seu pedido vai sendo montado aqui conforme você conversa com o assistente.
+        </p>
+      )}
 
       {showCard && (
         <div className="border-b border-blue-100 bg-gray-50 p-3">
@@ -108,7 +139,7 @@ export function RequestDraftPreview({
           label="Categoria"
           isEditing={editing === "category"}
           onEdit={() => setEditing("category")}
-          display={info.category || "Não definida"}
+          display={info.category || <span className="text-gray-400">Aguardando</span>}
         >
           <select
             autoFocus
@@ -162,8 +193,7 @@ export function RequestDraftPreview({
         <LocationRow
           label={locationLabel}
           info={info}
-          isEditing={editing === "location" || !hasLocation}
-          canCancel={hasLocation}
+          isEditing={editing === "location"}
           isLocating={isLocating}
           error={locationError}
           onEdit={() => setEditing("location")}
@@ -213,11 +243,12 @@ export function RequestDraftPreview({
               </div>
             )}
             {photos.length === 0 && !isProcessingPhotos && (
-              <p className="text-xs text-gray-500">Uma foto ajuda o profissional a entender e orçar o serviço.</p>
+              <p className="text-xs text-gray-400">Aguardando</p>
             )}
           </dd>
         </div>
       </dl>
+      </div>
 
       <footer className="flex flex-col gap-2 border-t border-blue-100 bg-blue-50/50 p-3">
         {missing.length > 0 && (
@@ -302,7 +333,7 @@ function TextField({
         value ? (
           <span className={multiline ? "whitespace-pre-line text-pretty leading-relaxed" : "font-medium"}>{value}</span>
         ) : (
-          <span className="text-gray-400">Não definido</span>
+          <span className="text-gray-400">Aguardando</span>
         )
       }
     >
@@ -329,35 +360,31 @@ function TextField({
   )
 }
 
-function LocationRow({
-  label,
-  info,
-  isEditing,
-  canCancel,
+type ManualLocation = { city: string; state: string; neighborhood: string }
+
+export function LocationPicker({
+  initial,
   isLocating,
   error,
-  onEdit,
-  onCancel,
+  idPrefix,
   onUseLocation,
   onManual,
+  onCancel,
 }: {
-  label: string | null
-  info: DraftInfo
-  isEditing: boolean
-  canCancel: boolean
+  initial?: Partial<ManualLocation>
   isLocating: boolean
   error: string | null
-  onEdit: () => void
-  onCancel: () => void
+  idPrefix: string
   onUseLocation: () => void
-  onManual: (location: { city: string; state: string; neighborhood: string }) => Promise<void>
+  onManual: (location: ManualLocation) => Promise<void>
+  onCancel?: () => void
 }) {
-  const [manual, setManual] = useState({ city: "", state: "", neighborhood: "" })
+  const [manual, setManual] = useState<ManualLocation>({
+    city: initial?.city ?? "",
+    state: initial?.state ?? "",
+    neighborhood: initial?.neighborhood ?? "",
+  })
   const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    if (isEditing) setManual({ city: info.city ?? "", state: info.state ?? "", neighborhood: info.neighborhood ?? "" })
-  }, [isEditing, info.city, info.state, info.neighborhood])
 
   const saveManual = async () => {
     setIsSaving(true)
@@ -369,35 +396,75 @@ function LocationRow({
   }
 
   return (
+    <div className="flex flex-col gap-2">
+      <Button type="button" onClick={onUseLocation} disabled={isLocating} size="sm" className="w-full gap-2 bg-blue-600 text-white hover:bg-blue-700">
+        {isLocating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
+        {isLocating ? "Localizando..." : "Usar minha localização"}
+      </Button>
+      <p className="text-center text-xs text-gray-400">ou digite</p>
+      <div className="grid grid-cols-[1fr_5rem] gap-2">
+        <Input id={`${idPrefix}-city`} aria-label="Cidade" placeholder="Cidade" value={manual.city} onChange={(e) => setManual((m) => ({ ...m, city: e.target.value }))} />
+        <Input id={`${idPrefix}-state`} aria-label="Estado" placeholder="UF" maxLength={2} value={manual.state} onChange={(e) => setManual((m) => ({ ...m, state: e.target.value.toUpperCase() }))} />
+      </div>
+      <Input id={`${idPrefix}-neighborhood`} aria-label="Bairro" placeholder="Bairro (opcional)" value={manual.neighborhood} onChange={(e) => setManual((m) => ({ ...m, neighborhood: e.target.value }))} />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <Button type="button" size="sm" variant="outline" onClick={saveManual} disabled={!manual.city.trim() || !manual.state.trim() || isSaving} className="flex-1 border-blue-300 bg-white text-blue-700 hover:bg-blue-50 hover:text-blue-800">
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Salvar local"}
+        </Button>
+        {onCancel && (
+          <Button type="button" size="sm" variant="ghost" onClick={onCancel} className="flex-1">
+            Cancelar
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LocationRow({
+  label,
+  info,
+  isEditing,
+  isLocating,
+  error,
+  onEdit,
+  onCancel,
+  onUseLocation,
+  onManual,
+}: {
+  label: string | null
+  info: DraftInfo
+  isEditing: boolean
+  isLocating: boolean
+  error: string | null
+  onEdit: () => void
+  onCancel: () => void
+  onUseLocation: () => void
+  onManual: (location: ManualLocation) => Promise<void>
+}) {
+  return (
     <Row
       label="Local"
       isEditing={isEditing}
       onEdit={onEdit}
-      display={<span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />{label}</span>}
+      display={
+        label ? (
+          <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />{label}</span>
+        ) : (
+          <span className="text-gray-400">Aguardando</span>
+        )
+      }
     >
-      <div className="flex flex-col gap-2">
-        <Button type="button" onClick={onUseLocation} disabled={isLocating} size="sm" className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
-          {isLocating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <MapPin className="h-4 w-4" aria-hidden="true" />}
-          {isLocating ? "Localizando..." : "Usar minha localização"}
-        </Button>
-        <p className="text-center text-xs text-gray-400">ou digite</p>
-        <div className="grid grid-cols-[1fr_5rem] gap-2">
-          <Input aria-label="Cidade" placeholder="Cidade" value={manual.city} onChange={(e) => setManual((m) => ({ ...m, city: e.target.value }))} />
-          <Input aria-label="Estado" placeholder="UF" maxLength={2} value={manual.state} onChange={(e) => setManual((m) => ({ ...m, state: e.target.value.toUpperCase() }))} />
-        </div>
-        <Input aria-label="Bairro" placeholder="Bairro" value={manual.neighborhood} onChange={(e) => setManual((m) => ({ ...m, neighborhood: e.target.value }))} />
-        {error && <p className="text-xs text-red-600">{error}</p>}
-        <div className="flex gap-2">
-          <Button type="button" size="sm" variant="outline" onClick={saveManual} disabled={!manual.city.trim() || !manual.state.trim() || isSaving} className="flex-1">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : "Salvar local"}
-          </Button>
-          {canCancel && (
-            <Button type="button" size="sm" variant="ghost" onClick={onCancel} className="flex-1">
-              Cancelar
-            </Button>
-          )}
-        </div>
-      </div>
+      <LocationPicker
+        idPrefix="preview-location"
+        initial={info}
+        isLocating={isLocating}
+        error={error}
+        onUseLocation={onUseLocation}
+        onManual={onManual}
+        onCancel={onCancel}
+      />
     </Row>
   )
 }
