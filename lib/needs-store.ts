@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createClient } from "@supabase/supabase-js"
 import { buildNotificationUrl, safeSendPush } from "@/lib/push-notifications-server"
 import { sendNotificationEmail } from "@/lib/email-notifications"
+import { FEATURES } from "@/lib/feature-flags"
 import type {
   Need,
   NewNeedInput,
@@ -1728,19 +1729,43 @@ async function insertNotificationRow(
   }
 }
 
+const MAX_EXPENSE_ITEM = 50000
+
+function normalizeBidExpenses(
+  raw: { materials: number; travel: number } | null | undefined,
+): { materials: number; travel: number } | null {
+  if (!FEATURES.bidExpenses || !raw) return null
+  const clean = (value: unknown) => {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n < 0 || n > MAX_EXPENSE_ITEM) {
+      throw new Error("Valor de despesa inválido.")
+    }
+    return Math.round(n * 100) / 100
+  }
+  const expenses = { materials: clean(raw.materials), travel: clean(raw.travel) }
+  return expenses.materials + expenses.travel > 0 ? expenses : null
+}
+
 export async function sendBidToChat({
   needId,
   professionalEmail,
   requesterEmail,
-  bidAmount,
+  bidAmount: serviceAmount,
+  expenses: rawExpenses,
 }: {
   needId: string
   professionalEmail: string
   requesterEmail: string
   bidAmount: number
+  expenses?: { materials: number; travel: number } | null
 }) {
   const supabase = await createSupabaseServerClient()
   const now = new Date().toISOString()
+
+  const expenses = normalizeBidExpenses(rawExpenses)
+  const expensesTotal = expenses ? expenses.materials + expenses.travel : 0
+  // bid_amount stays the amount the requester pays, so acceptance and payment flows are unchanged.
+  const bidAmount = Math.round((serviceAmount + expensesTotal) * 100) / 100
 
   const { data: needRow } = await supabase.from("needs").select("status").eq("id", needId).maybeSingle()
   if (!needRow || needRow.status !== "aberto") {
@@ -1821,6 +1846,7 @@ export async function sendBidToChat({
       proposalId: newProposal.id,
       bidAmount: bidAmount,
       status: "pending",
+      ...(expenses ? { serviceAmount, expenses } : {}),
     },
   }
 

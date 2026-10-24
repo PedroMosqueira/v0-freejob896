@@ -68,7 +68,15 @@ export type ChatMessage = {
     totalAmount?: number
     proposalId?: string
     status?: "pending" | "accepted" | "declined" | "cancelled"
+    /** Present when the bid includes expenses; bidAmount is then the total (service + expenses). */
+    serviceAmount?: number
+    expenses?: BidExpenses
   }
+}
+
+export type BidExpenses = {
+  materials: number
+  travel: number
 }
 
 // NOVO TIPO: Representa um thread de chat individual

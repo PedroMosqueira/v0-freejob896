@@ -17,6 +17,8 @@ export async function sendMagicLink(email: string, pendingRef?: string): Promise
   try {
     const supabase = createSupabaseBrowserClient()
     const redirectUrl = new URL("/auth/callback", window.location.origin)
+    // Keeps a "?" in {{ .RedirectTo }} so the email template can append "&token_hash=...".
+    redirectUrl.searchParams.set("via", "email")
     if (pendingRef) redirectUrl.searchParams.set("pending", pendingRef)
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
