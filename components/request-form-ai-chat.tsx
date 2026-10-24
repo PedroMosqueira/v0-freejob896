@@ -5,11 +5,10 @@ import { compressImages } from "@/lib/image-compress"
 import { useHasCamera } from "@/lib/use-has-camera"
 import { InAppCamera, isInAppCameraSupported } from "@/components/in-app-camera"
 import { describeGeolocationError, detectLocation } from "@/lib/geolocation"
+import { RequestDraftPreview, type DraftInfo } from "@/components/request-draft-preview"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Send, MapPin, Loader2, Camera, Globe, Image as ImageIcon } from "lucide-react"
+import { Send, Loader2 } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"
@@ -38,28 +37,13 @@ interface ChatProps {
   hideEditInForm?: boolean
 }
 
-function RemoteCheckbox({
-  checked,
-  onChange,
-  compact = false,
-}: {
-  checked: boolean
-  onChange: (checked: boolean) => void
-  compact?: boolean
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-blue-900">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-blue-300 accent-blue-600"
-      />
-      <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
-      {compact ? "Remoto" : "Pode ser feito remotamente"}
-    </label>
-  )
-}
+const OFFICIAL_CATEGORIES = [
+  "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
+  "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
+  "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
+  "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
+  "Professor Particular", "Outros",
+]
 
 export function RequestFormAIChat({
   onExtract,
@@ -72,31 +56,17 @@ export function RequestFormAIChat({
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content:
-        "Olá! Vou ajudá-lo a descrever o serviço que você precisa. Me conte o que você está procurando de forma natural.",
+      content: "Olá! Me conte, do seu jeito, qual serviço você precisa.",
     },
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [extractedInfo, setExtractedInfo] = useState<ExtractedInfo>({})
-  const [isFirstMessage, setIsFirstMessage] = useState(true)
-  const [locationConfirmed, setLocationConfirmed] = useState(false)
-  const [askingForPhotos, setAskingForPhotos] = useState(false)
-  const [showingPreview, setShowingPreview] = useState(false)
-  const [detailsConfirmed, setDetailsConfirmed] = useState(false)
-  const [editingDetails, setEditingDetails] = useState(false)
-  const [manualLocation, setManualLocation] = useState({ city: "", neighborhood: "", state: "" })
   const [photos, setPhotos] = useState<File[]>([])
   const [isLocating, setIsLocating] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
 
-  const officialCategories = [
-    "Encanador", "Eletricista", "Pedreiro", "Pintor", "Montador de Móveis",
-    "Marceneiro", "Serralheiro", "Limpeza", "Jardinagem", "Diarista",
-    "Dedetização", "Ar Condicionado", "Vidraceiro", "Chaveiro", "Mudanças",
-    "Técnico de Informática", "Cabeleireiro", "Manicure", "Costureira",
-    "Professor Particular", "Outros",
-  ]
   const isMobile = useHasCamera()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -104,22 +74,53 @@ export function RequestFormAIChat({
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const capturedBatchRef = useRef<File[]>([])
 
-  const fieldTranslations: Record<string, string> = {
-    title: "título do serviço",
-    description: "descrição detalhada",
-    category: "categoria",
-    city: "cidade",
-    neighborhood: "bairro",
-    state: "estado",
-  }
+  const hasDraft = Boolean(extractedInfo.title && extractedInfo.description)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    const area = scrollAreaRef.current
+    const preview = previewRef.current
+    // With a draft on screen, keep its top in view instead of jumping to the confirm button at the bottom.
+    if (area && preview && !completed) {
+      area.scrollTo({ top: Math.max(0, preview.offsetTop - area.clientHeight / 3), behavior: "smooth" })
+      return
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+  }, [messages, hasDraft, completed])
+
+  // Refs hold the latest values so async handlers (geolocation, compression) never merge into stale state.
+  const infoRef = useRef<ExtractedInfo>({})
+  const photosRef = useRef<File[]>([])
+
+  const updateInfo = (patch: Partial<ExtractedInfo>) => {
+    const updated = { ...infoRef.current, ...patch }
+    infoRef.current = updated
+    setExtractedInfo(updated)
+    onExtract(updated)
+  }
+
+  // Fields the user corrected by hand in the preview win over later AI rewrites.
+  const manualFieldsRef = useRef(new Set<keyof ExtractedInfo>())
+
+  const handleManualEdit = (patch: Partial<ExtractedInfo>) => {
+    for (const key of Object.keys(patch) as (keyof ExtractedInfo)[]) manualFieldsRef.current.add(key)
+    updateInfo(patch)
+  }
+
+  const applyAIExtraction = (extracted: Partial<ExtractedInfo>) => {
+    const patch = Object.fromEntries(
+      Object.entries(extracted).filter(([key]) => !manualFieldsRef.current.has(key as keyof ExtractedInfo)),
+    ) as Partial<ExtractedInfo>
+    updateInfo(patch)
+  }
+
+  const updatePhotos = (next: File[]) => {
+    photosRef.current = next
+    setPhotos(next)
+    updateInfo({ images: next })
+  }
 
   const handleSendMessage = async () => {
     if (!input.trim() || loading) return
@@ -136,12 +137,12 @@ export function RequestFormAIChat({
         body: JSON.stringify({
           message: userMessage,
           conversationHistory: messages,
-          currentDraft: extractedInfo.title
+          currentDraft: infoRef.current.title
             ? {
-                title: extractedInfo.title,
-                description: extractedInfo.description,
-                category: extractedInfo.category,
-                isRemote: extractedInfo.isRemote,
+                title: infoRef.current.title,
+                description: infoRef.current.description,
+                category: infoRef.current.category,
+                isRemote: infoRef.current.isRemote,
               }
             : undefined,
         }),
@@ -149,46 +150,15 @@ export function RequestFormAIChat({
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => null)
-        const message = errorBody?.error || `Erro ao processar mensagem (${response.status})`
-        console.error("[v0] AI request failed:", { status: response.status, error: errorBody })
-        throw new Error(message)
+        throw new Error(errorBody?.error || `Erro ao processar mensagem (${response.status})`)
       }
 
       const data = await response.json()
-
-      // Atualizar mensagem do assistente
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.message },
-      ])
-
-      // Atualizar informações extraídas
-      if (data.extracted) {
-        const updated = { ...extractedInfo, ...data.extracted }
-        setExtractedInfo(updated)
-        setDetailsConfirmed(false)
-        setEditingDetails(false)
-        onExtract(updated)
-
-        // Se é primeira mensagem e extraiu title/description/category, pedir localização
-        if (isFirstMessage && data.extracted.title && data.extracted.description && data.extracted.category) {
-          setIsFirstMessage(false)
-        }
-
-        // Se a IA indicou que precisa de localização, mostrar botão
-        if (data.needsLocation && !locationConfirmed) {
-          // Localização será pedida através da UI
-        }
-      }
+      setMessages((prev) => [...prev, { role: "assistant", content: data.message }])
+      if (data.extracted) applyAIExtraction(data.extracted)
     } catch (error) {
       console.error("[v0] Error sending message:", error)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Desculpe, houve um erro. Tente novamente.",
-        },
-      ])
+      setMessages((prev) => [...prev, { role: "assistant", content: "Desculpe, houve um erro. Tente novamente." }])
     } finally {
       setLoading(false)
     }
@@ -197,39 +167,38 @@ export function RequestFormAIChat({
   const handleUseLocation = async () => {
     if (isLocating) return
     setIsLocating(true)
+    setLocationError(null)
     try {
       const location = await detectLocation()
       if (!location.city) {
-        setManualLocation({ city: "", state: location.state, neighborhood: location.neighborhood })
-        setMessages((prev) => [
-          ...prev,
-          { role: "assistant", content: "Peguei suas coordenadas, mas não o nome da cidade. Digite a cidade e o bairro." },
-        ])
+        setLocationError("Peguei suas coordenadas, mas não o nome da cidade. Digite a cidade e o estado.")
         return
       }
-
-      const updated = { ...extractedInfo, ...location }
-      setExtractedInfo(updated)
-      setLocationConfirmed(true)
-      onExtract(updated)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: `Localização detectada: ${location.neighborhood ? `${location.neighborhood}, ` : ""}${location.city} - ${location.state}\n\nAgora adicione pelo menos uma foto do serviço.`,
-        },
-      ])
-      setAskingForPhotos(true)
+      updateInfo({ ...location, locationApproximate: false })
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: error instanceof Error && !("code" in error) ? error.message : describeGeolocationError(error),
-        },
-      ])
+      setLocationError(error instanceof Error && !("code" in error) ? error.message : describeGeolocationError(error))
     } finally {
       setIsLocating(false)
+    }
+  }
+
+  const handleManualLocation = async (location: { city: string; state: string; neighborhood: string }) => {
+    setLocationError(null)
+    const query = [location.neighborhood, location.city, location.state, "Brasil"].filter(Boolean).join(", ")
+    try {
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`)
+      const results = await response.json()
+      const match = Array.isArray(results) ? results[0] : null
+      const latitude = match?.lat ? Number(match.lat) : undefined
+      const longitude = match?.lon ? Number(match.lon) : undefined
+      updateInfo({
+        ...location,
+        ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : { latitude: undefined, longitude: undefined }),
+        locationApproximate: true,
+      })
+    } catch (error) {
+      console.error("[v0] Erro ao obter coordenadas aproximadas:", error)
+      updateInfo({ ...location, latitude: undefined, longitude: undefined, locationApproximate: false })
     }
   }
 
@@ -238,8 +207,8 @@ export function RequestFormAIChat({
       setIsCameraOpen(true)
       return
     }
-    const input = source === "camera" ? cameraInputRef.current : fileInputRef.current
-    input?.click()
+    const target = source === "camera" ? cameraInputRef.current : fileInputRef.current
+    target?.click()
   }
 
   const handleCameraUnavailable = () => {
@@ -248,377 +217,80 @@ export function RequestFormAIChat({
   }
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.currentTarget
-    const selected = input.files ? Array.from(input.files) : []
-    input.value = ""
+    const target = e.currentTarget
+    const selected = target.files ? Array.from(target.files) : []
+    target.value = ""
     addPhotoFiles(selected)
   }
 
   const addPhotoFiles = async (selected: File[]) => {
     if (selected.length === 0) return
-
     setIsProcessingPhotos(true)
-    let newFiles: File[]
     try {
-      newFiles = await compressImages(selected)
+      const compressed = await compressImages(selected)
+      if (compressed.length > 0) updatePhotos([...photosRef.current, ...compressed])
     } finally {
       setIsProcessingPhotos(false)
     }
-    const files = newFiles
-    if (files.length > 0) {
-      const allPhotos = [...photos, ...newFiles]
-
-      setPhotos(allPhotos)
-      const totalCount = allPhotos.length
-      const newCount = files.length
-
-      // Se é primeira vez (askingForPhotos), mostrar preview automaticamente
-      const isFirstPhoto = photos.length === 0
-      
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "user",
-          content: isFirstPhoto ? `📸 Adicionei ${newCount} foto(s)` : `📸 Adicionei mais ${newCount} foto(s) (total: ${totalCount})`,
-        },
-        {
-          role: "assistant",
-          content: isFirstPhoto 
-            ? `✅ Ótimo! Agora vou mostrar uma pré-visualização da sua solicitação para você revisar.`
-            : `✅ Perfeito! Agora você tem ${totalCount} foto(s) anexada(s).`,
-        },
-      ])
-
-      const finalInfo = { ...extractedInfo, images: allPhotos }
-      setExtractedInfo(finalInfo)
-      onExtract(finalInfo)
-      
-      // Se era primeira foto e estava pedindo fotos, ir para preview
-      if (isFirstPhoto && askingForPhotos) {
-        setAskingForPhotos(false)
-        setShowingPreview(true)
-      }
-    }
   }
 
-  const handleConfirmDetails = () => {
-    setDetailsConfirmed(true)
-    setEditingDetails(false)
-    setMessages((prev) => [...prev, { role: "assistant", content: "Perfeito. Agora escolha como deseja informar sua localização." }])
+  const handleRemovePhoto = (index: number) => {
+    updatePhotos(photosRef.current.filter((_, i) => i !== index))
   }
 
-  const handleManualLocationConfirm = async () => {
-    const query = [manualLocation.neighborhood, manualLocation.city, manualLocation.state, "Brasil"]
-      .filter(Boolean)
-      .join(", ")
+  const buildFinalInfo = (): ExtractedInfo => ({
+    ...infoRef.current,
+    images: photosRef.current.length > 0 ? photosRef.current : undefined,
+  })
 
-    try {
-      const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`)
-      const results = await response.json()
-      const match = Array.isArray(results) ? results[0] : null
-      const latitude = match?.lat ? Number(match.lat) : undefined
-      const longitude = match?.lon ? Number(match.lon) : undefined
-      const updated = {
-        ...extractedInfo,
-        ...manualLocation,
-        ...(latitude !== undefined && longitude !== undefined ? { latitude, longitude } : {}),
-        locationApproximate: true,
-      }
-
-      setExtractedInfo(updated)
-      setLocationConfirmed(true)
-      onExtract(updated)
-      setMessages((prev) => [...prev, {
-        role: "assistant",
-        content: match
-          ? "Localização aproximada encontrada pelo bairro e cidade. Agora você pode adicionar fotos e revisar tudo antes de solicitar o serviço."
-          : "Não encontrei as coordenadas desse bairro. Vou manter a cidade e o bairro informados para a revisão final.",
-      }])
-      setAskingForPhotos(true)
-    } catch (error) {
-      console.error("[v0] Erro ao obter distância aproximada:", error)
-      const updated = { ...extractedInfo, ...manualLocation, locationApproximate: false }
-      setExtractedInfo(updated)
-      setLocationConfirmed(true)
-      onExtract(updated)
-      setAskingForPhotos(true)
-    }
-  }
-
-  const handleEditInForm = () => {
-    const finalInfo = { ...extractedInfo }
-    if (photos && photos.length > 0) {
-      finalInfo.images = photos
-    }
-    onComplete(finalInfo)
-  }
-
-  const handleConfirmFromPreview = () => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: confirmMessage,
-      },
-    ])
-    setShowingPreview(false)
+  const handleConfirm = () => {
+    setMessages((prev) => [...prev, { role: "assistant", content: confirmMessage }])
     setCompleted(true)
-    
-    // Incluir fotos no objeto final
-    const finalInfo = { ...extractedInfo }
-    if (photos && photos.length > 0) {
-      finalInfo.images = photos
-    }
-    
-    onComplete(finalInfo)
+    onComplete(buildFinalInfo())
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border border-gray-200">
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div className="flex h-full flex-col rounded-lg border border-gray-200 bg-white">
+      <div ref={scrollAreaRef} className="relative flex flex-1 flex-col gap-3 overflow-y-auto p-4">
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+          <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-xs px-4 py-2 rounded-lg whitespace-pre-line ${
-                msg.role === "user"
-                  ? "bg-blue-500 text-white rounded-br-none"
-                  : "bg-gray-100 text-gray-800 rounded-bl-none"
+              className={`max-w-[85%] whitespace-pre-line rounded-lg px-4 py-2 ${
+                msg.role === "user" ? "rounded-br-none bg-blue-500 text-white" : "rounded-bl-none bg-gray-100 text-gray-800"
               }`}
             >
-              <p className="text-sm">{msg.content}</p>
+              <p className="text-sm leading-relaxed">{msg.content}</p>
             </div>
           </div>
         ))}
 
-        {/* Extracted Info Display */}
-        {Object.keys(extractedInfo).length > 0 && !askingForPhotos && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-2">
-            <p className="text-xs font-semibold text-blue-900 mb-2">
-              ✅ Informações Coletadas:
-            </p>
-            <div className="space-y-1 text-xs text-blue-800">
-              {extractedInfo.title && <p>📌 Serviço: {extractedInfo.title}</p>}
-              {extractedInfo.category && (
-                <p>🏷️ Categoria: {extractedInfo.category}</p>
-              )}
-              {extractedInfo.description && (
-                <p>📝 Descrição: {extractedInfo.description}</p>
-              )}
-              {extractedInfo.isRemote && <p>🌐 Pode ser feito remotamente</p>}
-              {(extractedInfo.city || extractedInfo.neighborhood) && (
-                <p>
-                  📍 Local: {extractedInfo.neighborhood ? `${extractedInfo.neighborhood}, ` : ""}{extractedInfo.city}
-                  {extractedInfo.state ? ` - ${extractedInfo.state}` : ""}
-                </p>
-              )}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-2 rounded-lg rounded-bl-none bg-gray-100 px-4 py-2 text-sm text-gray-500">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              {hasDraft ? "Atualizando o pedido..." : "Montando seu pedido..."}
             </div>
           </div>
         )}
 
-        {/* Confirmação ou correção dos dados gerados pela IA */}
-        {!detailsConfirmed && extractedInfo.title && extractedInfo.description && extractedInfo.category && !editingDetails && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-            <p className="text-sm font-semibold text-blue-900">Confira os dados do serviço</p>
-            <p className="text-xs text-blue-800">
-              A IA criou um título, uma descrição e escolheu a categoria mais próxima. Se quiser acrescentar algo, é só escrever abaixo.
-            </p>
-            <RemoteCheckbox
-              checked={extractedInfo.isRemote === true}
-              onChange={(isRemote) => {
-                const updated = { ...extractedInfo, isRemote }
-                setExtractedInfo(updated)
-                onExtract(updated)
-              }}
-            />
-            <div className="flex gap-2">
-              <Button onClick={handleConfirmDetails} className="flex-1 bg-green-600 hover:bg-green-700">Confirmar dados</Button>
-              <Button onClick={() => setEditingDetails(true)} variant="outline" className="flex-1">Corrigir</Button>
-            </div>
-          </div>
-        )}
-
-        {!detailsConfirmed && editingDetails && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-3">
-            <Input value={extractedInfo.title || ""} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, title: e.target.value }))} placeholder="Título do serviço" />
-            <Textarea value={extractedInfo.description || ""} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, description: e.target.value }))} placeholder="Descrição do serviço" rows={4} />
-            <select value={extractedInfo.category || "Outros"} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, category: e.target.value }))} className="w-full rounded-md border bg-white px-3 py-2 text-sm">
-              {officialCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-            <RemoteCheckbox
-              checked={extractedInfo.isRemote === true}
-              onChange={(isRemote) => setExtractedInfo((prev) => ({ ...prev, isRemote }))}
-            />
-            <div className="flex gap-2">
-              <Button onClick={() => { onExtract(extractedInfo); handleConfirmDetails() }} className="flex-1">Salvar correção</Button>
-              <Button onClick={() => setEditingDetails(false)} variant="outline" className="flex-1">Cancelar</Button>
-            </div>
-          </div>
-        )}
-
-        {/* Location Button - Only show after service details are confirmed */}
-        {!locationConfirmed && detailsConfirmed && !askingForPhotos && !showingPreview && (
-          <div>
-            <p className="text-sm text-blue-900 mb-3">
-              Agora informe onde o serviço será realizado:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <Input value={manualLocation.city} onChange={(e) => setManualLocation((prev) => ({ ...prev, city: e.target.value }))} placeholder="Cidade" />
-              <Input value={manualLocation.state} onChange={(e) => setManualLocation((prev) => ({ ...prev, state: e.target.value }))} placeholder="Estado/UF" />
-            </div>
-            <Input value={manualLocation.neighborhood} onChange={(e) => setManualLocation((prev) => ({ ...prev, neighborhood: e.target.value }))} placeholder="Bairro" className="mt-2" />
-            <div className="flex gap-2 mt-3">
-              <Button
-                onClick={handleUseLocation}
-                disabled={isLocating}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
-              >
-                {isLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                {isLocating ? "Localizando..." : "Usar localização"}
-              </Button>
-              <Button onClick={handleManualLocationConfirm} disabled={!manualLocation.city || !manualLocation.state} variant="outline" className="flex-1">Preencher manualmente</Button>
-            </div>
-          </div>
-        )}
-
-        {/* Photo Upload Section */}
-        {askingForPhotos && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
-            <p className="text-sm text-amber-900 font-semibold">
-              📸 Adicionar Fotos (obrigatório - mínimo 1)
-            </p>
-            <div className="flex gap-2">
-              {isMobile && (
-                <Button
-                  onClick={() => handlePhotoCapture("camera")}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2 flex-1"
-                >
-                  <Camera className="w-4 h-4" />
-                  Tirar Foto
-                </Button>
-              )}
-              <Button
-                onClick={() => handlePhotoCapture("gallery")}
-                variant="outline"
-                size="sm"
-                className={`flex items-center gap-2 ${isMobile ? "flex-1" : "w-full"}`}
-              >
-                <ImageIcon className="w-4 h-4" />
-                Galeria
-              </Button>
-            </div>
-            {isProcessingPhotos && (
-              <p className="flex items-center gap-2 text-xs text-amber-800">
-                <Loader2 className="w-3 h-3 animate-spin" /> Processando foto...
-              </p>
-            )}
-            {!isProcessingPhotos && photos.length === 0 && (
-              <p className="text-xs text-amber-700">Você deve adicionar pelo menos uma foto para continuar.</p>
-            )}
-          </div>
-        )}
-
-        {/* Preview Section */}
-        {showingPreview && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-4">
-            <h3 className="font-semibold text-green-900 text-sm">
-              📋 Pré-visualização da Solicitação
-            </h3>
-
-            <div className="space-y-3 text-sm">
-              {extractedInfo.title && (
-                <div className="border-b border-green-200 pb-2">
-                  <p className="text-xs font-semibold text-green-700">Serviço</p>
-                  <p className="text-green-900">{extractedInfo.title}</p>
-                </div>
-              )}
-
-              {extractedInfo.category && (
-                <div className="border-b border-green-200 pb-2">
-                  <p className="text-xs font-semibold text-green-700">Categoria</p>
-                  <p className="text-green-900">{extractedInfo.category}</p>
-                </div>
-              )}
-
-              {extractedInfo.description && (
-                <div className="border-b border-green-200 pb-2">
-                  <p className="text-xs font-semibold text-green-700">Descrição</p>
-                  <p className="text-green-900 whitespace-pre-line">{extractedInfo.description}</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between gap-2 border-b border-green-200 pb-2">
-                <div>
-                  <p className="text-xs font-semibold text-green-700">Atendimento</p>
-                  <p className="text-green-900">{extractedInfo.isRemote ? "Remoto ou presencial" : "Presencial"}</p>
-                </div>
-                <RemoteCheckbox
-                  checked={extractedInfo.isRemote === true}
-                  onChange={(isRemote) => {
-                    const updated = { ...extractedInfo, isRemote }
-                    setExtractedInfo(updated)
-                    onExtract(updated)
-                  }}
-                  compact
-                />
-              </div>
-
-              {(extractedInfo.city || extractedInfo.neighborhood) && (
-                <div className="border-b border-green-200 pb-2">
-                  <p className="text-xs font-semibold text-green-700">Localização</p>
-                  <p className="text-green-900">
-                    {extractedInfo.neighborhood && `${extractedInfo.neighborhood}, `}
-                    {extractedInfo.city}
-                    {extractedInfo.state && ` - ${extractedInfo.state}`}
-                  </p>
-                </div>
-              )}
-
-              {photos && photos.length > 0 && (
-                <div className="border-b border-green-200 pb-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-semibold text-green-700">Fotos</p>
-                      <p className="text-green-900">{photos.length} foto(s) anexada(s)</p>
-                    </div>
-                    <Button
-                      onClick={() => handlePhotoCapture("gallery")}
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    >
-                      + Adicionar
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white rounded p-3 space-y-2">
-              <p className="text-xs text-gray-600 mb-3">
-                Tudo correto? Você pode:
-              </p>
-              <Button
-                onClick={handleConfirmFromPreview}
-                className="w-full bg-green-600 hover:bg-green-700 text-sm"
-              >
-                ✅ Confirmar e Enviar
-              </Button>
-              {!hideEditInForm && (
-                <Button
-                  onClick={handleEditInForm}
-                  variant="outline"
-                  className="w-full text-sm"
-                >
-                  ✏️ Editar no Formulário
-                </Button>
-              )}
-            </div>
+        {hasDraft && !completed && (
+          <div ref={previewRef}>
+          <RequestDraftPreview
+            info={extractedInfo as DraftInfo}
+            photos={photos}
+            categories={OFFICIAL_CATEGORIES}
+            isMobile={isMobile}
+            isLocating={isLocating}
+            isProcessingPhotos={isProcessingPhotos}
+            locationError={locationError}
+            onChange={handleManualEdit}
+            onUseLocation={handleUseLocation}
+            onManualLocation={handleManualLocation}
+            onAddPhotos={handlePhotoCapture}
+            onRemovePhoto={handleRemovePhoto}
+            onConfirm={handleConfirm}
+            onEditInForm={hideEditInForm ? undefined : () => onComplete(buildFinalInfo())}
+          />
           </div>
         )}
 
@@ -627,10 +299,8 @@ export function RequestFormAIChat({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 p-4 space-y-3">
-        {/* Show input only when not in location/photos/preview stages */}
-        {!detailsConfirmed && !editingDetails && !locationConfirmed && !askingForPhotos && !showingPreview && !completed && (
+      <div className="border-t border-gray-200 p-3">
+        {!completed && (
           <div className="flex gap-2">
             <Input
               value={input}
@@ -640,41 +310,20 @@ export function RequestFormAIChat({
                 e.preventDefault()
                 handleSendMessage()
               }}
-              placeholder={extractedInfo.title ? "Responda ou acrescente detalhes..." : "Descreva o serviço que precisa..."}
+              placeholder={hasDraft ? "Acrescente ou corrija algo..." : "Descreva o serviço que precisa..."}
+              aria-label={hasDraft ? "Complementar pedido" : "Descrever serviço"}
               disabled={loading}
               className="flex-1"
             />
-            <Button
-              onClick={handleSendMessage}
-              disabled={loading || !input.trim()}
-              size="icon"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+            <Button onClick={handleSendMessage} disabled={loading || !input.trim()} size="icon" aria-label="Enviar mensagem">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handlePhotoSelect}
-          accept="image/*"
-          className="hidden"
-          multiple
-        />
+        <input ref={fileInputRef} type="file" onChange={handlePhotoSelect} accept="image/*" className="hidden" multiple />
         {/* Android ignores capture on inputs with multiple and opens the file picker, so the camera gets its own single-file input. */}
-        <input
-          ref={cameraInputRef}
-          type="file"
-          onChange={handlePhotoSelect}
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-        />
+        <input ref={cameraInputRef} type="file" onChange={handlePhotoSelect} accept="image/*" capture="environment" className="hidden" />
         {/* Photos taken in one camera session are added together, so the chat gets a single message. */}
         <InAppCamera
           open={isCameraOpen}
