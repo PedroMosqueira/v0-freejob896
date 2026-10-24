@@ -3,6 +3,7 @@
 import React from "react"
 import type { ReactElement } from "react"
 import { useState, useEffect, useCallback, useRef } from "react"
+import { Globe } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { filterNeeds, getNeed, type Need, type NeedStatus } from "@/lib/needs-store"
@@ -23,6 +24,7 @@ interface SearchRequestsProps {
   showFilters?: boolean
   searchQuery?: string
   initialQuery?: string
+  onShowFiltersChange?: (open: boolean) => void
 }
 
 function SearchRequests({
@@ -31,6 +33,7 @@ function SearchRequests({
   showFilters = false,
   searchQuery = "",
   initialQuery = "",
+  onShowFiltersChange,
 }: SearchRequestsProps): ReactElement {
   const { email } = useAuth()
 
@@ -62,6 +65,7 @@ function SearchRequests({
   const [locationAttempted, setLocationAttempted] = useState(false)
   const [locationState, setLocationState] = useState<LocationState>("locating")
   const [radiusKm, setRadiusKm] = useState<RadiusKm>(50)
+  const [remoteOnly, setRemoteOnly] = useState(false)
 
   const [selectedImage, setSelectedImage] = useState<{ url: string; alt: string } | null>(null)
 
@@ -119,6 +123,7 @@ function SearchRequests({
             limit,
             offset: currentPage * limit,
             near: userLocation ? { ...userLocation, radiusKm } : undefined,
+            remoteOnly,
           })
         }
 
@@ -199,6 +204,7 @@ function SearchRequests({
       page,
       userLocation,
       radiusKm,
+      remoteOnly,
     ],
   )
 
@@ -365,6 +371,12 @@ function SearchRequests({
     setRadiusKm(radius)
   }, [])
 
+  const handleRemoteOnlyChange = useCallback((value: boolean) => {
+    setPage(0)
+    setHasMore(true)
+    setRemoteOnly(value)
+  }, [])
+
   useEffect(() => {
     if (!isGettingLocation && locationAttempted) {
       performSearch()
@@ -372,10 +384,16 @@ function SearchRequests({
   }, [isGettingLocation, locationAttempted, performSearch])
 
   useEffect(() => {
-    if (showFilters) {
-      setIsMobileFilterOpen(true)
-    }
+    setIsMobileFilterOpen(showFilters)
   }, [showFilters])
+
+  const handleFilterOpenChange = useCallback(
+    (open: boolean) => {
+      setIsMobileFilterOpen(open)
+      onShowFiltersChange?.(open)
+    },
+    [onShowFiltersChange],
+  )
 
   useEffect(() => {
     const handleOpenNeed = async (event: any) => {
@@ -456,9 +474,11 @@ function SearchRequests({
         <NearbyBar
           locationState={locationState}
           radiusKm={radiusKm}
+          remoteOnly={remoteOnly}
           city={userCity}
           location={userLocation}
           onRadiusChange={handleRadiusChange}
+          onRemoteOnlyChange={handleRemoteOnlyChange}
           onRequestLocation={requestLocation}
         />
       )}
@@ -466,7 +486,7 @@ function SearchRequests({
       <div className="flex gap-6">
         <div className="flex-1 grid gap-4 sm:gap-6">
           {/* Mobile Filter Sheet */}
-          <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+          <Sheet open={isMobileFilterOpen} onOpenChange={handleFilterOpenChange}>
             <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
               <SheetHeader className="px-4 py-3 border-b">
                 <SheetTitle className="text-lg">Filtros</SheetTitle>
@@ -491,7 +511,9 @@ function SearchRequests({
             <SearchRequestsSkeleton />
           ) : searchResults.length === 0 ? (
             <p className="text-center text-muted-foreground">
-              {isNearbyMode
+              {remoteOnly && !showMyRequests && !showMyProfessionalServices
+                ? "Nenhum serviço remoto encontrado."
+                : isNearbyMode
                 ? `Nenhum serviço encontrado em até ${radiusKm} km de você.${radiusKm < 100 ? " Tente aumentar a distância." : ""}`
                 : "Nenhum serviço encontrado."}
             </p>
@@ -533,6 +555,13 @@ function SearchRequests({
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
 
+                          {need.isRemote && (
+                            <span className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-600/90 px-2.5 py-1 text-xs font-bold text-white shadow-lg backdrop-blur-sm">
+                              <Globe className="h-3 w-3" aria-hidden="true" />
+                              Remoto
+                            </span>
+                          )}
+
                           {need.distance !== undefined &&
                             need.distance !== null &&
                             need.distance !== Number.POSITIVE_INFINITY &&
@@ -541,7 +570,7 @@ function SearchRequests({
                                 <span className="text-white font-bold text-xs whitespace-nowrap bg-blue-500/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-lg border border-blue-400/50">
                                   ⚡ {formatDistance(need.distance)}
                                 </span>
-                                <TravelEstimateBadge distanceKm={need.distance} />
+                                {!need.isRemote && <TravelEstimateBadge distanceKm={need.distance} />}
                               </div>
                             )}
 

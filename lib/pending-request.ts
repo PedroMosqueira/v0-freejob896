@@ -17,6 +17,7 @@ export interface PendingRequestDraft {
   neighborhood?: string
   latitude?: number
   longitude?: number
+  isRemote?: boolean
   images: string[]
   savedAt: number
 }
@@ -30,6 +31,7 @@ export interface PendingRequestInput {
   neighborhood?: string
   latitude?: number
   longitude?: number
+  isRemote?: boolean
   images?: File[]
 }
 
@@ -132,6 +134,7 @@ export async function savePendingRequest(
     neighborhood: info.neighborhood,
     latitude,
     longitude,
+    isRemote: info.isRemote === true,
     images,
     savedAt: Date.now(),
   }

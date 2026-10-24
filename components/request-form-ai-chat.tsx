@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
-import { Send, MapPin, Loader2, Camera, Image as ImageIcon } from "lucide-react"
+import { Send, MapPin, Loader2, Camera, Globe, Image as ImageIcon } from "lucide-react"
 
 interface Message {
   role: "user" | "assistant"
@@ -26,6 +26,7 @@ interface ExtractedInfo {
   latitude?: number
   longitude?: number
   locationApproximate?: boolean
+  isRemote?: boolean
   images?: File[]
 }
 
@@ -35,6 +36,29 @@ interface ChatProps {
   confirmMessage?: string
   afterComplete?: React.ReactNode
   hideEditInForm?: boolean
+}
+
+function RemoteCheckbox({
+  checked,
+  onChange,
+  compact = false,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  compact?: boolean
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-blue-900">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-blue-300 accent-blue-600"
+      />
+      <Globe className="h-4 w-4 shrink-0" aria-hidden="true" />
+      {compact ? "Remoto" : "Pode ser feito remotamente"}
+    </label>
+  )
 }
 
 export function RequestFormAIChat({
@@ -112,6 +136,14 @@ export function RequestFormAIChat({
         body: JSON.stringify({
           message: userMessage,
           conversationHistory: messages,
+          currentDraft: extractedInfo.title
+            ? {
+                title: extractedInfo.title,
+                description: extractedInfo.description,
+                category: extractedInfo.category,
+                isRemote: extractedInfo.isRemote,
+              }
+            : undefined,
         }),
       })
 
@@ -137,7 +169,6 @@ export function RequestFormAIChat({
         setDetailsConfirmed(false)
         setEditingDetails(false)
         onExtract(updated)
-        console.log("[v0] Extracted info updated:", updated)
 
         // Se é primeira mensagem e extraiu title/description/category, pedir localização
         if (isFirstMessage && data.extracted.title && data.extracted.description && data.extracted.category) {
@@ -377,6 +408,7 @@ export function RequestFormAIChat({
               {extractedInfo.description && (
                 <p>📝 Descrição: {extractedInfo.description}</p>
               )}
+              {extractedInfo.isRemote && <p>🌐 Pode ser feito remotamente</p>}
               {(extractedInfo.city || extractedInfo.neighborhood) && (
                 <p>
                   📍 Local: {extractedInfo.neighborhood ? `${extractedInfo.neighborhood}, ` : ""}{extractedInfo.city}
@@ -391,7 +423,17 @@ export function RequestFormAIChat({
         {!detailsConfirmed && extractedInfo.title && extractedInfo.description && extractedInfo.category && !editingDetails && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
             <p className="text-sm font-semibold text-blue-900">Confira os dados do serviço</p>
-            <p className="text-xs text-blue-800">A IA criou um título, uma descrição e escolheu a categoria mais próxima.</p>
+            <p className="text-xs text-blue-800">
+              A IA criou um título, uma descrição e escolheu a categoria mais próxima. Se quiser acrescentar algo, é só escrever abaixo.
+            </p>
+            <RemoteCheckbox
+              checked={extractedInfo.isRemote === true}
+              onChange={(isRemote) => {
+                const updated = { ...extractedInfo, isRemote }
+                setExtractedInfo(updated)
+                onExtract(updated)
+              }}
+            />
             <div className="flex gap-2">
               <Button onClick={handleConfirmDetails} className="flex-1 bg-green-600 hover:bg-green-700">Confirmar dados</Button>
               <Button onClick={() => setEditingDetails(true)} variant="outline" className="flex-1">Corrigir</Button>
@@ -406,6 +448,10 @@ export function RequestFormAIChat({
             <select value={extractedInfo.category || "Outros"} onChange={(e) => setExtractedInfo((prev) => ({ ...prev, category: e.target.value }))} className="w-full rounded-md border bg-white px-3 py-2 text-sm">
               {officialCategories.map((category) => <option key={category} value={category}>{category}</option>)}
             </select>
+            <RemoteCheckbox
+              checked={extractedInfo.isRemote === true}
+              onChange={(isRemote) => setExtractedInfo((prev) => ({ ...prev, isRemote }))}
+            />
             <div className="flex gap-2">
               <Button onClick={() => { onExtract(extractedInfo); handleConfirmDetails() }} className="flex-1">Salvar correção</Button>
               <Button onClick={() => setEditingDetails(false)} variant="outline" className="flex-1">Cancelar</Button>
@@ -506,6 +552,22 @@ export function RequestFormAIChat({
                 </div>
               )}
 
+              <div className="flex items-center justify-between gap-2 border-b border-green-200 pb-2">
+                <div>
+                  <p className="text-xs font-semibold text-green-700">Atendimento</p>
+                  <p className="text-green-900">{extractedInfo.isRemote ? "Remoto ou presencial" : "Presencial"}</p>
+                </div>
+                <RemoteCheckbox
+                  checked={extractedInfo.isRemote === true}
+                  onChange={(isRemote) => {
+                    const updated = { ...extractedInfo, isRemote }
+                    setExtractedInfo(updated)
+                    onExtract(updated)
+                  }}
+                  compact
+                />
+              </div>
+
               {(extractedInfo.city || extractedInfo.neighborhood) && (
                 <div className="border-b border-green-200 pb-2">
                   <p className="text-xs font-semibold text-green-700">Localização</p>
@@ -568,7 +630,7 @@ export function RequestFormAIChat({
       {/* Input Area */}
       <div className="border-t border-gray-200 p-4 space-y-3">
         {/* Show input only when not in location/photos/preview stages */}
-        {isFirstMessage && !locationConfirmed && !askingForPhotos && !showingPreview && (
+        {!detailsConfirmed && !editingDetails && !locationConfirmed && !askingForPhotos && !showingPreview && !completed && (
           <div className="flex gap-2">
             <Input
               value={input}
@@ -578,7 +640,7 @@ export function RequestFormAIChat({
                 e.preventDefault()
                 handleSendMessage()
               }}
-              placeholder="Descreva o serviço que precisa..."
+              placeholder={extractedInfo.title ? "Responda ou acrescente detalhes..." : "Descreva o serviço que precisa..."}
               disabled={loading}
               className="flex-1"
             />

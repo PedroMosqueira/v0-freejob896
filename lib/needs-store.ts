@@ -37,6 +37,7 @@ function mapSupabaseNeedToNeedType(row: any, proposals: NeedProposal[] = []): Ne
     createdAt: row.created_at,
     proposals: proposals,
     images: row.images || [],
+    isRemote: row.is_remote === true,
   }
 }
 
@@ -141,6 +142,7 @@ export async function filterNeeds({
   limit = 20,
   offset = 0,
   near,
+  remoteOnly = false,
 }: {
   q?: string
   cidade?: string
@@ -151,6 +153,7 @@ export async function filterNeeds({
   limit?: number
   offset?: number
   near?: { latitude: number; longitude: number; radiusKm: number }
+  remoteOnly?: boolean
 }): Promise<Need[]> {
   const supabase = await createSupabaseServerClient()
 
@@ -224,6 +227,7 @@ export async function filterNeeds({
       p_city: cidade || null,
       p_limit: limit,
       p_offset: offset,
+      p_remote_only: remoteOnly,
     })
 
     if (nearbyError) {
@@ -288,6 +292,9 @@ export async function filterNeeds({
   if (requesterEmail) {
     query = query.eq("requester_email", requesterEmail)
   }
+  if (remoteOnly && !requesterEmail) {
+    query = query.eq("is_remote", true)
+  }
 
   const { data, error } = await query.order("created_at", { ascending: false }).range(offset, offset + limit - 1)
 
@@ -323,6 +330,7 @@ export async function addNeed(input: NewNeedInput): Promise<Need> {
         status: "aberto",
         created_at: now,
         images: input.images || [],
+        is_remote: input.isRemote === true,
       })
       .select("*")
       .single()

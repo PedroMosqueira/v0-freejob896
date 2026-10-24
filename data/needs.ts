@@ -110,6 +110,7 @@ export type Need = {
   imageUrl?: string
   professionalEmail?: string
   distance?: number
+  isRemote?: boolean
 }
 
 export type NewNeedInput = Omit<Need, "id" | "status" | "createdAt" | "proposals">

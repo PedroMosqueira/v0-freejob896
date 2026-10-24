@@ -26,6 +26,7 @@ const draftSchema = z.object({
   neighborhood: optionalText(80),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
+  isRemote: z.boolean().optional(),
   images: z.array(z.string().max(MAX_IMAGE_CHARS).regex(IMAGE_PREFIX)).max(4).default([]),
 })
 
