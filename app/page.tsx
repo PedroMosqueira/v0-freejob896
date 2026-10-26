@@ -10,6 +10,7 @@ import SearchRequests from "@/components/search-requests"
 import { GuestLanding } from "@/components/guest-landing"
 import { LoginBackground } from "@/components/login-background"
 import { BackToTopButton } from "@/components/back-to-top-button"
+import { InterestReconfirmDialog } from "@/components/interest-reconfirm-dialog"
 import {
   claimPendingRequest,
   clearPendingRef,
@@ -276,6 +277,7 @@ export default function Home() {
       </section>
       <SiteFooter clearBottomNav={isLogged} />
       {isLogged && <BackToTopButton />}
+      {isLogged && authenticatedEmail && <InterestReconfirmDialog email={authenticatedEmail} />}
     </main>
   )
 }
