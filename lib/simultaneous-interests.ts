@@ -1,5 +1,6 @@
 import { createAdminClient } from "./stripe-subscription-sync"
 import { PLAN_FEATURES, type SubscriptionPlan } from "./subscription-manager"
+import { PAID_SUBSCRIPTION_STATUSES, isSubscriptionExpired } from "./subscription-status"
 
 /** How long a slot stays occupied after the professional cancels on their own. */
 export const PROFESSIONAL_CANCEL_HOLD_MS = 2 * 60 * 60 * 1000
@@ -11,6 +12,8 @@ export interface ActiveInterestsSummary {
   heldCount: number
   /** ISO time when the earliest held slot is released, if any. */
   nextReleaseAt: string | null
+  /** Requests currently occupying one of those slots. */
+  occupiedNeedIds: string[]
 }
 
 // The professional ended it: the slot stays held for 2h so cancelling a
@@ -70,7 +73,7 @@ function slotStateFor(proposal: ProposalRow, needStatus: string | undefined, now
  */
 export async function getActiveInterestsSummary(professionalEmail: string): Promise<ActiveInterestsSummary> {
   const email = professionalEmail.trim().toLowerCase()
-  const empty: ActiveInterestsSummary = { count: 0, heldCount: 0, nextReleaseAt: null }
+  const empty: ActiveInterestsSummary = { count: 0, heldCount: 0, nextReleaseAt: null, occupiedNeedIds: [] }
   if (!email) return empty
 
   const supabase = createAdminClient()
@@ -113,17 +116,24 @@ export async function getActiveInterestsSummary(professionalEmail: string): Prom
   let count = 0
   let heldCount = 0
   let nextRelease: number | null = null
+  const occupiedNeedIds: string[] = []
 
-  for (const state of stateByNeed.values()) {
+  for (const [needId, state] of stateByNeed) {
     if (state.kind === "free") continue
     count++
+    occupiedNeedIds.push(needId)
     if (state.kind === "held") {
       heldCount++
       nextRelease = nextRelease === null ? state.until : Math.min(nextRelease, state.until)
     }
   }
 
-  return { count, heldCount, nextReleaseAt: nextRelease === null ? null : new Date(nextRelease).toISOString() }
+  return {
+    count,
+    heldCount,
+    nextReleaseAt: nextRelease === null ? null : new Date(nextRelease).toISOString(),
+    occupiedNeedIds,
+  }
 }
 
 export async function getActiveInterestsCount(professionalEmail: string): Promise<number> {
@@ -172,4 +182,57 @@ export async function canSendInterest(
   }
 
   return { allowed: true, currentCount: summary.count, limit: simultaneousLimit }
+}
+
+async function resolveSimultaneousLimit(professionalEmail: string, authUserId?: string): Promise<number> {
+  const supabase = createAdminClient()
+  const { data: users } = await supabase.from("users").select("id").ilike("email", professionalEmail).limit(5)
+  const userIds = [...new Set([...(users || []).map((u) => String(u.id)), authUserId].filter(Boolean))] as string[]
+
+  let planSlug = "free"
+  if (userIds.length) {
+    const { data: subscriptions } = await supabase
+      .from("user_subscriptions")
+      .select("plan_id, current_period_end")
+      .in("user_id", userIds)
+      .in("status", [...PAID_SUBSCRIPTION_STATUSES])
+      .order("created_at", { ascending: false })
+      .limit(1)
+    const subscription = subscriptions?.[0]
+    if (subscription && !isSubscriptionExpired(subscription.current_period_end)) {
+      const { data: plan } = await supabase
+        .from("subscription_plans")
+        .select("slug")
+        .eq("id", subscription.plan_id)
+        .maybeSingle()
+      planSlug = plan?.slug?.trim().toLowerCase() || "free"
+    }
+  }
+
+  // Same defaults as canUserExpressInterest so every entry point enforces one limit.
+  if (planSlug === "free") return PLAN_FEATURES.free?.limits?.simultaneous_interests ?? 1
+  return PLAN_FEATURES[planSlug as SubscriptionPlan]?.limits?.simultaneous_interests ?? 8
+}
+
+/**
+ * Server-side guard for every way a professional can take on a request (bid, visit, direct acceptance),
+ * so slots held for 2h after cancelling can't be bypassed by skipping the interest flow.
+ * Acting again on a request that already occupies a slot never needs a new one.
+ */
+export async function assertSlotAvailableForNeed(params: {
+  professionalEmail: string
+  needId: string
+  authUserId?: string
+}): Promise<void> {
+  const email = params.professionalEmail.trim().toLowerCase()
+  const summary = await getActiveInterestsSummary(email)
+  if (summary.occupiedNeedIds.includes(String(params.needId))) return
+
+  const limit = await resolveSimultaneousLimit(email, params.authUserId)
+  if (limit === -1 || summary.count < limit) return
+
+  const holdNote = summary.nextReleaseAt
+    ? ` Serviços que você cancelou continuam ocupando a vaga por 2h; a próxima vaga libera às ${formatReleaseTime(summary.nextReleaseAt)}.`
+    : " Conclua um serviço ou aguarde o cliente encerrar um pedido para liberar uma vaga."
+  throw new Error(`Você atingiu o limite de ${limit} serviços simultâneos.${holdNote}`)
 }
