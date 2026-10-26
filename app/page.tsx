@@ -172,11 +172,25 @@ export default function Home() {
 
   const isLogged = !!authenticatedEmail
 
+  // This is the only markup in the server-rendered HTML, so it carries the page's real heading and summary for crawlers.
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background dark:bg-gray-900">
-        <p>Carregando autenticação...</p>
-      </div>
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <img src="/icons/icon-192.png" alt="" width={72} height={72} className="rounded-full" />
+        <h1 className="flex flex-col gap-1 text-2xl font-extrabold text-foreground text-balance">
+          <span translate="no">Freejob</span>
+          <span className="text-base font-medium text-muted-foreground">
+            Contrate serviços perto de você ou online
+          </span>
+        </h1>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground text-pretty">
+          Peça um serviço em uma conversa rápida e receba orçamentos grátis de profissionais da sua região ou que
+          atendem online.
+        </p>
+        <p className="text-xs text-muted-foreground" role="status">
+          Carregando...
+        </p>
+      </main>
     )
   }
 

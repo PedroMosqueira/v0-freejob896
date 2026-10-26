@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import "@/lib/buffer-polyfill"
@@ -16,36 +16,101 @@ const inter = Inter({ subsets: ["latin"] })
 export const dynamic = "force-dynamic"
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://freejob.services").replace(/\/$/, "")
+const SITE_TITLE = "Freejob – Contrate serviços perto de você ou online"
 const SITE_DESCRIPTION =
-  "Publique o serviço que você precisa e receba propostas de profissionais perto de você, ou encontre clientes para o seu trabalho."
+  "Peça um serviço em uma conversa rápida e receba orçamentos grátis de profissionais da sua região ou que atendem online. É profissional? Encontre novos clientes."
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Freejob – Encontre ou ofereça serviços perto de você",
+    default: SITE_TITLE,
     template: "%s | Freejob",
   },
   description: SITE_DESCRIPTION,
   applicationName: "Freejob",
-  keywords: ["serviços", "profissionais", "freelancer", "orçamento", "prestadores de serviço", "Freejob"],
+  keywords: [
+    "contratar serviços",
+    "orçamento grátis",
+    "prestadores de serviço",
+    "profissionais perto de mim",
+    "serviços remotos",
+    "serviços online",
+    "freelancer",
+    "trabalho remoto",
+    "eletricista",
+    "encanador",
+    "diarista",
+    "pintor",
+    "pedreiro",
+    "designer",
+    "Freejob",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
   icons: {
-    icon: "/favicon.ico",
-    apple: "/icons/apple-touch-icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/icons/icon-48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
+  },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Freejob",
+    statusBarStyle: "default",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
   openGraph: {
     type: "website",
     locale: "pt_BR",
     url: "/",
     siteName: "Freejob",
-    title: "Freejob – Encontre ou ofereça serviços perto de você",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Freejob – Encontre ou ofereça serviços perto de você",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
   generator: "v0.app",
+}
+
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
+}
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "Freejob",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icons/icon-512.png`, width: 512, height: 512 },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: "Freejob",
+      url: SITE_URL,
+      inLanguage: "pt-BR",
+      description: SITE_DESCRIPTION,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
 }
 
 export default async function RootLayout({
@@ -100,13 +165,10 @@ export default async function RootLayout({
           }}
         />
 
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#2563eb" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Freejob" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+        />
       </head>
       <body className={`${inter.className} bg-background text-foreground`}>
         <ThemeProvider defaultTheme="system" storageKey="freejob-theme">
