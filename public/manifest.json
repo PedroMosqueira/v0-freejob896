@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Freejob - Serviços Locais",
+  "name": "Freejob - Serviços perto de você ou online",
   "short_name": "Freejob",
-  "description": "Conecte-se com profissionais próximos de você",
+  "description": "Contrate serviços perto de você ou online e receba orçamentos grátis de profissionais.",
   "lang": "pt-BR",
   "start_url": "/?source=pwa",
   "scope": "/",
