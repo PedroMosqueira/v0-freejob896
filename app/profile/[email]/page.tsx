@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { getPublicProfile } from "@/lib/user-profile"
+import { getUserRatings } from "@/lib/ratings"
 import { ProfileHeader } from "@/components/profile-header"
 import { ProfileStats } from "@/components/profile-stats"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
   const { email } = await params
   const decodedEmail = decodeURIComponent(email)
 
-  const profile = await getPublicProfile(decodedEmail)
+  const [profile, ratings] = await Promise.all([getPublicProfile(decodedEmail), getUserRatings(decodedEmail)])
 
   if (!profile) {
     notFound()
@@ -24,7 +25,7 @@ export default async function PublicProfilePage({ params }: PublicProfilePagePro
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="space-y-8">
         <ProfileHeader profile={profile} isPublic />
-        <ProfileStats profile={profile} />
+        <ProfileStats profile={profile} ratings={ratings} />
 
         <div className="flex justify-center">
           <Button asChild>
