@@ -43,12 +43,15 @@ interface ProposalRow {
   need_id: string | null
   status: string | null
   cancelled_at: string | null
+  reconfirm_requested_at: string | null
 }
 
 function slotStateFor(proposal: ProposalRow, needStatus: string | undefined, now: number): SlotState {
   const status = String(proposal.status ?? "")
 
   if (!needStatus || REQUESTER_CANCELLED_NEED_STATUSES.has(needStatus)) return { kind: "free" }
+  // The request reopened after another professional cancelled; it only counts again once this one confirms.
+  if (proposal.reconfirm_requested_at) return { kind: "free" }
 
   if (PROFESSIONAL_CANCELLED_STATUSES.has(status)) {
     const cancelledAt = proposal.cancelled_at ? Date.parse(proposal.cancelled_at) : Number.NaN
@@ -80,7 +83,7 @@ export async function getActiveInterestsSummary(professionalEmail: string): Prom
 
   const { data: proposals, error } = await supabase
     .from("need_proposals")
-    .select("need_id, status, cancelled_at")
+    .select("need_id, status, cancelled_at, reconfirm_requested_at")
     .ilike("professional_email", email)
 
   if (error) throw new Error(`Failed to load proposals: ${error.message}`)

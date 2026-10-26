@@ -1318,6 +1318,8 @@ export async function professionalRespondToVisit(params: {
         params.proposalId,
       )
 
+      await requestInterestReconfirmation(params.needId, needData.title, params.professionalEmail)
+
       if (params.message) {
         const thread = await getChatThread(params.needId, needData.requester_email, params.professionalEmail)
         if (thread) {
@@ -1435,6 +1437,8 @@ export async function professionalCancelService(params: {
       params.needId,
       proposalData.id,
     )
+
+    await requestInterestReconfirmation(params.needId, needData.title, params.professionalEmail)
 
     const thread = await getChatThread(params.needId, needData.requester_email, params.professionalEmail)
     if (thread && params.reason) {
@@ -1584,6 +1588,51 @@ export async function professionalWithdrawInterest(params: { needId: string; rea
     need.id,
     openProposalIds[0],
   )
+}
+
+/**
+ * When the chosen professional drops out and the request reopens, the other professionals who had shown
+ * interest are asked to confirm again instead of silently re-occupying a slot. Uses the service role
+ * because their proposals aren't visible to the cancelling professional. Never blocks the cancellation.
+ */
+async function requestInterestReconfirmation(needId: string, needTitle: string, cancellingEmail: string) {
+  try {
+    const admin = createAdminClient()
+    const { data: proposals, error } = await admin
+      .from("need_proposals")
+      .select("id, professional_email")
+      .eq("need_id", needId)
+      .in("status", ["interested", "pending"])
+
+    if (error || !proposals?.length) return
+
+    const cancelling = cancellingEmail.trim().toLowerCase()
+    const others = proposals.filter((p) => String(p.professional_email || "").toLowerCase() !== cancelling)
+    if (!others.length) return
+
+    await admin
+      .from("need_proposals")
+      .update({ reconfirm_requested_at: new Date().toISOString() })
+      .in(
+        "id",
+        others.map((p) => p.id),
+      )
+
+    const emails = [...new Set(others.map((p) => String(p.professional_email).toLowerCase()))]
+    await Promise.all(
+      emails.map((email) =>
+        createNotification(
+          email,
+          "Serviço disponível novamente",
+          `O pedido "${needTitle}" voltou a ficar disponível. Confirme se ainda tem interesse.`,
+          "interest_reconfirm",
+          needId,
+        ),
+      ),
+    )
+  } catch (e) {
+    console.error("[requestInterestReconfirmation]", e)
+  }
 }
 
 const MAX_PUSH_PREVIEW_LINES = 5
