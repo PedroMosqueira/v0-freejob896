@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
 import { createClient } from "@supabase/supabase-js"
 import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { clearSupabaseSessionCookies } from "@/lib/supabase/auth-cookies"
 import { stripe, isStripeConfigured } from "@/lib/stripe"
 
 export const dynamic = "force-dynamic"
@@ -84,7 +86,9 @@ export async function POST(request: Request) {
     const { error: authError } = await admin.auth.admin.deleteUser(user.id)
     if (authError) throw authError
 
-    await supabase.auth.signOut()
+    // signOut can't revoke a session whose user no longer exists, so the cookies are expired explicitly.
+    await supabase.auth.signOut({ scope: "local" }).catch(() => {})
+    clearSupabaseSessionCookies(await cookies())
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("[account-delete] Failed to delete account:", error)

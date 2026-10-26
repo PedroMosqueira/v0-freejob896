@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { ensureUserProfile } from "@/lib/ensure-user-profile"
+import { clearSupabaseSessionCookies, isSupabaseSessionCookie } from "@/lib/supabase/auth-cookies"
 
 export const dynamic = "force-dynamic"
 
@@ -97,10 +98,15 @@ function createCallbackClient(cookieStore: Awaited<ReturnType<typeof cookies>>) 
     return null
   }
 
+  // A leftover session (e.g. from a deleted account) makes the client refresh it in the background while
+  // verifyOtp runs; when that refresh fails it wipes the cookies, including the brand-new session.
+  // The callback always establishes a fresh session, so the old one is discarded up front.
+  clearSupabaseSessionCookies(cookieStore)
+
   return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
-        return cookieStore.getAll()
+        return cookieStore.getAll().filter(({ name, value }) => !isSupabaseSessionCookie(name) || value)
       },
       setAll(cookiesToSet) {
         try {
