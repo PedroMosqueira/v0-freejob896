@@ -16,6 +16,7 @@ import type {
   ProposalType,
 } from "@/data/needs"
 import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
+import { assertSlotAvailableForNeed } from "@/lib/simultaneous-interests"
 import { createAdminClient } from "@/lib/stripe-subscription-sync"
 import { notifyNearbyProfessionals } from "@/lib/nearby-alerts"
 
@@ -378,6 +379,11 @@ export async function addNeedProposal(params: {
     if (!sessionUser?.email) {
       throw new Error("Sua sessão expirou. Entre novamente para continuar.")
     }
+    await assertSlotAvailableForNeed({
+      professionalEmail: sessionUser.email,
+      needId: params.needId,
+      authUserId: sessionUser.id,
+    })
     const now = new Date().toISOString()
 
     const { data, error } = await supabase
@@ -1779,6 +1785,8 @@ export async function sendBidToChat({
   if (!needRow || needRow.status !== "aberto") {
     throw new Error("Este pedido não está mais aberto para lances.")
   }
+
+  await assertSlotAvailableForNeed({ professionalEmail, needId })
 
   const { data: existingProposals } = await supabase
     .from("need_proposals")

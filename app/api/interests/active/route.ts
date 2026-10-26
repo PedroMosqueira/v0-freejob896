@@ -17,8 +17,8 @@ export async function GET() {
   }
 
   try {
-    const summary = await getActiveInterestsSummary(user.email)
-    return NextResponse.json(summary)
+    const { count, heldCount, nextReleaseAt } = await getActiveInterestsSummary(user.email)
+    return NextResponse.json({ count, heldCount, nextReleaseAt })
   } catch (error) {
     console.error("[interests/active] Failed to count active interests:", error)
     return NextResponse.json({ error: "Não foi possível carregar as propostas ativas." }, { status: 500 })
