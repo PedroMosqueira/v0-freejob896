@@ -115,21 +115,6 @@ export function GuestLanding() {
               onExpandChange={(open) => setExpandedCard(open ? "procurar" : null)}
               onAction={() => setBrowseOpen(true)}
             />
-
-            <div className="mt-2 flex items-center gap-3" aria-hidden="true">
-              <span className="h-px flex-1 bg-white/20" />
-              <span className={`text-sm text-blue-100/80 ${TEXT_SHADOW}`}>ou</span>
-              <span className="h-px flex-1 bg-white/20" />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => goToLogin(null)}
-              className={`flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-white/80 bg-white/10 px-5 py-4 text-base font-semibold text-white backdrop-blur-md transition-colors hover:bg-white hover:text-[#1D4ED8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B1631] ${PANEL_SHADOW}`}
-            >
-              <LogIn className="h-5 w-5" aria-hidden="true" />
-              Já tenho conta, quero entrar
-            </button>
           </div>
         )}
 
