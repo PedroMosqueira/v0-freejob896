@@ -1458,6 +1458,94 @@ export async function professionalCancelService(params: {
   }
 }
 
+const EXECUTION_NEED_STATUSES = ["aceito", "em_andamento"]
+const MIN_EXECUTION_CANCEL_REASON_LENGTH = 10
+
+/**
+ * The requester dismisses the chosen professional but keeps the request: it reopens for the others, who are
+ * asked to reconfirm their interest. The dismissed professional's slot is released right away because the
+ * decision was the requester's.
+ */
+export async function requesterCancelExecution(params: {
+  needId: string
+  requesterEmail: string
+  reason: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const reason = params.reason.trim()
+  if (reason.length < MIN_EXECUTION_CANCEL_REASON_LENGTH) {
+    return { ok: false, error: `Explique o motivo com pelo menos ${MIN_EXECUTION_CANCEL_REASON_LENGTH} caracteres.` }
+  }
+
+  const supabase = await createSupabaseServerClient()
+
+  const { data: needData, error: needError } = await supabase
+    .from("needs")
+    .select("requester_email, title, status")
+    .eq("id", params.needId)
+    .single()
+
+  if (needError || !needData) return { ok: false, error: "Pedido não encontrado." }
+  if (String(needData.requester_email).toLowerCase() !== params.requesterEmail.toLowerCase()) {
+    return { ok: false, error: "Apenas o solicitante pode cancelar a execução." }
+  }
+  if (!EXECUTION_NEED_STATUSES.includes(needData.status)) {
+    return { ok: false, error: "Este serviço não está em execução." }
+  }
+
+  const { data: acceptedProposal } = await supabase
+    .from("need_proposals")
+    .select("id, professional_email")
+    .eq("need_id", params.needId)
+    .in("status", ["accepted_by_requester", "accepted_by_professional"])
+    .limit(1)
+    .maybeSingle()
+
+  if (!acceptedProposal?.professional_email) {
+    return { ok: false, error: "Nenhum profissional em execução neste pedido." }
+  }
+  const professionalEmail = String(acceptedProposal.professional_email)
+
+  const { error: proposalUpdateError } = await supabase
+    .from("need_proposals")
+    .update({ status: "cancelled_by_requester" })
+    .eq("need_id", params.needId)
+    .eq("professional_email", professionalEmail)
+    .in("status", ["interested", "pending", "accepted_by_requester", "accepted_by_professional"])
+
+  if (proposalUpdateError) {
+    console.error("[requesterCancelExecution] proposal update", proposalUpdateError)
+    return { ok: false, error: "Não foi possível cancelar a execução. Tente novamente." }
+  }
+
+  const { error: needUpdateError } = await supabase.from("needs").update({ status: "aberto" }).eq("id", params.needId)
+  if (needUpdateError) {
+    console.error("[requesterCancelExecution] need update", needUpdateError)
+    return { ok: false, error: "Não foi possível reabrir o pedido. Tente novamente." }
+  }
+
+  await createNotification(
+    professionalEmail,
+    "Execução cancelada pelo cliente",
+    `O cliente cancelou a execução do serviço "${needData.title}": ${reason}`,
+    "cancellation",
+    params.needId,
+    acceptedProposal.id,
+  )
+
+  await requestInterestReconfirmation(params.needId, needData.title, professionalEmail)
+
+  const thread = await getChatThread(params.needId, needData.requester_email, professionalEmail)
+  if (thread) {
+    await addChatMessage({
+      chatThreadId: thread.id,
+      email: needData.requester_email,
+      text: `Execução cancelada pelo cliente: ${reason}`,
+    })
+  }
+
+  return { ok: true }
+}
+
 type WithdrawContext = {
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
   professionalEmail: string

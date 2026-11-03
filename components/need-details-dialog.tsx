@@ -27,6 +27,7 @@ import {
   acceptProposal,
   professionalRespondToVisit,
   professionalCancelService,
+  requesterCancelExecution,
   type Need,
   type NeedStatus,
   type NeedProposal,
@@ -93,6 +94,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [hasMarkedAsCompleted, setHasMarkedAsCompleted] = useState(false)
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false)
+  const [showExecutionCancel, setShowExecutionCancel] = useState(false)
+  const [executionCancelReason, setExecutionCancelReason] = useState("")
+  const [executionCancelError, setExecutionCancelError] = useState<string | null>(null)
+  const [isCancellingExecution, setIsCancellingExecution] = useState(false)
   const [showProfessionalCancelConfirmation, setShowProfessionalCancelConfirmation] = useState(false)
   const [professionalCancelReason, setProfessionalCancelReason] = useState("")
   const [isCancelingByProfessional, setIsCancelingByProfessional] = useState(false)
@@ -415,6 +420,33 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
     }
   }
 
+  const handleCancelExecution = async () => {
+    if (!email) return
+
+    setIsCancellingExecution(true)
+    setExecutionCancelError(null)
+    try {
+      const result = await requesterCancelExecution({
+        needId: currentNeed.id,
+        requesterEmail: email,
+        reason: executionCancelReason,
+      })
+      if (!result.ok) {
+        setExecutionCancelError(result.error)
+        return
+      }
+      setShowExecutionCancel(false)
+      setExecutionCancelReason("")
+      onStatusUpdate?.()
+      onClose()
+    } catch (error) {
+      console.error("Erro ao cancelar execução:", error)
+      setExecutionCancelError("Não foi possível cancelar a execução. Tente novamente.")
+    } finally {
+      setIsCancellingExecution(false)
+    }
+  }
+
   const getRatingTarget = () => {
     const accepted = proposals.find(
       (p) => p.status === "accepted_by_requester" || p.status === "accepted_by_professional",
@@ -599,6 +631,8 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const canCancelService = email === currentNeed.requesterEmail && !isClosedStatus
   const isRequester = email === currentNeed.requesterEmail
+  const canCancelExecution =
+    isRequester && (currentNeed.status === "aceito" || currentNeed.status === "em_andamento")
   // Bids live only in the chat, so the chat is the main action unless "Tenho Interesse" comes first.
   const isChatPrimaryAction = isRequester || currentNeed.status !== "aberto" || hasShownInterest
   const chatButtonLabel =
@@ -1327,6 +1361,68 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                 </div>
               )}
 
+              {canCancelExecution && (
+                <div className="p-3 border-t dark:border-gray-700 bg-orange-50 dark:bg-gray-900/50">
+                  {!showExecutionCancel ? (
+                    <Button
+                      onClick={() => setShowExecutionCancel(true)}
+                      variant="outline"
+                      className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-gray-800 h-9"
+                      size="sm"
+                    >
+                      <Ban className="h-4 w-4 mr-2" />
+                      Cancelar execução
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="execution-cancel-reason" className="text-xs text-gray-600 dark:text-gray-400">
+                        Por que você quer cancelar a execução com este profissional? O pedido volta a ficar disponível
+                        para os outros profissionais interessados.
+                      </label>
+                      <Textarea
+                        id="execution-cancel-reason"
+                        placeholder="Ex.: o profissional não compareceu no horário combinado"
+                        value={executionCancelReason}
+                        onChange={(e) => {
+                          setExecutionCancelReason(e.target.value)
+                          setExecutionCancelError(null)
+                        }}
+                        rows={3}
+                        maxLength={500}
+                        className="text-xs"
+                      />
+                      {executionCancelError && (
+                        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+                          {executionCancelError}
+                        </p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleCancelExecution}
+                          disabled={isCancellingExecution || executionCancelReason.trim().length < 10}
+                          className="flex-1 bg-orange-600 hover:bg-orange-700 text-white h-8 text-xs"
+                          size="sm"
+                        >
+                          {isCancellingExecution ? "Cancelando..." : "Confirmar"}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            setShowExecutionCancel(false)
+                            setExecutionCancelReason("")
+                            setExecutionCancelError(null)
+                          }}
+                          variant="outline"
+                          className="flex-1 h-8 text-xs dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+                          size="sm"
+                        >
+                          Voltar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {canCancelService && (
                 <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                   {!showCancelConfirmation ? (
@@ -1337,11 +1433,13 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                       size="sm"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Cancelar Serviço
+                      Cancelar solicitação
                     </Button>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Confirmar cancelamento do serviço?</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Cancelar a solicitação inteira? O pedido sai das buscas e não será reaberto.
+                      </p>
                       <div className="flex gap-2">
                         <Button
                           onClick={handleCancelService}
