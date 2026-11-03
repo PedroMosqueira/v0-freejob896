@@ -1,11 +1,14 @@
-/** Before the requester views the interest, the professional must wait this long to withdraw. */
-export const UNVIEWED_INTEREST_WAIT_MS = 2 * 60 * 60 * 1000
+/**
+ * After showing interest, the professional must wait this long to withdraw, whether or not the requester
+ * has opened the chat. Otherwise they could talk, give up right away and take another request.
+ */
+export const INTEREST_WITHDRAW_WAIT_MS = 2 * 60 * 60 * 1000
 
 /** After sending a bid, withdrawing is locked for this long so the requester can answer. */
 export const BID_RESPONSE_LOCK_MS = 30 * 60 * 1000
 
-export type WithdrawAllowedReason = "viewed" | "unviewed_timeout" | "bid_declined" | "bid_timeout"
-export type WithdrawLockedReason = "awaiting_view" | "bid_pending"
+export type WithdrawAllowedReason = "interest_timeout" | "bid_declined" | "bid_timeout"
+export type WithdrawLockedReason = "interest_wait" | "bid_pending"
 
 export type WithdrawPolicy =
   | { allowed: true; reason: WithdrawAllowedReason }
@@ -13,7 +16,6 @@ export type WithdrawPolicy =
 
 export interface WithdrawPolicyInput {
   interestSentAt: string
-  requesterViewedAt: string | null
   latestBid: { sentAt: string; status: string } | null
   now?: number
 }
@@ -23,15 +25,9 @@ export interface WithdrawPolicyInput {
  * - Pending bid: locked for 30 min after the bid (a new bid restarts the clock),
  *   then optional; the bid stays available to the requester either way.
  * - Bid declined by the requester: allowed.
- * - No bid: allowed once the requester has viewed the interest, or 2h after
- *   sending it if they never do.
+ * - No bid: allowed 2h after showing interest.
  */
-export function getWithdrawPolicy({
-  interestSentAt,
-  requesterViewedAt,
-  latestBid,
-  now = Date.now(),
-}: WithdrawPolicyInput): WithdrawPolicy {
+export function getWithdrawPolicy({ interestSentAt, latestBid, now = Date.now() }: WithdrawPolicyInput): WithdrawPolicy {
   if (latestBid?.status === "pending") {
     const unlockAt = Date.parse(latestBid.sentAt) + BID_RESPONSE_LOCK_MS
     return now >= unlockAt
@@ -43,14 +39,10 @@ export function getWithdrawPolicy({
     return { allowed: true, reason: "bid_declined" }
   }
 
-  if (requesterViewedAt) {
-    return { allowed: true, reason: "viewed" }
-  }
-
-  const unlockAt = Date.parse(interestSentAt) + UNVIEWED_INTEREST_WAIT_MS
+  const unlockAt = Date.parse(interestSentAt) + INTEREST_WITHDRAW_WAIT_MS
   return now >= unlockAt
-    ? { allowed: true, reason: "unviewed_timeout" }
-    : { allowed: false, reason: "awaiting_view", availableAt: new Date(unlockAt).toISOString() }
+    ? { allowed: true, reason: "interest_timeout" }
+    : { allowed: false, reason: "interest_wait", availableAt: new Date(unlockAt).toISOString() }
 }
 
 export function describeWithdrawLock(policy: Extract<WithdrawPolicy, { allowed: false }>): string {
@@ -62,5 +54,5 @@ export function describeWithdrawLock(policy: Extract<WithdrawPolicy, { allowed: 
 
   return policy.reason === "bid_pending"
     ? `Lance enviado. Aguarde a resposta do cliente; você poderá desistir a partir das ${time}.`
-    : `Você poderá desistir quando o cliente visualizar seu interesse ou a partir das ${time}.`
+    : `Você poderá desistir a partir das ${time} (2 horas após manifestar interesse).`
 }

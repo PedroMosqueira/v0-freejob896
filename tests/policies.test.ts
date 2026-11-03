@@ -1,43 +1,34 @@
 import { describe, expect, it } from "vitest"
-import { BID_RESPONSE_LOCK_MS, getWithdrawPolicy, UNVIEWED_INTEREST_WAIT_MS } from "@/lib/withdraw-policy"
+import { BID_RESPONSE_LOCK_MS, getWithdrawPolicy, INTEREST_WITHDRAW_WAIT_MS } from "@/lib/withdraw-policy"
 import { formatRetryAfter, getClientIp } from "@/lib/rate-limit"
 
 const sentAt = "2026-10-18T12:00:00.000Z"
 const t0 = Date.parse(sentAt)
 
 describe("regra de desistência do profissional", () => {
-  it("bloqueia antes do cliente ver o interesse e libera depois de 2h", () => {
-    const locked = getWithdrawPolicy({ interestSentAt: sentAt, requesterViewedAt: null, latestBid: null, now: t0 + 1000 })
-    expect(locked).toMatchObject({ allowed: false, reason: "awaiting_view" })
+  it("bloqueia por 2h após o interesse, mesmo que o cliente já tenha aberto o chat", () => {
+    const locked = getWithdrawPolicy({ interestSentAt: sentAt, latestBid: null, now: t0 + 60 * 60 * 1000 })
+    expect(locked).toMatchObject({ allowed: false, reason: "interest_wait" })
 
-    const open = getWithdrawPolicy({
-      interestSentAt: sentAt,
-      requesterViewedAt: null,
-      latestBid: null,
-      now: t0 + UNVIEWED_INTEREST_WAIT_MS,
-    })
-    expect(open).toEqual({ allowed: true, reason: "unviewed_timeout" })
+    const open = getWithdrawPolicy({ interestSentAt: sentAt, latestBid: null, now: t0 + INTEREST_WITHDRAW_WAIT_MS })
+    expect(open).toEqual({ allowed: true, reason: "interest_timeout" })
   })
 
-  it("libera assim que o cliente visualiza", () => {
-    const policy = getWithdrawPolicy({ interestSentAt: sentAt, requesterViewedAt: sentAt, latestBid: null, now: t0 })
-    expect(policy).toEqual({ allowed: true, reason: "viewed" })
-  })
-
-  it("trava 30 min após um lance pendente, mesmo se o cliente já viu", () => {
+  it("trava 30 min após um lance pendente", () => {
     const bid = { sentAt, status: "pending" }
-    expect(
-      getWithdrawPolicy({ interestSentAt: sentAt, requesterViewedAt: sentAt, latestBid: bid, now: t0 + 60_000 }),
-    ).toMatchObject({ allowed: false, reason: "bid_pending" })
-    expect(
-      getWithdrawPolicy({ interestSentAt: sentAt, requesterViewedAt: sentAt, latestBid: bid, now: t0 + BID_RESPONSE_LOCK_MS }),
-    ).toEqual({ allowed: true, reason: "bid_timeout" })
+    expect(getWithdrawPolicy({ interestSentAt: sentAt, latestBid: bid, now: t0 + 60_000 })).toMatchObject({
+      allowed: false,
+      reason: "bid_pending",
+    })
+    expect(getWithdrawPolicy({ interestSentAt: sentAt, latestBid: bid, now: t0 + BID_RESPONSE_LOCK_MS })).toEqual({
+      allowed: true,
+      reason: "bid_timeout",
+    })
   })
 
   it("libera quando o cliente recusa o lance", () => {
     const policy = getWithdrawPolicy({
       interestSentAt: sentAt,
-      requesterViewedAt: null,
       latestBid: { sentAt, status: "declined_by_requester" },
       now: t0,
     })
