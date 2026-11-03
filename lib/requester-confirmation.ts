@@ -39,7 +39,7 @@ export async function getRequesterCancelState(needId: string): Promise<Requester
   const confirmedAt = context.need.requester_confirmed_at ?? null
   return {
     needsConfirmation: CONFIRMATION_STATUSES.includes(context.need.status) && !confirmedAt,
-    cancelLockedUntil: await getRequesterCancelLockedUntil(context.supabase, needId, confirmedAt),
+    cancelLockedUntil: getRequesterCancelLockedUntil(confirmedAt),
   }
 }
 

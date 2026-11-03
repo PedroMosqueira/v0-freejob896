@@ -931,11 +931,7 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
       throw new Error("Este serviço já está cancelado.")
     }
 
-    const cancelLockedUntil = await getRequesterCancelLockedUntil(
-      supabase,
-      needId,
-      needData.requester_confirmed_at ?? null,
-    )
+    const cancelLockedUntil = getRequesterCancelLockedUntil(needData.requester_confirmed_at ?? null)
     if (cancelLockedUntil) {
       throw new Error(
         `Você confirmou que ainda precisa deste serviço. O cancelamento fica disponível a partir das ${formatCancelUnlockTime(cancelLockedUntil)}.`,
