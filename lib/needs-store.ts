@@ -17,6 +17,7 @@ import type {
 } from "@/data/needs"
 import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
 import { assertSlotAvailableForNeed } from "@/lib/simultaneous-interests"
+import { formatCancelUnlockTime, getRequesterCancelLockedUntil } from "@/lib/requester-cancel-lock"
 import { createAdminClient } from "@/lib/stripe-subscription-sync"
 import { notifyNearbyProfessionals } from "@/lib/nearby-alerts"
 
@@ -910,7 +911,7 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
 
     const { data: needData, error: needError } = await supabase
       .from("needs")
-      .select("requester_email, title, status")
+      .select("requester_email, title, status, requester_confirmed_at")
       .eq("id", needId)
       .single()
 
@@ -930,7 +931,21 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
       throw new Error("Este serviço já está cancelado.")
     }
 
-    const { error } = await supabase.from("needs").update({ status: "cancelado" }).eq("id", needId)
+    const cancelLockedUntil = await getRequesterCancelLockedUntil(
+      supabase,
+      needId,
+      needData.requester_confirmed_at ?? null,
+    )
+    if (cancelLockedUntil) {
+      throw new Error(
+        `Você confirmou que ainda precisa deste serviço. O cancelamento fica disponível a partir das ${formatCancelUnlockTime(cancelLockedUntil)}.`,
+      )
+    }
+
+    const { error } = await supabase
+      .from("needs")
+      .update({ status: "cancelado", cancelled_at: new Date().toISOString() })
+      .eq("id", needId)
 
     if (error) {
       throw new Error(`Falha ao cancelar serviço: ${String(error.message || "Erro desconhecido")}`)
@@ -940,7 +955,7 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
       .from("need_proposals")
       .select("professional_email")
       .eq("need_id", needId)
-      .in("status", ["pending", "accepted_by_requester"])
+      .in("status", ["interested", "pending", "accepted_by_requester"])
 
     if (proposals && proposals.length > 0) {
       for (const proposal of proposals) {

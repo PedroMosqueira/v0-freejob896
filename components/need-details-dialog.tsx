@@ -40,6 +40,7 @@ import { canUserRate } from "@/lib/ratings"
 import { Textarea } from "@/components/ui/textarea"
 import ChatManagementDialog from "@/components/chat-management-dialog"
 import ChatDialog from "@/components/chat-dialog"
+import { RequesterCancelLock } from "@/components/service-still-needed-dialog"
 import ImageViewerDialog from "@/components/image-viewer-dialog"
 import InterestDialog from "@/components/interest-dialog"
 import EditNeedDialog from "@/components/edit-need-dialog"
@@ -1329,6 +1330,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
               {canCancelService && (
                 <div className="p-3 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                  <RequesterCancelLock needId={currentNeed.id}>
                   {!showCancelConfirmation ? (
                     <Button
                       onClick={() => setShowCancelConfirmation(true)}
@@ -1362,6 +1364,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                       </div>
                     </div>
                   )}
+                  </RequesterCancelLock>
                 </div>
               )}
             </div>
@@ -1392,6 +1395,10 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
           onClose={() => setSelectedProfessionalChat(null)}
           currentUserEmail={email}
           chatThreadId={selectedProfessionalChat.chatThreadId}
+          onNeedCancelled={() => {
+            onStatusUpdate?.()
+            onClose()
+          }}
         />
       )}
 

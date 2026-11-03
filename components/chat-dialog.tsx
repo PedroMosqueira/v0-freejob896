@@ -29,6 +29,7 @@ import { formatCurrency } from "@/lib/pricing"
 import { dismissChatPush } from "@/lib/push-notifications-client"
 import useSWR from "swr"
 import { WithdrawInterestControl, chatAccessKey } from "@/components/withdraw-interest-control"
+import { ServiceStillNeededDialog, useRequesterCancelState } from "@/components/service-still-needed-dialog"
 
 const MESSAGES_PER_PAGE = 50
 
@@ -38,9 +39,53 @@ interface ChatDialogProps {
   onClose: () => void
   currentUserEmail: string
   chatThreadId: string
+  /** Called when the requester cancels the request from the pre-chat confirmation. */
+  onNeedCancelled?: () => void
 }
 
-export default function ChatDialog({ need, isOpen, onClose, currentUserEmail, chatThreadId }: ChatDialogProps) {
+/**
+ * Before the requester sees any message, they confirm they still need the service. Confirming locks
+ * cancellation for a while; cancelling here releases every professional's slot right away, since no
+ * conversation has happened yet that could have prompted it.
+ */
+export default function ChatDialog(props: ChatDialogProps) {
+  const { need, isOpen, onClose, currentUserEmail, onNeedCancelled } = props
+  const isRequester =
+    !!need.requesterEmail && need.requesterEmail.toLowerCase() === currentUserEmail.toLowerCase()
+  const mayNeedConfirmation =
+    isOpen && isRequester && (need.status === "aberto" || need.status === "visita-proposta")
+  const { data, error, mutate } = useRequesterCancelState(need.id, mayNeedConfirmation)
+
+  if (mayNeedConfirmation && !data && !error) {
+    return (
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="flex items-center justify-center py-12 sm:max-w-md">
+          <DialogTitle className="sr-only">Carregando chat</DialogTitle>
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  if (mayNeedConfirmation && data?.needsConfirmation) {
+    return (
+      <ServiceStillNeededDialog
+        need={need}
+        currentUserEmail={currentUserEmail}
+        onClose={onClose}
+        onConfirmed={() => void mutate()}
+        onCancelled={() => {
+          onClose()
+          onNeedCancelled?.()
+        }}
+      />
+    )
+  }
+
+  return <ChatDialogContent {...props} />
+}
+
+function ChatDialogContent({ need, isOpen, onClose, currentUserEmail, chatThreadId }: ChatDialogProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
