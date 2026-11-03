@@ -237,7 +237,8 @@ export function useAuthState(): AuthState {
 
   const logout = useCallback(async () => {
     try {
-      await supabase.auth.signOut()
+      // Supabase defaults to "global", which would also sign the user out on their other devices.
+      await supabase.auth.signOut({ scope: "local" })
       setEmail(null)
       setSession(null)
       setPhoneVerified(false)
