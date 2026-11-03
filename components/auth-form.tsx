@@ -44,11 +44,18 @@ export function GoogleLoginButton({
 }) {
   // Google only accepts its native button on origins registered in Google Cloud;
   // previews and other hosts keep the Supabase redirect flow.
+  // On phones and the installed app, the native button's popup often can't report back to the page and
+  // gets stuck on a blank accounts.google.com tab, so those also use the redirect flow.
   const [useNativeGoogleButton, setUseNativeGoogleButton] = useState(false)
 
   useEffect(() => {
     const host = window.location.hostname
-    setUseNativeGoogleButton(host === "freejob.services" || host.endsWith(".freejob.services"))
+    const isOwnDomain = host === "freejob.services" || host.endsWith(".freejob.services")
+    const isInstalledApp =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    setUseNativeGoogleButton(isOwnDomain && !isInstalledApp && !isMobile)
   }, [])
 
   const handleGoogleLogin = async () => {
