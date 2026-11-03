@@ -631,8 +631,7 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
 
   const canCancelService = email === currentNeed.requesterEmail && !isClosedStatus
   const isRequester = email === currentNeed.requesterEmail
-  const canCancelExecution =
-    isRequester && (currentNeed.status === "aceito" || currentNeed.status === "em_andamento")
+  const canCancelExecution = isRequester && currentNeed.status === "aceito"
   // Bids live only in the chat, so the chat is the main action unless "Tenho Interesse" comes first.
   const isChatPrimaryAction = isRequester || currentNeed.status !== "aberto" || hasShownInterest
   const chatButtonLabel =
