@@ -34,34 +34,95 @@ const OPEN_NEED_STATUSES = new Set(["aberto"])
 // "aguardando_avaliacao" is deliberately absent: once the professional marks the
 // job done, the slot is released while the requester reviews it.
 const IN_PROGRESS_NEED_STATUSES = new Set(["aceito", "em_andamento"])
-// The requester cancelled the whole request: everyone gets their slot back.
 const REQUESTER_CANCELLED_NEED_STATUSES = new Set(["cancelado"])
+
+/**
+ * When the requester cancels after opening the chat with a professional, that professional only gets the slot
+ * back once 2h have passed since their own interest, so asking the requester to cancel is never a faster way
+ * to free a slot. If the requester never opened that chat, the slot is released right away.
+ */
+export const REQUESTER_CANCEL_SLOT_HOLD_MS = 2 * 60 * 60 * 1000
 
 type SlotState = { kind: "free" } | { kind: "active" } | { kind: "held"; until: number }
 
 interface ProposalRow {
   need_id: string | null
   status: string | null
+  created_at: string | null
   cancelled_at: string | null
   reconfirm_requested_at: string | null
 }
 
-function slotStateFor(proposal: ProposalRow, needStatus: string | undefined, now: number): SlotState {
+function heldUntil(from: string | null, holdMs: number, now: number): SlotState {
+  const start = from ? Date.parse(from) : Number.NaN
+  // Rows without a timestamp predate the rule; treat them as released.
+  if (Number.isNaN(start)) return { kind: "free" }
+  const until = start + holdMs
+  return until > now ? { kind: "held", until } : { kind: "free" }
+}
+
+/** Requests whose chat with this professional the requester has opened, among the given ones. */
+async function loadRequesterViewedNeedIds(
+  supabase: ReturnType<typeof createAdminClient>,
+  professionalEmail: string,
+  needIds: string[],
+): Promise<Set<string>> {
+  if (!needIds.length) return new Set()
+  const { data, error } = await supabase
+    .from("chat_threads")
+    .select("need_id")
+    .in("need_id", needIds)
+    .ilike("professional_email", professionalEmail)
+    .not("last_read_by_requester", "is", null)
+  if (error) throw new Error(`Failed to load chat threads: ${error.message}`)
+  return new Set((data || []).map((row) => String(row.need_id)))
+}
+
+/** Requests, among the given ones, where the requester had accepted a professional. */
+async function loadNeedIdsWithAcceptedProfessional(
+  supabase: ReturnType<typeof createAdminClient>,
+  needIds: string[],
+): Promise<Set<string>> {
+  if (!needIds.length) return new Set()
+  const { data, error } = await supabase
+    .from("need_proposals")
+    .select("need_id")
+    .in("need_id", needIds)
+    .in("status", [...ACCEPTED_STATUSES])
+  if (error) throw new Error(`Failed to load accepted proposals: ${error.message}`)
+  return new Set((data || []).map((row) => String(row.need_id)))
+}
+
+interface RequesterCancelContext {
+  requesterViewedChat: boolean
+  someoneWasAccepted: boolean
+}
+
+function slotStateFor(
+  proposal: ProposalRow,
+  needStatus: string | undefined,
+  now: number,
+  cancelContext: RequesterCancelContext,
+): SlotState {
   const status = String(proposal.status ?? "")
 
-  if (!needStatus || REQUESTER_CANCELLED_NEED_STATUSES.has(needStatus)) return { kind: "free" }
-  // The request reopened after another professional cancelled; it only counts again once this one confirms.
-  if (proposal.reconfirm_requested_at) return { kind: "free" }
+  if (!needStatus) return { kind: "free" }
 
   if (PROFESSIONAL_CANCELLED_STATUSES.has(status)) {
-    const cancelledAt = proposal.cancelled_at ? Date.parse(proposal.cancelled_at) : Number.NaN
-    // Rows cancelled before cancelled_at existed have no timestamp; treat them as released.
-    if (Number.isNaN(cancelledAt)) return { kind: "free" }
-    const until = cancelledAt + PROFESSIONAL_CANCEL_HOLD_MS
-    return until > now ? { kind: "held", until } : { kind: "free" }
+    return heldUntil(proposal.cancelled_at, PROFESSIONAL_CANCEL_HOLD_MS, now)
   }
 
+  // The request reopened after another professional cancelled; it only counts again once this one confirms.
+  if (proposal.reconfirm_requested_at) return { kind: "free" }
   if (RELEASED_STATUSES.has(status)) return { kind: "free" }
+
+  if (REQUESTER_CANCELLED_NEED_STATUSES.has(needStatus)) {
+    // They never talked, so the professional couldn't have asked for the cancellation.
+    if (!cancelContext.requesterViewedChat) return { kind: "free" }
+    // Another professional had been chosen, so this slot was already released at acceptance.
+    if (cancelContext.someoneWasAccepted && !ACCEPTED_STATUSES.has(status)) return { kind: "free" }
+    return heldUntil(proposal.created_at, REQUESTER_CANCEL_SLOT_HOLD_MS, now)
+  }
   if (OPEN_NEED_STATUSES.has(needStatus)) return { kind: "active" }
   // Once a request is in progress only the chosen professional keeps the slot.
   if (IN_PROGRESS_NEED_STATUSES.has(needStatus) && ACCEPTED_STATUSES.has(status)) return { kind: "active" }
@@ -83,7 +144,7 @@ export async function getActiveInterestsSummary(professionalEmail: string): Prom
 
   const { data: proposals, error } = await supabase
     .from("need_proposals")
-    .select("need_id, status, cancelled_at, reconfirm_requested_at")
+    .select("need_id, status, created_at, cancelled_at, reconfirm_requested_at")
     .ilike("professional_email", email)
 
   if (error) throw new Error(`Failed to load proposals: ${error.message}`)
@@ -96,13 +157,21 @@ export async function getActiveInterestsSummary(professionalEmail: string): Prom
   if (needsError) throw new Error(`Failed to load needs: ${needsError.message}`)
 
   const needStatusById = new Map((needs || []).map((n) => [String(n.id), String(n.status)]))
+  const cancelledNeedIds = needIds.filter((id) => REQUESTER_CANCELLED_NEED_STATUSES.has(needStatusById.get(id) ?? ""))
+  const [viewedCancelledNeedIds, acceptedCancelledNeedIds] = await Promise.all([
+    loadRequesterViewedNeedIds(supabase, email, cancelledNeedIds),
+    loadNeedIdsWithAcceptedProfessional(supabase, cancelledNeedIds),
+  ])
   const now = Date.now()
   const stateByNeed = new Map<string, SlotState>()
 
   for (const proposal of proposals as ProposalRow[]) {
     if (!proposal.need_id) continue
     const needId = String(proposal.need_id)
-    const next = slotStateFor(proposal, needStatusById.get(needId), now)
+    const next = slotStateFor(proposal, needStatusById.get(needId), now, {
+      requesterViewedChat: viewedCancelledNeedIds.has(needId),
+      someoneWasAccepted: acceptedCancelledNeedIds.has(needId),
+    })
     const current = stateByNeed.get(needId) ?? { kind: "free" }
 
     if (current.kind === "active" || next.kind === "free") {
