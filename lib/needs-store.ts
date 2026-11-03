@@ -1590,9 +1590,11 @@ async function loadWithdrawContext(needId: string): Promise<WithdrawContext | nu
 
   const bids = (proposals || []).filter((p) => p.type === "direct_acceptance" && p.bid_amount != null)
   const latestBid = bids.at(-1)
+  const thread = await getChatThread(needId, need.requester_email, professionalEmail)
 
   const policy = getWithdrawPolicy({
     interestSentAt: String(proposals![0].created_at),
+    requesterViewedAt: thread?.lastReadByRequester ? String(thread.lastReadByRequester) : null,
     latestBid: latestBid ? { sentAt: String(latestBid.created_at), status: String(latestBid.status) } : null,
   })
 
