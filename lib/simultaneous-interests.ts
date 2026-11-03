@@ -78,11 +78,31 @@ async function loadRequesterViewedNeedIds(
   return new Set((data || []).map((row) => String(row.need_id)))
 }
 
+/** Requests, among the given ones, where the requester had accepted a professional. */
+async function loadNeedIdsWithAcceptedProfessional(
+  supabase: ReturnType<typeof createAdminClient>,
+  needIds: string[],
+): Promise<Set<string>> {
+  if (!needIds.length) return new Set()
+  const { data, error } = await supabase
+    .from("need_proposals")
+    .select("need_id")
+    .in("need_id", needIds)
+    .in("status", [...ACCEPTED_STATUSES])
+  if (error) throw new Error(`Failed to load accepted proposals: ${error.message}`)
+  return new Set((data || []).map((row) => String(row.need_id)))
+}
+
+interface RequesterCancelContext {
+  requesterViewedChat: boolean
+  someoneWasAccepted: boolean
+}
+
 function slotStateFor(
   proposal: ProposalRow,
   needStatus: string | undefined,
   now: number,
-  requesterViewedChat: boolean,
+  cancelContext: RequesterCancelContext,
 ): SlotState {
   const status = String(proposal.status ?? "")
 
@@ -98,7 +118,9 @@ function slotStateFor(
 
   if (REQUESTER_CANCELLED_NEED_STATUSES.has(needStatus)) {
     // They never talked, so the professional couldn't have asked for the cancellation.
-    if (!requesterViewedChat) return { kind: "free" }
+    if (!cancelContext.requesterViewedChat) return { kind: "free" }
+    // Another professional had been chosen, so this slot was already released at acceptance.
+    if (cancelContext.someoneWasAccepted && !ACCEPTED_STATUSES.has(status)) return { kind: "free" }
     return heldUntil(proposal.created_at, REQUESTER_CANCEL_SLOT_HOLD_MS, now)
   }
   if (OPEN_NEED_STATUSES.has(needStatus)) return { kind: "active" }
@@ -135,18 +157,21 @@ export async function getActiveInterestsSummary(professionalEmail: string): Prom
   if (needsError) throw new Error(`Failed to load needs: ${needsError.message}`)
 
   const needStatusById = new Map((needs || []).map((n) => [String(n.id), String(n.status)]))
-  const viewedCancelledNeedIds = await loadRequesterViewedNeedIds(
-    supabase,
-    email,
-    needIds.filter((id) => REQUESTER_CANCELLED_NEED_STATUSES.has(needStatusById.get(id) ?? "")),
-  )
+  const cancelledNeedIds = needIds.filter((id) => REQUESTER_CANCELLED_NEED_STATUSES.has(needStatusById.get(id) ?? ""))
+  const [viewedCancelledNeedIds, acceptedCancelledNeedIds] = await Promise.all([
+    loadRequesterViewedNeedIds(supabase, email, cancelledNeedIds),
+    loadNeedIdsWithAcceptedProfessional(supabase, cancelledNeedIds),
+  ])
   const now = Date.now()
   const stateByNeed = new Map<string, SlotState>()
 
   for (const proposal of proposals as ProposalRow[]) {
     if (!proposal.need_id) continue
     const needId = String(proposal.need_id)
-    const next = slotStateFor(proposal, needStatusById.get(needId), now, viewedCancelledNeedIds.has(needId))
+    const next = slotStateFor(proposal, needStatusById.get(needId), now, {
+      requesterViewedChat: viewedCancelledNeedIds.has(needId),
+      someoneWasAccepted: acceptedCancelledNeedIds.has(needId),
+    })
     const current = stateByNeed.get(needId) ?? { kind: "free" }
 
     if (current.kind === "active" || next.kind === "free") {
