@@ -1,7 +1,6 @@
 "use server"
 
 import { createSupabaseServerClient } from "@/lib/supabase/server"
-import { getRequesterCancelLockedUntil } from "@/lib/requester-cancel-lock"
 
 const CONFIRMATION_STATUSES = ["aberto", "visita-proposta"]
 const CLOSED_STATUSES = ["aguardando_avaliacao", "concluido", "nao_realizado", "cancelado"]
@@ -9,8 +8,6 @@ const CLOSED_STATUSES = ["aguardando_avaliacao", "concluido", "nao_realizado", "
 export interface RequesterCancelState {
   /** The requester hasn't yet confirmed they still need the service; asked before the first chat opens. */
   needsConfirmation: boolean
-  /** While set and in the future, the requester can't cancel the request. */
-  cancelLockedUntil: string | null
 }
 
 async function loadOwnNeed(needId: string) {
@@ -33,13 +30,11 @@ async function loadOwnNeed(needId: string) {
 export async function getRequesterCancelState(needId: string): Promise<RequesterCancelState> {
   const context = await loadOwnNeed(needId)
   if (!context || CLOSED_STATUSES.includes(context.need.status)) {
-    return { needsConfirmation: false, cancelLockedUntil: null }
+    return { needsConfirmation: false }
   }
 
-  const confirmedAt = context.need.requester_confirmed_at ?? null
   return {
-    needsConfirmation: CONFIRMATION_STATUSES.includes(context.need.status) && !confirmedAt,
-    cancelLockedUntil: getRequesterCancelLockedUntil(confirmedAt),
+    needsConfirmation: CONFIRMATION_STATUSES.includes(context.need.status) && !context.need.requester_confirmed_at,
   }
 }
 

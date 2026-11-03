@@ -17,7 +17,6 @@ import type {
 } from "@/data/needs"
 import { describeWithdrawLock, getWithdrawPolicy, type WithdrawPolicy } from "@/lib/withdraw-policy"
 import { assertSlotAvailableForNeed } from "@/lib/simultaneous-interests"
-import { formatCancelUnlockTime, getRequesterCancelLockedUntil } from "@/lib/requester-cancel-lock"
 import { createAdminClient } from "@/lib/stripe-subscription-sync"
 import { notifyNearbyProfessionals } from "@/lib/nearby-alerts"
 
@@ -911,7 +910,7 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
 
     const { data: needData, error: needError } = await supabase
       .from("needs")
-      .select("requester_email, title, status, requester_confirmed_at")
+      .select("requester_email, title, status")
       .eq("id", needId)
       .single()
 
@@ -929,13 +928,6 @@ export async function cancelNeed(needId: string, requesterEmail: string): Promis
 
     if (needData.status === "cancelado") {
       throw new Error("Este serviço já está cancelado.")
-    }
-
-    const cancelLockedUntil = getRequesterCancelLockedUntil(needData.requester_confirmed_at ?? null)
-    if (cancelLockedUntil) {
-      throw new Error(
-        `Você confirmou que ainda precisa deste serviço. O cancelamento fica disponível a partir das ${formatCancelUnlockTime(cancelLockedUntil)}.`,
-      )
     }
 
     const { error } = await supabase

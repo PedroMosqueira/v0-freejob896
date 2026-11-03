@@ -1,9 +1,8 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import useSWR from "swr"
-import { Clock, HelpCircle, Loader2 } from "lucide-react"
+import { HelpCircle, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/use-toast"
@@ -14,10 +13,6 @@ export const requesterCancelStateKey = (needId: string) => ["requester-cancel-st
 
 export function useRequesterCancelState(needId: string | undefined, enabled: boolean) {
   return useSWR(enabled && needId ? requesterCancelStateKey(needId) : null, () => getRequesterCancelState(needId!))
-}
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
 }
 
 interface ServiceStillNeededDialogProps {
@@ -78,12 +73,8 @@ export function ServiceStillNeededDialog({
 
         {step === "ask" ? (
           <div className="flex flex-col gap-4">
-            <p className="flex gap-2 rounded-lg bg-muted p-3 text-sm leading-relaxed text-muted-foreground">
-              <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>
-                Ao confirmar, o chat é liberado e o pedido não poderá ser cancelado nas próximas 2 horas, para que
-                os profissionais possam se programar.
-              </span>
+            <p className="text-center text-sm leading-relaxed text-muted-foreground">
+              Ao confirmar, o chat com o profissional é liberado.
             </p>
             <div className="flex flex-col gap-2">
               <Button onClick={handleConfirm} disabled={!!pending} className="h-11">
@@ -121,19 +112,3 @@ export function ServiceStillNeededDialog({
   )
 }
 
-/** Replaces the cancel action with a notice while the requester's cancellation is locked. */
-export function RequesterCancelLock({ needId, children }: { needId: string; children: React.ReactNode }) {
-  const { data } = useRequesterCancelState(needId, true)
-  const lockedUntil = data?.cancelLockedUntil
-  if (!lockedUntil || new Date(lockedUntil).getTime() <= Date.now()) return <>{children}</>
-
-  return (
-    <p className="flex gap-2 text-xs leading-relaxed text-muted-foreground">
-      <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-      <span>
-        Você confirmou que ainda precisa deste serviço. O cancelamento fica disponível a partir das{" "}
-        <span className="font-semibold text-foreground">{formatTime(lockedUntil)}</span>.
-      </span>
-    </p>
-  )
-}
