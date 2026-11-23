@@ -16,6 +16,9 @@ const officialCategories = [
 ] as const
 
 const serviceSchema = z.object({
+  understood: z
+    .boolean()
+    .describe("false quando a mensagem não dá para interpretar como pedido de serviço, nem corrigindo a ortografia"),
   title: z.string().describe("Título curto e específico, até 60 caracteres, sem ponto final"),
   description: z
     .string()
@@ -34,6 +37,12 @@ const serviceSchema = z.object({
 const SYSTEM_PROMPT = `Você ajuda clientes de uma plataforma brasileira de serviços a montar um pedido para profissionais autônomos.
 
 A partir do que o cliente escreveu (pode ter erros de digitação, gírias e frases soltas), gere:
+
+ENTENDIMENTO (campo understood)
+- Erros de ortografia, abreviações, falta de acento e gírias são normais: corrija mentalmente e siga com understood=true. Ex.: "concerta xuveiro q nao esquenta" = consertar chuveiro que não esquenta; "pintar a ksa" = pintar a casa.
+- understood=false quando NÃO dá para saber qual serviço o cliente quer, mesmo corrigindo a escrita: letras ou teclas aleatórias ("asdkjh", "kkkkk"), palavras soltas sem relação entre si, frases sem sentido, ou assunto que não é contratar um serviço (ex.: "oi", "qual seu nome", "bom dia" sozinhos).
+- Em conversa em andamento, respostas curtas que fazem sentido como resposta à última pergunta ou complemento do pedido ("2", "sim", "só um", "na sala", "amanhã") são understood=true. Só use false se a nova mensagem não fizer sentido nenhum nesse contexto.
+- Nunca invente um serviço para preencher uma mensagem sem sentido. Se understood=false, preencha os demais campos com o pedido atual (ou vazio e categoria "Outros" se não houver) e clarifyingQuestion null; eles serão ignorados.
 
 TÍTULO
 - Curto e específico, diz o serviço e o objeto: "Trocar resistência do chuveiro", "Instalar ar-condicionado split 12.000 BTUs", "Montar guarda-roupa de 6 portas".
@@ -133,6 +142,17 @@ export async function POST(request: NextRequest) {
         : ""
     const isFollowUp = draftText !== ""
 
+    const notUnderstood = () =>
+      NextResponse.json({
+        notUnderstood: true,
+        message: isFollowUp
+          ? "Não entendi o que você quis dizer. Pode escrever de novo, de outro jeito, o que quer acrescentar ou corrigir no pedido?"
+          : 'Não consegui entender seu pedido. Pode digitar novamente contando qual serviço você precisa? Por exemplo: "trocar a resistência do chuveiro" ou "pintar a sala".',
+      })
+
+    // Answers to a follow-up question can be just a number ("2"), so only new requests need letters.
+    if (!isFollowUp && !/\p{L}{2,}/u.test(inputMessage)) return notUnderstood()
+
     const { output } = await generateText({
       model: MODEL,
       system: SYSTEM_PROMPT + draftText,
@@ -140,6 +160,8 @@ export async function POST(request: NextRequest) {
       output: Output.object({ schema: serviceSchema }),
       temperature: 0.2,
     })
+
+    if (!output.understood) return notUnderstood()
 
     const question = output.clarifyingQuestion?.trim() || null
     const intro = isFollowUp ? "Pronto, atualizei o pedido." : "Entendi! Já comecei a montar seu pedido."

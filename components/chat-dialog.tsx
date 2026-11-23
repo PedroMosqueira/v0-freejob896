@@ -30,6 +30,7 @@ import { dismissChatPush } from "@/lib/push-notifications-client"
 import useSWR from "swr"
 import { WithdrawInterestControl, chatAccessKey } from "@/components/withdraw-interest-control"
 import { ServiceStillNeededDialog, useRequesterCancelState } from "@/components/service-still-needed-dialog"
+import { getNeedCoverImage } from "@/lib/category-images"
 
 const MESSAGES_PER_PAGE = 50
 
@@ -399,7 +400,7 @@ function ChatDialogContent({ need, isOpen, onClose, currentUserEmail, chatThread
 
   const otherUserFirstName = otherUserProfile?.fullName ? otherUserProfile.fullName.split(" ")[0] : "Carregando..."
 
-  const serviceImage = need.images?.[0] || null
+  const serviceImage = getNeedCoverImage(need)
 
   const isProfessional = chatThreadProfessionalEmail === currentUserEmail
 

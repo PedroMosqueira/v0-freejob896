@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Camera, Check, Eye, Globe, Image as ImageIcon, Loader2, MapPin, Pencil, X } from "lucide-react"
+import { getCategoryImage } from "@/lib/category-images"
 
 export interface DraftInfo {
   title?: string
@@ -37,12 +38,11 @@ interface RequestDraftPreviewProps {
   className?: string
 }
 
-export function getMissingFields(info: DraftInfo, photoCount: number): string[] {
+export function getMissingFields(info: DraftInfo): string[] {
   return [
     !info.title?.trim() && "título",
     !info.description?.trim() && "descrição",
     !info.city && "localização",
-    photoCount === 0 && "uma foto",
   ].filter(Boolean) as string[]
 }
 
@@ -73,7 +73,7 @@ export function RequestDraftPreview({
   const [showCard, setShowCard] = useState(false)
   const photoUrls = usePhotoUrls(photos)
 
-  const missing = getMissingFields(info, photos.length)
+  const missing = getMissingFields(info)
   const locationLabel = formatLocationLabel(info)
   const isEmpty = !info.title && !info.description
 
@@ -118,7 +118,7 @@ export function RequestDraftPreview({
       {showCard && (
         <div className="border-b border-blue-100 bg-gray-50 p-3">
           <p className="mb-2 text-xs text-gray-500">Assim os profissionais vão ver seu pedido na lista:</p>
-          <CardPreview info={info} imageUrl={photoUrls[0]} locationLabel={locationLabel} />
+          <CardPreview info={info} imageUrl={photoUrls[0] ?? getCategoryImage(info.category)} locationLabel={locationLabel} />
         </div>
       )}
 
@@ -208,7 +208,7 @@ export function RequestDraftPreview({
         <div className="flex flex-col gap-2 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
             <dt className="text-xs font-medium text-gray-500">
-              Fotos {photos.length === 0 && <span className="text-amber-700">(obrigatório)</span>}
+              Fotos {photos.length === 0 && <span className="font-normal">(opcional)</span>}
             </dt>
             <div className="flex gap-1">
               {isMobile && (

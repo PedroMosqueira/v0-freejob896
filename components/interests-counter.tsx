@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { PLAN_FEATURES } from "@/lib/subscription-manager"
 import { ACTIVE_INTERESTS_KEY, fetchActiveInterests } from "@/lib/active-interests-client"
 
-export function InterestsCounter() {
+export function InterestsCounter({ compact = false }: { compact?: boolean }) {
   const { email, subscriptionPlan } = useAuth()
   const isPaidPlan = subscriptionPlan === "simples" || subscriptionPlan === "agencia"
 
@@ -49,14 +49,16 @@ export function InterestsCounter() {
     <div
       title={tooltip}
       aria-label={tooltip}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-help group"
+      className={`flex items-center rounded-md bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-help group ${
+        compact ? "gap-1.5 px-2 py-1" : "gap-2 px-3 py-1.5"
+      }`}
     >
       {/* Barra seccionada */}
-      <div className="flex gap-1">
+      <div className={`flex ${compact ? "gap-0.5" : "gap-1"}`}>
         {slots.map((slot, index) => (
           <div
             key={index}
-            className={`h-3 w-2 rounded-sm transition-colors ${
+            className={`h-3 rounded-sm transition-colors ${compact ? "w-1.5" : "w-2"} ${
               slot === "active"
                 ? isNearLimit
                   ? "bg-orange-500"

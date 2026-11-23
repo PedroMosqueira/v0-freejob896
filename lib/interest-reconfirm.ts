@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/stripe-subscription-sync"
 import { assertSlotAvailableForNeed } from "@/lib/simultaneous-interests"
+import { getCategoryImage } from "@/lib/category-images"
 
 const RECONFIRMABLE_STATUSES = ["interested", "pending"]
 
@@ -65,7 +66,10 @@ export async function getPendingReconfirmations(): Promise<PendingReconfirmation
         category: String(need.category || ""),
         location,
         isRemote: Boolean(need.is_remote),
-        image: Array.isArray(need.images) && need.images.length ? String(need.images[0]) : null,
+        image:
+          Array.isArray(need.images) && need.images.length
+            ? String(need.images[0])
+            : getCategoryImage(need.category ? String(need.category) : null),
       }
     })
     .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt))

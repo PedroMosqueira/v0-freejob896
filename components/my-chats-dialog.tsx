@@ -12,6 +12,7 @@ import { MessageCircle, Loader2 } from 'lucide-react'
 import { formatUserName } from "@/lib/format-user-name"
 import { createClient } from "@/lib/supabase/client"
 import { getUserProfile } from "@/lib/user-profile"
+import { getCategoryImage } from "@/lib/category-images"
 
 const THREADS_PER_PAGE = 30
 const POLLING_INTERVAL = 5000 // 5 seconds
@@ -400,7 +401,8 @@ export default function MyChatsDialog({ isOpen, onClose, currentUserEmail }: MyC
                   thread.requesterEmail === currentUserEmail ? thread.professionalEmail : thread.requesterEmail
                 const otherUserName = userProfiles[otherUserEmail] || otherUserEmail.split("@")[0]
                 const need = needDetails[thread.needId]
-                const serviceImage = need?.images?.[0] || need?.imageUrl || null
+                const serviceImage =
+                  need?.images?.[0] || need?.imageUrl || (need?.category ? getCategoryImage(need.category) : null)
                 const serviceTitle = need?.title || `Serviço #${thread.needId.slice(0, 8)}`
 
                 const messageText = lastMessage ? lastMessage.text || lastMessage.content || "" : ""

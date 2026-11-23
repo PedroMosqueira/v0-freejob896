@@ -10,6 +10,7 @@ import ChatDialog from "@/components/chat-dialog"
 import { MessageCircle } from "lucide-react"
 import { formatUserName } from "@/lib/format-user-name"
 import { getUserProfile } from "@/lib/user-profile"
+import { getCategoryImage } from "@/lib/category-images"
 
 interface ChatManagementDialogProps {
   need: Need
@@ -187,7 +188,8 @@ function ChatManagementDialog({
                 const lastMessage =
                   thread.messages && thread.messages.length > 0 ? thread.messages[thread.messages.length - 1] : null
                 const messageText = lastMessage ? lastMessage.text || lastMessage.content || "" : ""
-                const serviceImage = need?.images?.[0] || need?.imageUrl || null
+                const serviceImage =
+                  need?.images?.[0] || need?.imageUrl || (need?.category ? getCategoryImage(need.category) : null)
 
                 return (
                   <div
