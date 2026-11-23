@@ -47,7 +47,8 @@ type Step = "describe" | "clarify" | "location" | "photos" | "review"
 
 const STEP_PROMPTS: Record<Exclude<Step, "describe" | "clarify">, string> = {
   location: "Onde o serviço vai ser feito?",
-  photos: "Agora adicione pelo menos uma foto do que precisa ser feito. Isso ajuda o profissional a entender e orçar.",
+  photos:
+    "Quer adicionar fotos do que precisa ser feito? Elas ajudam o profissional a entender e orçar. Se preferir, siga sem fotos e o pedido usa uma imagem ilustrativa da categoria.",
   review: "Tudo pronto! Confira o pedido e confirme quando quiser. Se precisar mudar algo, é só escrever aqui ou editar direto na prévia.",
 }
 
@@ -175,6 +176,7 @@ export function RequestFormAIChat({
 
       const data = await response.json()
       addMessage("assistant", data.message)
+      if (data.notUnderstood) return
       if (data.extracted) applyAIExtraction(data.extracted)
 
       const current = stepRef.current
@@ -284,7 +286,10 @@ export function RequestFormAIChat({
 
   const handlePhotosDone = () => {
     const count = photosRef.current.length
-    addMessage("user", count === 1 ? "Adicionei 1 foto." : `Adicionei ${count} fotos.`)
+    addMessage(
+      "user",
+      count === 0 ? "Vou seguir sem fotos." : count === 1 ? "Adicionei 1 foto." : `Adicionei ${count} fotos.`,
+    )
     goToStep("review")
   }
 
@@ -293,7 +298,7 @@ export function RequestFormAIChat({
     images: photosRef.current.length > 0 ? photosRef.current : undefined,
   })
 
-  const missing = getMissingFields(extractedInfo, photos.length)
+  const missing = getMissingFields(extractedInfo)
   const canConfirm = missing.length === 0 && !isProcessingPhotos
 
   const handleConfirm = () => {
@@ -393,10 +398,10 @@ export function RequestFormAIChat({
                   type="button"
                   size="sm"
                   onClick={handlePhotosDone}
-                  disabled={photos.length === 0 || isProcessingPhotos}
+                  disabled={isProcessingPhotos}
                   className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
                 >
-                  Continuar
+                  {photos.length === 0 ? "Seguir sem fotos" : "Continuar"}
                   <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                 </Button>
               </div>

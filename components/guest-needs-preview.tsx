@@ -6,23 +6,7 @@ import { MapPin, Briefcase } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { PublicNeedPreview } from "@/app/api/public/needs/route"
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  eletricista: "/electrician-working.png",
-  encanador: "/plumber-fixing-pipes.png",
-  pedreiro: "/mason-building-wall.jpg",
-  pintor: "/painter-painting-wall.png",
-  marceneiro: "/carpenter-woodworking.jpg",
-  mecanico: "/mechanic-fixing-car.jpg",
-  jardinagem: "/gardener-trimming-plants.jpg",
-  jardineiro: "/gardener-trimming-plants.jpg",
-  limpeza: "/cleaner-cleaning-house.jpg",
-  diarista: "/cleaner-cleaning-house.jpg",
-}
-
-function categoryImage(category: string) {
-  return CATEGORY_IMAGES[category?.toLowerCase()] ?? "/service-professional.jpg"
-}
+import { getCategoryImage } from "@/lib/category-images"
 
 function formatLocation(need: PublicNeedPreview) {
   const place = [need.neighborhood, need.city].filter(Boolean).join(", ")
@@ -146,7 +130,7 @@ function NeedsList({
       {needs.map((need) => (
         <li key={need.id} className="flex gap-3 rounded-xl border border-border bg-card p-3">
           <img
-            src={need.image || categoryImage(need.category)}
+            src={need.image || getCategoryImage(need.category)}
             alt=""
             className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
             loading="lazy"

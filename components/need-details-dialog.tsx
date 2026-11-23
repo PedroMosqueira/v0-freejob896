@@ -50,6 +50,7 @@ import { getNeedStatusLabel } from "@/data/needs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import Link from "next/link"
 import { formatCurrency } from "@/lib/pricing"
+import { getCategoryImage } from "@/lib/category-images"
 
 // Assuming getUserProfile is defined elsewhere and fetches user details
 // import { getUserProfile } from "@/lib/user-profiles"; // Placeholder
@@ -719,6 +720,18 @@ export default function NeedDetailsDialog({ need, isOpen, onClose, onStatusUpdat
                   </div>
                 </>
               )}
+            </div>
+          )}
+          {(!currentNeed.images || currentNeed.images.length === 0) && (
+            <div className="relative h-56 w-full flex-shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-800 sm:h-64">
+              <img
+                src={getCategoryImage(currentNeed.category)}
+                alt={`Imagem ilustrativa de ${currentNeed.category}`}
+                className="h-full w-full object-cover"
+              />
+              <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                Imagem ilustrativa
+              </span>
             </div>
           )}
 

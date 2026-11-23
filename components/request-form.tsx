@@ -268,9 +268,7 @@ export default function RequestForm() {
       newErrors.state = "Estado é obrigatório"
     }
 
-    if (imagePreviews.length === 0) {
-      newErrors.images = "Adicione pelo menos uma foto"
-    } else if (imagePreviews.length > 10) {
+    if (imagePreviews.length > 10) {
       newErrors.images = "Máximo de 10 fotos permitido"
     }
 
@@ -913,12 +911,14 @@ export default function RequestForm() {
 
             <div className="grid gap-2">
               <Label htmlFor="images" className="text-sm sm:text-base">
-                Fotos do serviço *
+                Fotos do serviço (opcional)
               </Label>
               <div className="space-y-2">
                 <ImageCaptureInput onCapture={handleImageCapture} multiple={true} disabled={isSubmitting} />
                 <p className={`text-xs ${errors.images ? "text-red-500" : "text-muted-foreground"}`}>
-                  {errors.images ? errors.images : "Adicione pelo menos uma foto do serviço (máximo 10)."}
+                  {errors.images
+                    ? errors.images
+                    : "Fotos ajudam o profissional a orçar (máximo 10). Sem fotos, usamos uma imagem ilustrativa da categoria."}
                 </p>
                 {imagePreviews.length > 0 && (
                   <div className="mt-2">

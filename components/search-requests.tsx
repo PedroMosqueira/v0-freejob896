@@ -17,6 +17,7 @@ import { NearbyBar, type LocationState, type RadiusKm } from "./nearby-bar"
 import { SearchRequestsSkeleton } from "./search-requests-skeleton"
 import { FilterForm } from "./filter-form"
 import { getNeedStatusLabel } from "@/data/needs"
+import { getNeedCoverImage } from "@/lib/category-images"
 
 interface SearchRequestsProps {
   initialShowMyRequests?: boolean
@@ -539,8 +540,7 @@ function SearchRequests({
                       ? `${need.neighborhood} - ${need.city}`
                       : `${need.city}${need.state ? ` - ${need.state}` : ""}`
 
-                  const displayImage =
-                    need.images && need.images.length > 0 ? need.images[0] : getCategoryImage(need.category)
+                  const displayImage = getNeedCoverImage(need)
 
                   return (
                     <React.Fragment key={need.id}>
@@ -668,20 +668,6 @@ function SearchRequests({
       )}
     </div>
   )
-}
-
-function getCategoryImage(category: string): string {
-  const images: Record<string, string> = {
-    eletricista: "/electrician-working.png",
-    encanador: "/plumber-fixing-pipes.png",
-    pedreiro: "/mason-building-wall.jpg",
-    pintor: "/painter-painting-wall.png",
-    marceneiro: "/carpenter-woodworking.jpg",
-    mecanico: "/mechanic-fixing-car.jpg",
-    jardineiro: "/gardener-trimming-plants.jpg",
-    faxineiro: "/cleaner-cleaning-house.jpg",
-  }
-  return images[category] || "/service-professional.jpg"
 }
 
 export default SearchRequests

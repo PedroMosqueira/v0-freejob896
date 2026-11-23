@@ -335,7 +335,8 @@ export function SiteHeader({
                 </div>
 
                 {/* Mobile Notifications */}
-                <div className="md:hidden">
+                <div className="flex items-center gap-1 md:hidden">
+                  <InterestsCounter compact />
                   <NotificationsDropdown userEmail={email} />
                 </div>
 
